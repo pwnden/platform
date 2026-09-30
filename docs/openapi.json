@@ -29,7 +29,7 @@
         "description": "No request body. An already recorded service run returns 409 and is preserved. File problems create no service resources.",
         "responses": {
           "200": {
-            "description": "Problem ready; only published browser endpoints are returned",
+            "description": "Problem ready; published HTTP and TCP entry points retain their original URL scheme",
             "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Run"}}}
           },
           "default": {"$ref": "#/components/responses/Failure"}

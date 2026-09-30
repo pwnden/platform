@@ -15,7 +15,7 @@ The API version is independent of the challenges-owned problem contract. Version
 
 Problem summaries contain `slug`, `title`, `category`, and `kind`. Missing display titles use the slug. Kind is `file` or `service`. Arrays are JSON arrays, including empty arrays; they never serialize as `null`.
 
-Start and stop accept no body. File starts create no service resources and return an empty endpoint array. A service start preserves an already recorded run and returns a conflict. Endpoints contain `name` and `url` for published browser-accessible ports; private network endpoints and Compose project identifiers stay inside the application layer. Stop is repeatable and reports success only after resource and state cleanup.
+Start and stop accept no body. File starts create no service resources and return an empty endpoint array. A service start preserves an already recorded run and returns a conflict. Endpoints contain `name` and `url` for published entry points, preserving the problem's `http://` or `tcp://` scheme. HTTP URLs are browser links; TCP URLs identify addresses for terminal tools. Private network endpoints and Compose project identifiers stay inside the application layer. Stop is repeatable and reports success only after resource and state cleanup.
 
 Submission accepts exactly one JSON object with a nonempty string `flag`, up to 4096 body bytes. Unknown request fields, trailing JSON values, malformed JSON, query parameters, and unexpected bodies are rejected. The media type must be `application/json` with an optional charset. Leading and trailing whitespace is trimmed by the application. An incorrect answer is `200 {"slug":"...","accepted":false}`. Service submissions require a recorded run. Submission history is a later feature.
 
