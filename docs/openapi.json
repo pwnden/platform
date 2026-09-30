@@ -1,0 +1,171 @@
+{
+  "openapi": "3.1.2",
+  "info": {
+    "title": "pwnden local player API",
+    "version": "1.0.0",
+    "description": "Contract for the initial local player server. Handlers and serve are the next implementation step."
+  },
+  "servers": [{"url": "/api/v1"}],
+  "security": [{"LocalSession": []}],
+  "paths": {
+    "/problems": {
+      "get": {
+        "operationId": "listProblems",
+        "summary": "List installed problems in slug order",
+        "responses": {
+          "200": {
+            "description": "Available problem summaries",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ProblemList"}}}
+          },
+          "default": {"$ref": "#/components/responses/Failure"}
+        }
+      }
+    },
+    "/problems/{slug}/run": {
+      "parameters": [{"$ref": "#/components/parameters/Slug"}],
+      "post": {
+        "operationId": "startProblem",
+        "summary": "Start a service problem or select a file problem",
+        "description": "No request body. An already recorded service run returns 409 and is preserved. File problems create no service resources.",
+        "responses": {
+          "200": {
+            "description": "Problem ready; only published browser endpoints are returned",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Run"}}}
+          },
+          "default": {"$ref": "#/components/responses/Failure"}
+        }
+      },
+      "delete": {
+        "operationId": "stopProblem",
+        "summary": "Remove problem service resources and saved run state",
+        "description": "No request body. Stop is repeatable and reports success only after cleanup completes.",
+        "responses": {
+          "200": {
+            "description": "Problem stopped",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Stop"}}}
+          },
+          "default": {"$ref": "#/components/responses/Failure"}
+        }
+      }
+    },
+    "/problems/{slug}/submissions": {
+      "parameters": [{"$ref": "#/components/parameters/Slug"}],
+      "post": {
+        "operationId": "submitFlag",
+        "summary": "Check a candidate flag",
+        "description": "The request body is at most 4096 bytes. Incorrect flags are successful checks with accepted=false. Service submissions require a recorded run. No solution is executed or submission history written.",
+        "requestBody": {
+          "required": true,
+          "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SubmissionRequest"}}}
+        },
+        "responses": {
+          "200": {
+            "description": "Candidate checked",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Submission"}}}
+          },
+          "default": {"$ref": "#/components/responses/Failure"}
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "LocalSession": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Random token for one local server process; separate from challenge flags. Loopback binding and Host/Origin checks are also required."
+      }
+    },
+    "parameters": {
+      "Slug": {
+        "name": "slug",
+        "in": "path",
+        "required": true,
+        "schema": {"$ref": "#/components/schemas/Slug"}
+      }
+    },
+    "responses": {
+      "Failure": {
+        "description": "Public error. Application status mappings and transport failures are defined in web-api.md. Raw causes, Docker output, host paths and recovered flags remain private.",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}
+      }
+    },
+    "schemas": {
+      "Slug": {"type": "string", "minLength": 1, "maxLength": 40, "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+      "Kind": {"type": "string", "enum": ["file", "service"]},
+      "Problem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["slug", "title", "category", "kind"],
+        "properties": {
+          "slug": {"$ref": "#/components/schemas/Slug"},
+          "title": {"type": "string", "minLength": 1},
+          "category": {"type": "string"},
+          "kind": {"$ref": "#/components/schemas/Kind"}
+        }
+      },
+      "ProblemList": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["problems"],
+        "properties": {"problems": {"type": "array", "items": {"$ref": "#/components/schemas/Problem"}}}
+      },
+      "Endpoint": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "url"],
+        "properties": {"name": {"type": "string"}, "url": {"type": "string", "format": "uri"}}
+      },
+      "Run": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["slug", "kind", "file_count", "endpoints"],
+        "properties": {
+          "slug": {"$ref": "#/components/schemas/Slug"},
+          "kind": {"$ref": "#/components/schemas/Kind"},
+          "file_count": {"type": "integer", "minimum": 0},
+          "endpoints": {"type": "array", "items": {"$ref": "#/components/schemas/Endpoint"}}
+        }
+      },
+      "Stop": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["slug"],
+        "properties": {"slug": {"$ref": "#/components/schemas/Slug"}}
+      },
+      "SubmissionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["flag"],
+        "properties": {"flag": {"type": "string", "minLength": 1}}
+      },
+      "Submission": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["slug", "accepted"],
+        "properties": {"slug": {"$ref": "#/components/schemas/Slug"}, "accepted": {"type": "boolean"}}
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "message"],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": ["invalid_argument", "not_found", "already_running", "not_running", "incompatible_contract", "validation_failed", "setup_required", "setup_failed", "canceled", "deadline_exceeded", "execution_failed", "cleanup_failed", "internal_error", "invalid_request", "unauthorized", "forbidden", "method_not_allowed", "payload_too_large", "unsupported_media_type"]
+              },
+              "message": {"type": "string"},
+              "operation": {"type": "string"},
+              "slug": {"type": "string"}
+            }
+          }
+        }
+      }
+    }
+  }
+}
