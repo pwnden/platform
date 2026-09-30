@@ -3,7 +3,7 @@
   "info": {
     "title": "pwnden local player API",
     "version": "1.0.0",
-    "description": "Contract for the initial local player server. Handlers and serve are the next implementation step."
+    "description": "Initial local player API implemented by the Go server and serve command."
   },
   "servers": [{"url": "/api/v1"}],
   "security": [{"LocalSession": []}],
