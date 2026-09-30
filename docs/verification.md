@@ -17,3 +17,5 @@ Start with the problems stopped before running the complete check. After a succe
 `.github/workflows/verify.yml` checks out the platform revision under test and `pwnden/challenges` at `main`, runs Go tests and vet, and runs the same execution verifier. It uses read-only repository permissions and checkouts without persisted credentials. Action versions are pinned to exact commits.
 
 The workflow runs on pushes to the platform's `main`, pull requests, manual dispatches, and daily at 18:00 UTC (03:00 Korea time). The daily run checks changes to the consumed problem repository. Publish both repositories' implementations before confirming GitHub-hosted execution. The platform workflow uses its own checked-out code for the runner.
+
+After problem verification, the workflow builds a native Linux platform package and runs `tools/smoke_package.py`. That check uses the package with only Docker on its child PATH, exercising managed setup and player commands without Go, Git, or a separately supplied problem path. See [distribution](distribution.md) for local package checks.

@@ -45,3 +45,9 @@ jobs:
           python3 --version
       - name: Verify every challenge
         run: python3 platform/tools/verify.py --challenges challenges
+      - name: Build native Linux package
+        working-directory: platform
+        run: go run ./tools/package --challenges ../challenges --out dist --target linux/amd64
+      - name: Verify end-user package without Go or Git
+        working-directory: platform
+        run: python3 -B tools/smoke_package.py --package dist/pwnden-linux-amd64.tar.gz

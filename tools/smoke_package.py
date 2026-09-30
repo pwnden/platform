@@ -1,0 +1,122 @@
+"""Exercise a native Linux package without Go, Git, or an explicit problem checkout."""
+
+import argparse
+import os
+from pathlib import Path
+import shutil
+import signal
+import subprocess
+import tarfile
+import tempfile
+
+active_child = None
+interrupted = 0
+cleaning = False
+
+
+def handle_signal(signum, _frame):
+    global interrupted
+    interrupted = signum
+    if active_child is not None and active_child.poll() is None and not cleaning:
+        active_child.send_signal(signum)
+
+
+def execute(binary, environment, args, *, expected=0, cleanup=False):
+    global active_child, cleaning
+    if interrupted and not cleanup:
+        raise InterruptedError("package smoke check interrupted")
+    print("+ pwnden " + " ".join(args), flush=True)
+    cleaning = cleanup
+    try:
+        active_child = subprocess.Popen(
+            [str(binary), *args], env=environment,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        )
+        if interrupted and not cleanup:
+            active_child.send_signal(interrupted)
+        output, diagnostic = active_child.communicate()
+        print(output, end="", flush=True)
+        print(diagnostic, end="", flush=True)
+        if active_child.returncode != expected:
+            raise subprocess.CalledProcessError(active_child.returncode, args)
+        if interrupted and not cleanup:
+            raise InterruptedError("package smoke check interrupted")
+        return output
+    finally:
+        active_child = None
+        cleaning = False
+
+
+def extract_package(package, directory):
+    with tarfile.open(package, "r:gz") as archive:
+        for member in archive:
+            parts = Path(member.name).parts
+            if (not member.isfile() or len(parts) != 2 or parts[0] in (".", "..")
+                    or parts[1] not in ("pwnden", "catalog.tar.gz", "distribution.json")):
+                raise ValueError(f"unexpected package entry: {member.name}")
+            target = directory / member.name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with archive.extractfile(member) as source, target.open("xb") as output:
+                shutil.copyfileobj(source, output)
+            target.chmod(member.mode & 0o777)
+    binaries = list(directory.glob("*/pwnden"))
+    if len(binaries) != 1:
+        raise ValueError("package must contain one executable")
+    return binaries[0]
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--package", required=True, type=Path)
+    args = parser.parse_args()
+    package = args.package.resolve()
+    docker = shutil.which("docker")
+    if docker is None:
+        parser.error("Docker is required")
+    signal.signal(signal.SIGINT, handle_signal)
+    signal.signal(signal.SIGTERM, handle_signal)
+    work = Path(tempfile.mkdtemp(prefix=".smoke-", dir=package.parent))
+    started = False
+    preserve = False
+    try:
+        binary = extract_package(package, work)
+        tool_path = work / "path"
+        tool_path.mkdir()
+        (tool_path / "docker").symlink_to(Path(docker).resolve())
+        environment = dict(os.environ, PATH=str(tool_path),
+                           XDG_CONFIG_HOME=str(work / "config"),
+                           XDG_CACHE_HOME=str(work / "cache"))
+        assert shutil.which("go", path=environment["PATH"]) is None
+        assert shutil.which("git", path=environment["PATH"]) is None
+        execute(binary, environment, ["setup"])
+        execute(binary, environment, ["setup"])
+        listing = execute(binary, environment, ["list"])
+        assert "note-vault" in listing and "rotor-lock" in listing
+        execute(binary, environment, ["exec", "rotor-lock", "--", "python3", "files/checker.py", "wrong"], expected=1)
+        file_flag = execute(binary, environment, ["exec", "rotor-lock", "--", "python3", "solve/solve.py"]).strip()
+        execute(binary, environment, ["submit", "rotor-lock", "wrong"], expected=1)
+        execute(binary, environment, ["submit", "rotor-lock", file_flag])
+        execute(binary, environment, ["verify", "rotor-lock"])
+        # The fresh data root makes this check the owner of any attempted start.
+        started = True
+        try:
+            execute(binary, environment, ["run", "note-vault"])
+            service_flag = execute(binary, environment, ["exec", "note-vault", "--", "python3", "solve/solve.py"]).strip()
+            execute(binary, environment, ["submit", "note-vault", service_flag])
+            execute(binary, environment, ["verify", "note-vault"])
+        finally:
+            try:
+                execute(binary, environment, ["stop", "note-vault"], cleanup=True)
+                started = False
+            except BaseException:
+                preserve = True
+                print(f"Cleanup failed; keep package and run state at {work}", flush=True)
+                raise
+        print("Package smoke check passed without Go or Git.", flush=True)
+    finally:
+        if not preserve and not started:
+            shutil.rmtree(work)
+
+
+if __name__ == "__main__":
+    main()
