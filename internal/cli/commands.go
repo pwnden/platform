@@ -1,0 +1,121 @@
+package cli
+
+import (
+	"context"
+	"errors"
+	"flag"
+	"fmt"
+
+	"github.com/pwnden/platform/internal/application"
+)
+
+func DefaultCommands() []Command {
+	return []Command{
+		{Name: "validate", Summary: "check compatibility and execution policy", Run: validate},
+		{Name: "run", Summary: "start a problem and show its endpoints", Run: run},
+		{Name: "verify", Summary: "check the automatic solution and optional patch", Run: verify},
+		{Name: "stop", Summary: "remove problem resources and saved state", Run: stop},
+	}
+}
+
+func challengeInputs(name string, invocation Invocation) (string, *application.Service, error) {
+	flags := flag.NewFlagSet(name, flag.ContinueOnError)
+	flags.SetOutput(invocation.Stderr)
+	flags.Usage = func() {
+		fmt.Fprintf(invocation.Stderr, "usage: pwnden --repo PATH %s <slug>\n", name)
+		flags.PrintDefaults()
+	}
+	if err := flags.Parse(invocation.Args); err != nil {
+		return "", nil, err
+	}
+	if flags.NArg() != 1 {
+		flags.Usage()
+		return "", nil, fmt.Errorf("%s requires exactly one problem slug", name)
+	}
+	service, err := application.New(invocation.Repo)
+	return flags.Arg(0), service, err
+}
+
+func validate(ctx context.Context, invocation Invocation) error {
+	slug, service, err := challengeInputs("validate", invocation)
+	if err != nil {
+		return err
+	}
+	result, err := service.Validate(ctx, slug)
+	if err != nil {
+		return err
+	}
+	if result.Kind == application.KindFile {
+		_, err = fmt.Fprintf(invocation.Stdout, "compatible file challenge %s (contract %d; %d files)\n", result.Slug, result.ContractVersion, result.FileCount)
+	} else {
+		_, err = fmt.Fprintf(invocation.Stdout, "compatible service challenge %s (contract %d; %d services)\n", result.Slug, result.ContractVersion, result.ServiceCount)
+	}
+	return err
+}
+
+func run(ctx context.Context, invocation Invocation) (err error) {
+	slug, service, err := challengeInputs("run", invocation)
+	if err != nil {
+		return err
+	}
+	result, err := service.Run(ctx, slug)
+	if err != nil {
+		return err
+	}
+	if result.Kind == application.KindFile {
+		_, err = fmt.Fprintf(invocation.Stdout, "file challenge %s: %d files; run verify to check the solution\n", result.Slug, result.FileCount)
+		return err
+	}
+	// A failed command must not leave a new run owned by nobody. Existing runs
+	// fail above, before this cleanup is installed.
+	defer func() {
+		if err != nil {
+			_, cleanupErr := service.Stop(context.WithoutCancel(ctx), slug)
+			err = errors.Join(err, cleanupErr)
+		}
+	}()
+	if _, err := fmt.Fprintf(invocation.Stdout, "running %s (project %s)\n", result.Slug, result.Project); err != nil {
+		return err
+	}
+	for _, endpoint := range result.Endpoints {
+		suffix := ""
+		if !endpoint.Published {
+			suffix = " (container network)"
+		}
+		if _, err := fmt.Fprintf(invocation.Stdout, "  %s: %s%s\n", endpoint.Name, endpoint.URL, suffix); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func verify(ctx context.Context, invocation Invocation) error {
+	slug, service, err := challengeInputs("verify", invocation)
+	if err != nil {
+		return err
+	}
+	result, err := service.Verify(ctx, slug)
+	if err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(invocation.Stdout, "verified %s: %s\n", result.Slug, result.Flag); err != nil {
+		return err
+	}
+	if result.Patched {
+		_, err = fmt.Fprintln(invocation.Stdout, "patched attack failed; functional check passed")
+	}
+	return err
+}
+
+func stop(ctx context.Context, invocation Invocation) error {
+	slug, service, err := challengeInputs("stop", invocation)
+	if err != nil {
+		return err
+	}
+	result, err := service.Stop(ctx, slug)
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(invocation.Stdout, "stopped %s\n", result.Slug)
+	return err
+}
