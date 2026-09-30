@@ -263,20 +263,15 @@ func TestNewRunDeliveryFailureCleanupAndExistingOwnership(t *testing.T) {
 
 func TestBootstrapKeepsTokenOutOfHTTPResponses(t *testing.T) {
 	h := newHandler(context.Background(), fakeBackend{}, testHost, testToken, io.Discard)
-	for _, path := range []string{"/", "/session.js"} {
-		w := httptest.NewRecorder()
-		r := request("GET", path, "")
-		r.Header.Del("Authorization")
-		h.ServeHTTP(w, r)
-		if w.Code != 200 || strings.Contains(w.Body.String(), testToken) {
-			t.Fatal("bootstrap disclosed token")
-		}
-		if path == "/session.js" && !strings.Contains(w.Body.String(), "history.replaceState") {
-			t.Fatal("URL credential retained")
-		}
+	w := httptest.NewRecorder()
+	r := request("GET", "/", "")
+	r.Header.Del("Authorization")
+	h.ServeHTTP(w, r)
+	if w.Code != 200 || strings.Contains(w.Body.String(), testToken) || !strings.Contains(w.Body.String(), `id="app"`) {
+		t.Fatal("player entry point missing or disclosed token")
 	}
 	h.closeAdmission()
-	w := httptest.NewRecorder()
+	w = httptest.NewRecorder()
 	h.ServeHTTP(w, request("GET", BasePath+"/problems", ""))
 	assertError(t, w, 503, "canceled")
 }

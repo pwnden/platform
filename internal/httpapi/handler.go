@@ -15,6 +15,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/pwnden/platform/internal/application"
+	"github.com/pwnden/platform/internal/playerweb"
 )
 
 type problemLock struct {
@@ -78,8 +79,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		transportError(w, 400, "invalid_request", "Query parameters and encoded paths are not accepted.")
 		return
 	}
-	if r.URL.Path == "/" || r.URL.Path == "/session.js" {
-		h.bootstrap(w, r)
+	if r.URL.Path == "/" || strings.HasPrefix(r.URL.Path, "/assets/") {
+		h.asset(w, r)
 		return
 	}
 	if len(r.Header.Values("Authorization")) != 1 || subtle.ConstantTimeCompare([]byte(r.Header.Get("Authorization")), []byte("Bearer "+h.token)) != 1 {
@@ -315,18 +316,30 @@ func writeJSON(w http.ResponseWriter, status int, value any) error {
 	return err
 }
 
-func (h *handler) bootstrap(w http.ResponseWriter, r *http.Request) {
-	if !method(w, r, "GET") || !emptyBody(w, r) {
+func (h *handler) asset(w http.ResponseWriter, r *http.Request) {
+	if !method(w, r, "GET", "HEAD") || !emptyBody(w, r) {
 		return
 	}
-	if r.URL.Path == "/session.js" {
-		w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
-		io.WriteString(w, `const token = location.hash.slice(1);
-history.replaceState(null, "", location.pathname);
-window.pwndenSession = Object.freeze({token, apiBase: "/api/v1"});
-`)
+	content, err := playerweb.Read(r.URL.Path)
+	if err != nil {
+		transportError(w, 404, "not_found", "The web asset was not found.")
 		return
 	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	io.WriteString(w, `<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>pwnden</title><script src="/session.js" defer></script><body><h1>pwnden</h1><p>웹 화면을 준비 중입니다.</p></body></html>`)
+	typeName := "text/html; charset=utf-8"
+	if r.URL.Path != "/" {
+		switch {
+		case strings.HasSuffix(r.URL.Path, ".js"):
+			typeName = "text/javascript; charset=utf-8"
+		case strings.HasSuffix(r.URL.Path, ".css"):
+			typeName = "text/css; charset=utf-8"
+		default:
+			typeName = http.DetectContentType(content)
+		}
+	}
+	w.Header().Set("Content-Type", typeName)
+	w.Header().Set("Content-Length", fmt.Sprint(len(content)))
+	w.WriteHeader(http.StatusOK)
+	if r.Method != "HEAD" {
+		w.Write(content)
+	}
 }

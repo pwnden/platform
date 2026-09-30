@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import queue
+import re
 import shutil
 import signal
 import subprocess
@@ -80,6 +81,30 @@ def solve_web(endpoint):
         return json.load(response)["body"]
 
 
+def check_assets(origin, token):
+    client = build_opener(ProxyHandler({}))
+    with client.open(origin + "/", timeout=10) as response:
+        page = response.read().decode()
+        assert response.headers.get("Content-Type") == "text/html; charset=utf-8"
+        assert response.headers.get("Cache-Control") == "no-store"
+        assert "default-src 'self'" in response.headers.get("Content-Security-Policy", "")
+    assert 'id="app"' in page and 'type="module"' in page
+    assert "/session.js" not in page and token not in page
+    assets = re.findall(r'(?:src|href)="(/assets/[^" ]+)"', page)
+    assert len(assets) >= 2
+    for path in assets:
+        with client.open(origin + path, timeout=10) as response:
+            content = response.read().decode()
+            media = "text/javascript" if path.endswith(".js") else "text/css"
+            assert response.headers.get("Content-Type") == media + "; charset=utf-8"
+            assert response.headers.get("Cache-Control") == "no-store"
+            assert response.headers.get("X-Content-Type-Options") == "nosniff"
+        assert content and token not in content
+        if path.endswith(".js"):
+            assert "history.replaceState" in content and "/api/v1" in content
+            assert "localStorage" not in content and "sessionStorage" not in content
+
+
 def interrupted(_signum, _frame):
     raise KeyboardInterrupt
 
@@ -111,6 +136,7 @@ def main():
         # CLI mutations complete before opening the HTTP session.
         file_flag = command(binary, environment, "exec", "rotor-lock", "--", "python3", "solve/solve.py")
         server, origin, token = start(binary, environment)
+        check_assets(origin, token)
         problems = api(origin, token, "GET", "/problems")["problems"]
         assert {p["slug"] for p in problems} == {"note-vault", "rotor-lock"}
         assert api(origin, "incorrect", "GET", "/problems", expected=401)["error"]["code"] == "unauthorized"

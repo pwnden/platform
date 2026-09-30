@@ -33,6 +33,9 @@ jobs:
         with:
           go-version-file: platform/go.mod
           cache-dependency-path: platform/go.sum
+      - name: Build embedded player assets with the pinned frontend toolchain
+        working-directory: platform
+        run: docker build --file Dockerfile.web --target assets --output type=local,dest=internal/playerweb/dist .
       - name: Test platform
         working-directory: platform
         run: |

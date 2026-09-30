@@ -1,6 +1,6 @@
 # Local player HTTP contract
 
-The platform owns the web client and HTTP adapter in the same repository. The initial API contract is [OpenAPI 3.1.2](https://spec.openapis.org/oas/v3.1.2.html), recorded in [openapi.json](openapi.json). JSON DTOs, handlers, server lifecycle, and public error mapping live in `internal/httpapi`. `pwnden serve` opens the managed installation and serves these operations. The Vue player screen and interactive terminal are subsequent implementation stages. See [local server](local-server.md) for startup and verification.
+The platform owns the web client and HTTP adapter in the same repository. The initial API contract is [OpenAPI 3.1.2](https://spec.openapis.org/oas/v3.1.2.html), recorded in [openapi.json](openapi.json). JSON DTOs, handlers, server lifecycle, and public error mapping live in `internal/httpapi`. `pwnden serve` opens the managed installation, serves the embedded Vue player and provides these operations. Interactive terminal access is a subsequent implementation stage. See [local server](local-server.md) for startup and verification.
 
 The API version is independent of the challenges-owned problem contract. Version 1 uses `/api/v1`, snake_case JSON keys and `application/json`. API changes are maintained with the platform. Compatible additions stay in version 1; incompatible request/response semantics require another major API path. Clients tolerate additional response fields and use error codes rather than matching messages.
 
@@ -50,7 +50,7 @@ Application error mapping follows typed errors, including cleanup precedence ove
 
 ## Local server ownership and access
 
-The server binds to `127.0.0.1`, chooses an available port, and prints its actual URL with a random process-scoped token in the URL fragment. Fragments are absent from HTTP requests. The bootstrap script removes the fragment from the current history entry and passes it to the same-origin client in memory; API calls use the bearer header. Host, Origin, and browser fetch-site checks confine requests to the printed local origin; the server enables no cross-origin access. Authentication also applies to reads. Responses use `Cache-Control: no-store`, and request bodies/tokens are excluded from diagnostics.
+The server binds to `127.0.0.1`, chooses an available port, and prints its actual URL with a random process-scoped token in the URL fragment. Fragments are absent from HTTP requests. The Vue entry point removes the fragment from the current history entry before rendering and injects it into the same-origin client in memory; API calls use the bearer header. Host, Origin, and browser fetch-site checks confine requests to the printed local origin; the server enables no cross-origin access. API authentication also applies to reads. Embedded HTML and static assets are available without a bearer header under the same origin checks. Responses use `Cache-Control: no-store`, and request bodies/tokens are excluded from diagnostics.
 
 The HTTP adapter opens the managed installation itself. Requests select problem slugs; they cannot select a repository, host mount, image or Docker options. The backend capability set is `httpapi.Backend`, implemented by the existing application service. Handlers call it directly.
 

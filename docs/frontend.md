@@ -92,11 +92,24 @@ an incorrect answer is an ordinary rejected submission. Requests do not follow
 redirects or persist credentials. The app removes the initial token fragment
 before rendering and provides recovery text for missing sessions.
 
-Go still serves the placeholder page. Serving these assets from Go and including
-them in clone/setup packaging is the next integration step. The app's entry
-point consumes the fragment itself; that integration must coordinate it with
-Go's existing `/session.js` initializer so the token is consumed once. A
-separate Vite server does not provide authenticated access to Go's API: the
-server allows its own local origin. Browser execution against Go, container
-terminal access, file downloads and persisted player status remain subsequent
-verification and implementation stages.
+Go embeds the built HTML and assets through `internal/playerweb`. `/` serves the
+Vue app and `/assets/` serves exact embedded files without directory listings,
+redirects or route fallbacks. Host/origin checks and security headers apply to
+these requests. The Vue entry point owns fragment initialization. Reloading
+after fragment removal requires reopening the server's printed full URL.
+
+`./setup` builds the pinned Node frontend stage inside Docker, copies its
+generated assets into the Go stage, and packages the executable and official
+catalog. The executable needs neither Node nor a separate asset directory.
+Source Go builds and tests must first prepare the ignored embed directory:
+
+```sh
+docker build --file Dockerfile.web --target assets --output type=local,dest=internal/playerweb/dist .
+go test ./...
+```
+
+The embed directives make a missing frontend build a compile error. The
+bootstrap context excludes host `node_modules` and generated frontend directories.
+A separate Vite server does not provide authenticated access to Go's API: the
+server allows its own local origin. Container terminal access, file downloads
+and persisted player status remain subsequent implementation stages.

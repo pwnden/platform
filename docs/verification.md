@@ -3,10 +3,11 @@
 The platform verifies the problems it consumes. With `platform` and `challenges` checked out as siblings, run this command from the platform repository:
 
 ```sh
+docker build --file Dockerfile.web --target assets --output type=local,dest=internal/playerweb/dist .
 python3 tools/verify.py --challenges ../challenges
 ```
 
-The host needs Python 3.11 or newer, the Go version declared in `go.mod`, Docker with Linux containers, and the Compose plugin. The verifier builds this checkout's CLI once, discovers the supplied problem manifests, and runs `validate`, `run`, `verify`, and `stop` for each one.
+The host needs Python 3.11 or newer, the Go version declared in `go.mod`, Docker with Linux containers, and the Compose plugin. The first command builds embedded frontend assets with pinned tools inside Docker. The verifier builds this checkout's CLI once, discovers the supplied problem manifests, and runs `validate`, `run`, `verify`, and `stop` for each one.
 
 The CLI implements [problem contract version 1](https://github.com/pwnden/challenges/blob/main/docs/contract.md), checks each problem's version, and reads execution defaults and the attack rejection exit code from the challenges checkout's `contract.toml`. Problem format validation belongs to the challenges repository. The CLI checks real paths and Docker resource policy before execution, verifies flags and patch behavior, and cleans up its projects.
 
@@ -14,10 +15,10 @@ Start with the problems stopped before running the complete check. After a succe
 
 ## GitHub Actions
 
-`.github/workflows/verify.yml` checks out the platform revision under test and `pwnden/challenges` at `main`, runs Go tests and vet, and runs the same execution verifier. It uses read-only repository permissions and checkouts without persisted credentials. Action versions are pinned to exact commits.
+`.github/workflows/verify.yml` checks out the platform revision under test and `pwnden/challenges` at `main`, builds embedded player assets in Docker, runs Go tests and vet, and runs the same execution verifier. It uses read-only repository permissions and checkouts without persisted credentials. Action versions are pinned to exact commits.
 
 The workflow runs on pushes to the platform's `main`, pull requests, manual dispatches, and daily at 18:00 UTC (03:00 Korea time). The daily run checks changes to the consumed problem repository. Publish both repositories' implementations before confirming GitHub-hosted execution. The platform workflow uses its own checked-out code for the runner.
 
 After problem verification, the workflow builds a native Linux platform package and runs `tools/smoke_package.py`. That check uses the package with only Docker on its child PATH, exercising managed setup and player commands without Go, Git, or a separately supplied problem path. See [distribution](distribution.md) for local package checks.
 
-`tools/smoke_http.py` also exercises the packaged local server with only Docker on its child PATH: authenticated catalog, both problem kinds, web problem solving, incorrect and correct submissions, preserved state and rotated credentials after server restart, and repeatable stop. See [local server](local-server.md) for the local command and unit/concurrency coverage.
+`tools/smoke_http.py` also exercises the packaged local server with only Docker on its child PATH: embedded HTML/script/style delivery, authenticated catalog, both problem kinds, web problem solving, incorrect and correct submissions, preserved state and rotated credentials after server restart, and repeatable stop. This driver checks HTTP behavior; browser interaction is a separate check. See [local server](local-server.md) for the local command and unit/concurrency coverage.
