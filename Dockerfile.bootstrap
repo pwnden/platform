@@ -1,0 +1,24 @@
+FROM --platform=$BUILDPLATFORM node:24.21.0-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6 AS web
+WORKDIR /web
+RUN npm install --global --no-audit --no-fund pnpm@12.8.1
+COPY web/ ./
+RUN pnpm install --frozen-lockfile
+RUN pnpm verify
+
+FROM --platform=$BUILDPLATFORM golang:1.27.1-bookworm@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195 AS source
+ENV GOTOOLCHAIN=local
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY cmd/ cmd/
+COPY internal/ internal/
+COPY --from=web /web/dist/player/ internal/playerweb/dist/
+COPY tools/package/ tools/package/
+COPY catalog.lock ./
+
+FROM source AS build
+ARG PWNDEN_TARGET
+RUN go run ./tools/package --official --unpacked --out /output --target "$PWNDEN_TARGET"
+
+FROM scratch AS export
+COPY --from=build /output/ /

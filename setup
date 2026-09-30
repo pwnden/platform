@@ -1,0 +1,77 @@
+#!/bin/sh
+set -eu
+
+if [ "$#" -ne 0 ]; then
+    printf 'usage: ./setup\n' >&2
+    exit 1
+fi
+root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+case $(uname -s) in
+    Linux) target_os=linux ;;
+    Darwin) target_os=darwin ;;
+    *) printf 'Use a supported POSIX host; native Windows setup is a later stage.\n' >&2; exit 1 ;;
+esac
+case $(uname -m) in
+    x86_64|amd64) target_arch=amd64 ;;
+    aarch64|arm64) target_arch=arm64 ;;
+    *) printf 'Unsupported host architecture.\n' >&2; exit 1 ;;
+esac
+if ! command -v docker >/dev/null 2>&1; then
+    printf 'Install Docker with Compose and Buildx before running setup.\n' >&2
+    exit 1
+fi
+if [ "$(docker info --format '{{.OSType}}')" != linux ]; then
+    printf 'Docker must be running Linux containers.\n' >&2
+    exit 1
+fi
+docker compose version --short >/dev/null
+docker buildx version >/dev/null
+
+if [ -L "$root/dist" ] || [ -L "$root/dist/active" ]; then
+    printf 'Generated build paths must stay inside this checkout.\n' >&2
+    exit 1
+fi
+mkdir -p "$root/dist"
+build_dir=$(mktemp -d "$root/dist/build.XXXXXX")
+complete=0
+child=
+cleanup() {
+    if [ "$complete" -eq 0 ]; then
+        if [ -f "$root/dist/active" ] && IFS= read -r active < "$root/dist/active" && \
+            [ "$active" = "${build_dir##*/}" ]; then
+            return
+        fi
+        rm -rf -- "$build_dir"
+    fi
+}
+interrupt() {
+    if [ -n "$child" ]; then
+        kill -TERM "$child" 2>/dev/null || :
+        wait "$child" 2>/dev/null || :
+    fi
+    exit "$1"
+}
+run_child() {
+    "$@" &
+    child=$!
+    if wait "$child"; then
+        child=
+    else
+        status=$?
+        child=
+        return "$status"
+    fi
+}
+trap cleanup 0
+trap 'interrupt 130' INT
+trap 'interrupt 143' TERM
+
+printf 'Building platform and acquiring official problems...\n'
+run_child docker buildx build --file "$root/Dockerfile.bootstrap" \
+    --build-arg "PWNDEN_TARGET=$target_os/$target_arch" \
+    --output "$build_dir/payload" "$root"
+run_child "$build_dir/payload/pwnden" setup
+printf '%s\n' "${build_dir##*/}" > "$build_dir/active"
+mv -f -- "$build_dir/active" "$root/dist/active"
+complete=1
+printf 'Setup complete. Use ./pwnden serve and open the printed URL.\n'

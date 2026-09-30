@@ -25,7 +25,7 @@ def execute(binary, environment, args, *, expected=0, cleanup=False):
     global active_child, cleaning
     if interrupted and not cleanup:
         raise InterruptedError("package smoke check interrupted")
-    print("+ pwnden " + " ".join(args), flush=True)
+    print("+ " + binary.name + " " + " ".join(args), flush=True)
     cleaning = cleanup
     try:
         active_child = subprocess.Popen(
@@ -67,29 +67,46 @@ def extract_package(package, directory):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--package", required=True, type=Path)
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--package", type=Path)
+    source.add_argument("--checkout", type=Path)
     args = parser.parse_args()
-    package = args.package.resolve()
+    checkout = args.checkout.resolve() if args.checkout else None
+    package = args.package.resolve() if args.package else None
     docker = shutil.which("docker")
     if docker is None:
         parser.error("Docker is required")
     signal.signal(signal.SIGINT, handle_signal)
     signal.signal(signal.SIGTERM, handle_signal)
-    work = Path(tempfile.mkdtemp(prefix=".smoke-", dir=package.parent))
+    parent = checkout / "dist" if checkout else package.parent
+    parent.mkdir(exist_ok=True)
+    work = Path(tempfile.mkdtemp(prefix=".smoke-", dir=parent))
     started = False
     preserve = False
     try:
-        binary = extract_package(package, work)
+        binary = checkout / "pwnden" if checkout else extract_package(package, work)
         tool_path = work / "path"
         tool_path.mkdir()
         (tool_path / "docker").symlink_to(Path(docker).resolve())
+        if checkout:
+            for name in ("sh", "dirname", "uname", "mkdir", "mktemp", "rm", "mv"):
+                executable = shutil.which(name)
+                if executable is None:
+                    parser.error(f"checkout setup requires {name}")
+                (tool_path / name).symlink_to(executable)
         environment = dict(os.environ, PATH=str(tool_path),
                            XDG_CONFIG_HOME=str(work / "config"),
                            XDG_CACHE_HOME=str(work / "cache"))
         assert shutil.which("go", path=environment["PATH"]) is None
         assert shutil.which("git", path=environment["PATH"]) is None
-        execute(binary, environment, ["setup"])
-        execute(binary, environment, ["setup"])
+        for name in ("node", "pnpm", "python3"):
+            assert shutil.which(name, path=environment["PATH"]) is None
+        if checkout:
+            execute(checkout / "setup", environment, [])
+            execute(checkout / "setup", environment, [])
+        else:
+            execute(binary, environment, ["setup"])
+            execute(binary, environment, ["setup"])
         listing = execute(binary, environment, ["list"])
         assert "note-vault" in listing and "rotor-lock" in listing
         execute(binary, environment, ["exec", "rotor-lock", "--", "python3", "files/checker.py", "wrong"], expected=1)

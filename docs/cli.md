@@ -1,6 +1,6 @@
 # Command interface
 
-The CLI consumes the [platform application interface](application-interface.md). The packaged executable selects commands and formats results. End users run `pwnden setup` once, then choose problems by name. [Distribution](distribution.md) describes the package and managed installation.
+The CLI consumes the [platform application interface](application-interface.md). A cloned platform starts with `./setup`, which builds inside Docker and prepares its managed problems. The tracked `./pwnden` launcher forwards to the generated executable. Native packages invoke `pwnden setup` directly. [Distribution](distribution.md) describes both entry points. `serve` provides the local Go server, embedded Vue player and implemented [HTTP API](web-api.md).
 
 ```text
 pwnden [--repo PATH] <command> [command arguments]
@@ -36,4 +36,4 @@ Add a handler and its registration to `DefaultCommands`. The handler defines its
 
 New platform functions define their own capability interfaces and result types when needed. Existing command signatures remain intact. A command invokes the application service in process; an HTTP adapter can consume the same service directly. These are compiled command registrations.
 
-Source development can use `go run ./cmd/pwnden --repo PATH <command>` with the Go version declared in `go.mod`. End-user packages contain their own executable and bundled content identity.
+Source development first prepares the embedded frontend as described in [frontend](frontend.md), then uses `go run ./cmd/pwnden --repo PATH <command>` with the Go version declared in `go.mod`. End-user packages contain their own executable, embedded frontend and bundled content identity.

@@ -46,6 +46,9 @@ jobs:
           docker version
           docker compose version
           python3 --version
+      - name: Test checkout bootstrap boundaries
+        working-directory: platform
+        run: python3 -B tools/test_bootstrap.py
       - name: Verify every challenge
         run: python3 platform/tools/verify.py --challenges challenges
       - name: Build native Linux package
@@ -57,3 +60,6 @@ jobs:
       - name: Verify local player HTTP server without host SDKs
         working-directory: platform
         run: python3 -B tools/smoke_http.py --package dist/pwnden-linux-amd64.tar.gz
+      - name: Verify clone setup without host development tools
+        working-directory: platform
+        run: python3 -B tools/smoke_package.py --checkout .

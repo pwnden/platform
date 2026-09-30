@@ -1,0 +1,23 @@
+#!/bin/sh
+set -eu
+
+root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+if [ -L "$root/dist" ] || [ ! -f "$root/dist/active" ]; then
+    printf 'Run ./setup first.\n' >&2
+    exit 1
+fi
+IFS= read -r build < "$root/dist/active"
+case "$build" in
+    ''|*[!a-zA-Z0-9.]*) printf 'Invalid generated build reference; run ./setup.\n' >&2; exit 1 ;;
+esac
+case "$build" in
+    build.?*) ;;
+    *) printf 'Invalid generated build reference; run ./setup.\n' >&2; exit 1 ;;
+esac
+directory="$root/dist/$build"
+if [ -L "$directory" ] || [ -L "$directory/payload" ] || \
+    [ -L "$directory/payload/pwnden" ] || [ ! -x "$directory/payload/pwnden" ]; then
+    printf 'Generated executable is unavailable; run ./setup.\n' >&2
+    exit 1
+fi
+exec "$directory/payload/pwnden" "$@"

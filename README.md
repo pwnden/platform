@@ -4,21 +4,23 @@ Local wargames with prepared problem environments and flag checks.
 
 ## Get started
 
-Download and unpack the platform package for your system. Keep its files together. Docker with Linux containers and Compose must be installed and running.
-
-From the unpacked folder:
+Install Git and Docker with Linux containers, Compose, and Buildx, then:
 
 ```sh
-./pwnden setup
-./pwnden list
-./pwnden run note-vault
+git clone https://github.com/pwnden/platform.git
+cd platform
+./setup
+./pwnden serve
 ```
 
-Setup prepares the included problems and their execution tools. Host Go, Git, Python, and a separate problem checkout are unnecessary. The platform manages problem files and paths.
+Setup builds the Vue frontend and Go platform inside Docker, acquires the pinned official problems, and prepares their execution tools. Host Go, Node, pnpm, Python, and a separate problem checkout are unnecessary. The checked-in `pwnden` file is a launcher; generated executables stay under ignored `dist/` paths.
 
-Open the URL printed by `run`. Note Vault is an introductory web problem: log in as `guest` / `guest` and find the administrator's recovery key, formatted as `pwnden{...}`.
+The pinned problem commit in `catalog.lock` must be published in the official problem repository before a fresh clone can complete setup. Missing commits fail explicitly. Open the full URL printed by `serve` to use the [local Vue player](docs/local-server.md): choose a problem, run or stop it and submit a flag. Go serves the embedded frontend and [web API](docs/web-api.md) from the same local origin.
+
+Note Vault is an introductory web problem: run it in the player, open its published HTTP endpoint, log in as `guest` / `guest` and find the administrator's recovery key, formatted as `pwnden{...}`. You can also use the CLI:
 
 ```sh
+./pwnden run note-vault
 ./pwnden submit note-vault 'pwnden{your_answer}'
 ./pwnden stop note-vault
 ```
@@ -37,13 +39,18 @@ Rotor Lock is an introductory reversing problem. Analyze its input checker and f
 
 File problem tools need no service startup. Their problem directory is read-only by default, and their toolbox has no network access. `exec` preserves command arguments and returns the command's exit status. It runs completed commands; an interactive terminal is a later feature.
 
-`./pwnden --help` lists commands. Windows packages use `pwnden.exe`. The current verified package runs on Linux; Windows and macOS actual host checks are a later stage.
+`./pwnden --help` lists commands. Linux/WSL is the current execution target for checkout verification. Windows and macOS actual host checks are a later stage.
+
+## Built packages
+
+Maintainers can also build a platform package containing the native executable and its problem catalog. From an unpacked package, run `./pwnden setup` and then the same player commands. Keep the package files together. Windows packages use `pwnden.exe`. See [distribution](docs/distribution.md) for build and verification commands.
 
 ## Development
 
-Development commands require Go 1.27.1, Docker with Compose, and a local problem checkout.
+Development commands require Go 1.27.1, Docker with Compose and Buildx, and a local problem checkout.
 
 ```sh
+docker build --file Dockerfile.web --target assets --output type=local,dest=internal/playerweb/dist .
 go run ./cmd/pwnden --repo ../challenges validate <slug>
 go run ./cmd/pwnden --repo ../challenges run <slug>
 go run ./cmd/pwnden --repo ../challenges verify <slug>

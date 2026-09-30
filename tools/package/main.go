@@ -5,6 +5,7 @@ import (
 	"archive/tar"
 	"archive/zip"
 	"compress/gzip"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -17,6 +18,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 )
 
 func main() {
@@ -31,6 +33,8 @@ func run(args []string) error {
 	repo := flags.String("challenges", "../challenges", "problem checkout to package")
 	output := flags.String("out", "dist", "directory for release packages")
 	target := flags.String("target", runtime.GOOS+"/"+runtime.GOARCH, "target GOOS/GOARCH")
+	official := flags.Bool("official", false, "fetch the official problem revision from catalog.lock")
+	unpacked := flags.Bool("unpacked", false, "write the executable and catalog directly to the output directory")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -41,6 +45,13 @@ func run(args []string) error {
 	if flags.NArg() != 0 {
 		return errors.New("unexpected positional arguments")
 	}
+	if *official {
+		conflict := false
+		flags.Visit(func(f *flag.Flag) { conflict = conflict || f.Name == "challenges" })
+		if conflict {
+			return errors.New("--official selects catalog.lock and cannot be combined with --challenges")
+		}
+	}
 	if err := os.MkdirAll(*output, 0755); err != nil {
 		return err
 	}
@@ -49,7 +60,18 @@ func run(args []string) error {
 		return err
 	}
 	defer os.RemoveAll(stage)
-	revision, err := exec.Command("git", "-C", *repo, "rev-parse", "--verify", "HEAD^{commit}").Output()
+	problemRepo := *repo
+	if *official {
+		data, err := os.ReadFile("catalog.lock")
+		if err != nil {
+			return fmt.Errorf("read official problem revision: %w", err)
+		}
+		problemRepo, err = fetchOfficial(stage, "https://github.com/pwnden/challenges.git", strings.TrimSpace(string(data)))
+		if err != nil {
+			return err
+		}
+	}
+	revision, err := exec.Command("git", "-C", problemRepo, "rev-parse", "--verify", "HEAD^{commit}").Output()
 	if err != nil {
 		return fmt.Errorf("read problem revision: %w", err)
 	}
@@ -61,7 +83,7 @@ func run(args []string) error {
 		return err
 	}
 	archive := filepath.Join(stage, "catalog.tar.gz")
-	if err := snapshot(*repo, commit, archive); err != nil {
+	if err := snapshot(problemRepo, commit, archive); err != nil {
 		return err
 	}
 	digest, err := checksum(archive)
@@ -89,6 +111,15 @@ func run(args []string) error {
 	}
 	if err := os.WriteFile(filepath.Join(stage, "distribution.json"), append(metadata, '\n'), 0644); err != nil {
 		return err
+	}
+	if *unpacked {
+		for _, name := range []string{binary, "catalog.tar.gz", "distribution.json"} {
+			if err := os.Rename(filepath.Join(stage, name), filepath.Join(*output, name)); err != nil {
+				return err
+			}
+		}
+		fmt.Printf("%s (problem revision %s)\n", *output, commit)
+		return nil
 	}
 	name := "pwnden-" + parts[0] + "-" + parts[1]
 	suffix := ".tar.gz"
@@ -119,6 +150,27 @@ func targetEnvironment(goos, goarch string) []string {
 		}
 	}
 	return append(env, "GOOS="+goos, "GOARCH="+goarch, "CGO_ENABLED=0")
+}
+
+// fetchOfficial exports only the pinned commit. No problem code is executed.
+func fetchOfficial(stage, origin, revision string) (string, error) {
+	if _, err := hex.DecodeString(revision); err != nil || len(revision) != 40 {
+		return "", errors.New("catalog.lock must contain a full problem commit hash")
+	}
+	repo := filepath.Join(stage, "official.git")
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	for _, args := range [][]string{
+		{"init", "--quiet", "--bare", repo},
+		{"-C", repo, "fetch", "--quiet", "--depth=1", "--no-tags", "--", origin, revision},
+		{"-C", repo, "update-ref", "HEAD", revision},
+	} {
+		cmd := exec.CommandContext(ctx, "git", args...)
+		if diagnostic, err := cmd.CombinedOutput(); err != nil {
+			return "", fmt.Errorf("acquire official problems at %s; the pinned commit must be published: %w: %s", revision, err, diagnostic)
+		}
+	}
+	return repo, nil
 }
 
 func snapshot(repo, revision, output string) error {

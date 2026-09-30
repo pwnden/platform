@@ -119,7 +119,7 @@ func (m *Manager) Stage(ctx context.Context) (_ *Pending, err error) {
 	r := receipt{Revision: m.Distribution.Revision, SHA256: m.Distribution.SHA256}
 	dir, err := m.directory(r)
 	if err != nil {
-		return nil, errors.New("this build has no valid bundled distribution; use a platform release package")
+		return nil, errors.New("this build has no valid problem distribution; run the checkout's ./setup or use a built platform package")
 	}
 	if installed, readErr := readReceipt(filepath.Join(dir, "receipt.json")); readErr == nil && installed == r {
 		root, err := m.root(dir)
@@ -130,7 +130,7 @@ func (m *Manager) Stage(ctx context.Context) (_ *Pending, err error) {
 	}
 	archive, err := os.Open(m.Distribution.Archive)
 	if err != nil {
-		return nil, fmt.Errorf("open bundled problems; keep the release package files together: %w", err)
+		return nil, fmt.Errorf("open bundled problems; keep the built executable and catalog together: %w", err)
 	}
 	defer archive.Close()
 	hash := sha256.New()
