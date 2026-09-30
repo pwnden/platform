@@ -23,6 +23,8 @@ const (
 	CleanupFailed        Code = "cleanup_failed"
 	Canceled             Code = "canceled"
 	DeadlineExceeded     Code = "deadline_exceeded"
+	SetupRequired        Code = "setup_required"
+	SetupFailed          Code = "setup_failed"
 )
 
 func loadError(ctx context.Context, operation, slug string, cause error) error {

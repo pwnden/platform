@@ -449,10 +449,8 @@ func (e *ToolExitError) Error() string { return fmt.Sprintf("toolbox exited %d: 
 
 func RunTool(ctx context.Context, c *challenge.Loaded, project, image string, args []string) (string, error) {
 	// A cold image download uses the caller's deadline, not the solution's runtime limit.
-	if _, _, err := command(ctx, c.Dir, nil, "docker", "image", "inspect", "--format", "{{.Id}}", "--", image); err != nil {
-		if _, stderr, err := command(ctx, c.Dir, nil, "docker", "pull", "--", image); err != nil {
-			return "", fmt.Errorf("prepare toolbox image: %w: %s", err, stderr)
-		}
+	if err := prepareToolImage(ctx, c, image); err != nil {
+		return "", err
 	}
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(c.Solve.TimeoutSeconds)*time.Second)
 	defer cancel()

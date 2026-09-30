@@ -11,6 +11,7 @@ import (
 
 func DefaultCommands() []Command {
 	return []Command{
+		{Name: "setup", Summary: "prepare the bundled problems and execution environment", Run: setup},
 		{Name: "validate", Summary: "check compatibility and execution policy", Run: validate},
 		{Name: "run", Summary: "start a problem and show its endpoints", Run: run},
 		{Name: "verify", Summary: "check the automatic solution and optional patch", Run: verify},
@@ -22,7 +23,7 @@ func challengeInputs(name string, invocation Invocation) (string, *application.S
 	flags := flag.NewFlagSet(name, flag.ContinueOnError)
 	flags.SetOutput(invocation.Stderr)
 	flags.Usage = func() {
-		fmt.Fprintf(invocation.Stderr, "usage: pwnden --repo PATH %s <slug>\n", name)
+		fmt.Fprintf(invocation.Stderr, "usage: pwnden [--repo PATH] %s <slug>\n", name)
 		flags.PrintDefaults()
 	}
 	if err := flags.Parse(invocation.Args); err != nil {
@@ -32,8 +33,41 @@ func challengeInputs(name string, invocation Invocation) (string, *application.S
 		flags.Usage()
 		return "", nil, fmt.Errorf("%s requires exactly one problem slug", name)
 	}
-	service, err := application.New(invocation.Repo)
+	service, err := problemService(invocation.Repo)
 	return flags.Arg(0), service, err
+}
+
+func problemService(repo string) (*application.Service, error) {
+	if repo == "" {
+		return application.Open()
+	}
+	return application.New(repo)
+}
+
+func setup(ctx context.Context, invocation Invocation) error {
+	flags := flag.NewFlagSet("setup", flag.ContinueOnError)
+	flags.SetOutput(invocation.Stderr)
+	flags.Usage = func() { fmt.Fprintln(invocation.Stderr, "usage: pwnden setup") }
+	if err := flags.Parse(invocation.Args); err != nil {
+		return err
+	}
+	if flags.NArg() != 0 || invocation.Repo != "" {
+		flags.Usage()
+		return errors.New("setup uses the bundled distribution and accepts no repository or positional arguments")
+	}
+	service, err := application.NewSetup()
+	if err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintln(invocation.Stdout, "Preparing problems and execution environment..."); err != nil {
+		return err
+	}
+	result, err := service.Setup(ctx)
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(invocation.Stdout, "Ready: %d problems. Start with pwnden run <problem>.\n", result.ProblemCount)
+	return err
 }
 
 func validate(ctx context.Context, invocation Invocation) error {

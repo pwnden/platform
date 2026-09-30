@@ -58,6 +58,8 @@ func TestAdditionalCommandOwnsArgumentsAndOptions(t *testing.T) {
 }
 
 func TestHelpAndDispatchErrors(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("APPDATA", t.TempDir())
 	r, err := New(DefaultCommands()...)
 	if err != nil {
 		t.Fatal(err)
@@ -69,13 +71,15 @@ func TestHelpAndDispatchErrors(t *testing.T) {
 	}{
 		{[]string{"--help"}, true, "Commands:"},
 		{[]string{"validate", "--help"}, true, "validate <slug>"},
+		{[]string{"setup", "--help"}, true, "pwnden setup"},
+		{[]string{"setup", "extra"}, false, "accepts no repository or positional arguments"},
 		{nil, false, "a command is required"},
 		{[]string{"unknown", "missing"}, false, "unknown command"},
 		{[]string{"validate"}, false, "exactly one problem slug"},
 		{[]string{"validate", "first", "second"}, false, "exactly one problem slug"},
 		{[]string{"--unknown"}, false, "flag provided but not defined"},
 		{[]string{"validate", "--unknown", "slug"}, false, "flag provided but not defined"},
-		{[]string{"validate", "slug"}, false, "repository path is required"},
+		{[]string{"validate", "slug"}, false, "run pwnden setup first"},
 	} {
 		t.Run(strings.Join(test.args, "/"), func(t *testing.T) {
 			var out, stderr bytes.Buffer

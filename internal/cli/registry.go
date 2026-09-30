@@ -48,7 +48,7 @@ func New(commands ...Command) (*Registry, error) {
 func (r *Registry) Execute(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	flags := flag.NewFlagSet("pwnden", flag.ContinueOnError)
 	flags.SetOutput(stderr)
-	repo := flags.String("repo", "", "path to challenges repository")
+	repo := flags.String("repo", "", "developer override for the problem distribution")
 	flags.Usage = func() {
 		fmt.Fprintln(stderr, "usage: pwnden [--repo PATH] <command> [arguments]")
 		fmt.Fprintln(stderr, "\nCommands:")
