@@ -40,9 +40,21 @@
       "get": {
         "operationId": "getProblem",
         "summary": "Read problem metadata, description text and downloadable files",
-        "description": "Optional README.md is UTF-8 text up to 1 MiB; missing descriptions are empty. Only declared distribution files and regular descendants of declared directories are listed. File IDs are opaque and stable for repository-relative paths.",
+        "description": "Contract 2 declares the player brief, ordered hints and walkthrough. The detail payload includes the brief plus hint_count and walkthrough availability, without spoiler bodies. Contract 1 retains optional README.md with no guidance. Content is UTF-8 up to 1 MiB. Only declared distribution files are listed; IDs are opaque stable path identifiers.",
         "responses": {
           "200": {"description": "Problem details", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ProblemDetail"}}}},
+          "default": {"$ref": "#/components/responses/Failure"}
+        }
+      }
+    },
+    "/problems/{slug}/guidance/{id}": {
+      "parameters": [{"$ref": "#/components/parameters/Slug"}, {"name": "id", "in": "path", "required": true, "schema": {"type": "string", "pattern": "^(walkthrough|hint-([1-9]|10))$"}}],
+      "get": {
+        "operationId": "getProblemGuidance",
+        "summary": "Read one explicitly requested hint or walkthrough",
+        "description": "Bearer-authenticated request with no body. Only declared guidance is available; absent entries return 404. Arbitrary paths are unsupported. The brief does not load this content. Walkthroughs intentionally contain answers.",
+        "responses": {
+          "200": {"description": "Declared guidance Markdown", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Guidance"}}}},
           "default": {"$ref": "#/components/responses/Failure"}
         }
       }
@@ -154,12 +166,17 @@
       },
       "ProblemDetail": {
         "type": "object", "additionalProperties": false,
-        "required": ["slug", "title", "category", "kind", "description", "files"],
+        "required": ["slug", "title", "category", "kind", "description", "files", "hint_count", "walkthrough"],
         "properties": {
           "slug": {"$ref": "#/components/schemas/Slug"}, "title": {"type": "string", "minLength": 1}, "category": {"type": "string"},
           "kind": {"$ref": "#/components/schemas/Kind"}, "description": {"type": "string"},
-          "files": {"type": "array", "items": {"$ref": "#/components/schemas/ProblemFile"}}
+          "files": {"type": "array", "items": {"$ref": "#/components/schemas/ProblemFile"}},
+          "hint_count": {"type": "integer", "minimum": 0, "maximum": 10}, "walkthrough": {"type": "boolean"}
         }
+      },
+      "Guidance": {
+        "type": "object", "additionalProperties": false, "required": ["id", "content"],
+        "properties": {"id": {"type": "string", "pattern": "^(walkthrough|hint-([1-9]|10))$"}, "content": {"type": "string"}}
       },
       "Status": {
         "type": "object", "additionalProperties": false, "required": ["slug", "kind", "state", "endpoints"],

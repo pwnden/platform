@@ -13,7 +13,10 @@ import (
 
 var slugPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 
-const SupportedContractVersion = 1
+const SupportedContractVersion = 2
+
+// Version 1 installations remain readable during the catalog rollout.
+func supportedVersion(version int) bool { return version == 1 || version == SupportedContractVersion }
 
 var ErrInvalidSlug = errors.New("invalid challenge slug")
 
@@ -25,9 +28,9 @@ type VersionError struct {
 
 func (e *VersionError) Error() string {
 	if e.Repository != 0 {
-		return fmt.Sprintf("unsupported challenge contract version %d; repository uses %d and platform supports %d", e.Version, e.Repository, SupportedContractVersion)
+		return fmt.Sprintf("unsupported challenge contract version %d; repository uses %d and platform supports 1 and %d", e.Version, e.Repository, SupportedContractVersion)
 	}
-	return fmt.Sprintf("unsupported repository contract version %d; platform supports %d", e.Version, SupportedContractVersion)
+	return fmt.Sprintf("unsupported repository contract version %d; platform supports 1 and %d", e.Version, SupportedContractVersion)
 }
 
 // Contract contains the machine-readable values of the owner-published contract.
@@ -49,6 +52,13 @@ type Challenge struct {
 	Flag      Flag       `toml:"flag"`
 	Solve     Solve      `toml:"solve"`
 	Patched   *Patched   `toml:"patched"`
+	Content   Content    `toml:"content"`
+}
+
+type Content struct {
+	Description string   `toml:"description"`
+	Hints       []string `toml:"hints"`
+	Walkthrough string   `toml:"walkthrough"`
 }
 
 type Endpoint struct {
@@ -182,7 +192,7 @@ func loadContract(root string) (Contract, error) {
 	if err := toml.Unmarshal(data, &header); err != nil {
 		return definition, fmt.Errorf("contract.toml: %w", err)
 	}
-	if header.Version != SupportedContractVersion {
+	if !supportedVersion(header.Version) {
 		return definition, &VersionError{Version: header.Version}
 	}
 	if err := toml.Unmarshal(data, &definition); err != nil {

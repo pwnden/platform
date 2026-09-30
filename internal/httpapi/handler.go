@@ -133,6 +133,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		action = parts[1]
 	case len(parts) == 3 && parts[1] == "files" && fileID.MatchString(parts[2]):
 		action = "download"
+	case len(parts) == 3 && parts[1] == "guidance" && guidanceID.MatchString(parts[2]):
+		action = "guidance"
 	}
 	if !strings.HasPrefix(r.URL.Path, BasePath+"/problems/") || action == "" {
 		transportError(w, 404, "not_found", "The API route was not found.")
@@ -143,11 +145,18 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		transportError(w, 400, "invalid_argument", "The problem slug is invalid.")
 		return
 	}
-	if action == "detail" || action == "download" {
+	if action == "detail" || action == "download" || action == "guidance" {
 		if !method(w, r, "GET") || !emptyBody(w, r) {
 			return
 		}
-		if action == "detail" {
+		if action == "guidance" {
+			result, err := h.backend.Guidance(ctx, slug, parts[2])
+			if err != nil {
+				applicationError(w, err)
+				return
+			}
+			writeJSON(w, 200, Guidance{ID: parts[2], Content: result})
+		} else if action == "detail" {
 			result, err := h.backend.Detail(ctx, slug)
 			if err != nil {
 				applicationError(w, err)
@@ -256,6 +265,7 @@ func (h *handler) stopUndelivered(ctx context.Context, slug string) error {
 
 var apiSlug = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 var fileID = regexp.MustCompile(`^[a-f0-9]{64}$`)
+var guidanceID = regexp.MustCompile(`^(walkthrough|hint-([1-9]|10))$`)
 
 func contextError(err error) error {
 	code := application.Canceled

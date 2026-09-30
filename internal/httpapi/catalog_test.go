@@ -23,6 +23,12 @@ func TestDetailDownloadAndStatus(t *testing.T) {
 	id := strings.Repeat("a", 64)
 	stream := &downloaded{Reader: strings.NewReader("file content")}
 	b := fakeBackend{
+		guidance: func(_ context.Context, slug, id string) (string, error) {
+			if slug != "example" || id != "hint-1" {
+				t.Fatal(slug, id)
+			}
+			return "Read the supplied material.", nil
+		},
 		detail: func(_ context.Context, slug string) (application.ProblemDetail, error) {
 			return application.ProblemDetail{Problem: application.Problem{Slug: slug, Title: "Example", Kind: application.KindFile}, Description: "<script>example</script>", Files: []application.ProblemFile{{ID: id, Name: "files/파일.txt", Size: 12}}}, nil
 		},
@@ -37,7 +43,7 @@ func TestDetailDownloadAndStatus(t *testing.T) {
 		},
 	}
 	h := newHandler(context.Background(), b, testHost, testToken, io.Discard)
-	for _, path := range []string{"/example", "/example/status", "/example/files/" + id} {
+	for _, path := range []string{"/example", "/example/status", "/example/files/" + id, "/example/guidance/hint-1"} {
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, request("GET", BasePath+"/problems"+path, ""))
 		if w.Code != 200 || w.Header().Get("Cache-Control") != "no-store" || strings.Contains(w.Body.String(), "database") {
@@ -50,7 +56,7 @@ func TestDetailDownloadAndStatus(t *testing.T) {
 			}
 		}
 	}
-	for _, path := range []string{"/example", "/example/status", "/example/files/" + id} {
+	for _, path := range []string{"/example", "/example/status", "/example/files/" + id, "/example/guidance/hint-1"} {
 		for _, test := range []struct {
 			method, content, token string
 			status                 int
@@ -66,7 +72,7 @@ func TestDetailDownloadAndStatus(t *testing.T) {
 			}
 		}
 	}
-	for _, path := range []string{"/example/files/README.md", "/example/files/../solve", "/example/files/" + strings.Repeat("A", 64)} {
+	for _, path := range []string{"/example/files/README.md", "/example/files/../solve", "/example/files/" + strings.Repeat("A", 64), "/example/guidance/solve.py", "/example/guidance/hint-11", "/example/guidance/hint-01"} {
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, request("GET", BasePath+"/problems"+path, ""))
 		assertError(t, w, 404, "not_found")

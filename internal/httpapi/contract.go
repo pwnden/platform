@@ -15,6 +15,7 @@ const BasePath = "/api/v1"
 type Backend interface {
 	application.Catalog
 	application.Details
+	application.Guidance
 	application.Files
 	application.Observer
 	application.Terminals
@@ -43,6 +44,13 @@ type ProblemDetail struct {
 	Problem
 	Description string        `json:"description"`
 	Files       []ProblemFile `json:"files"`
+	HintCount   int           `json:"hint_count"`
+	Walkthrough bool          `json:"walkthrough"`
+}
+
+type Guidance struct {
+	ID      string `json:"id"`
+	Content string `json:"content"`
 }
 
 type Status struct {
@@ -98,6 +106,7 @@ func ProblemsFrom(result []application.Problem) ProblemList {
 
 func DetailFrom(result application.ProblemDetail) ProblemDetail {
 	response := ProblemDetail{Problem: Problem{result.Slug, result.Title, result.Category, result.Kind}, Description: result.Description, Files: make([]ProblemFile, 0, len(result.Files))}
+	response.HintCount, response.Walkthrough = result.HintCount, result.Walkthrough
 	for _, file := range result.Files {
 		response.Files = append(response.Files, ProblemFile{file.ID, file.Name, file.Size})
 	}

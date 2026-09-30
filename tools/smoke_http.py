@@ -12,6 +12,7 @@ import signal
 import subprocess
 import tempfile
 import tarfile
+import tomllib
 import threading
 from urllib.error import HTTPError
 from urllib.parse import urlsplit
@@ -79,7 +80,12 @@ def solve_web(endpoint):
     with client.open(login, timeout=10) as response:
         assert response.status == 200
     with client.open(endpoint + "/api/notes/2", timeout=10) as response:
-        return json.load(response)["body"]
+        flag = json.load(response)["body"]
+    with client.open(endpoint + "/notes/1", timeout=10) as response:
+        assert flag not in response.read().decode()
+    with client.open(endpoint + "/notes/2", timeout=10) as response:
+        assert flag in response.read().decode(), "browser walkthrough failed to retrieve current flag"
+    return flag
 
 
 def check_assets(origin, token):
@@ -170,7 +176,24 @@ def main():
         assert {p["slug"] for p in problems} == {"note-vault", "rotor-lock"}
         assert api(origin, "incorrect", "GET", "/problems", expected=401)["error"]["code"] == "unauthorized"
         detail = api(origin, token, "GET", "/problems/rotor-lock")
-        assert "Rotor Lock" in detail["description"] and len(detail["files"]) == 1
+        assert detail["description"] and len(detail["files"]) == 1
+        with tarfile.open(binary.with_name("catalog.tar.gz"), "r:gz") as archive:
+            name = next(name for name in archive.getnames() if name.endswith("/contract.toml"))
+            with archive.extractfile(name) as source:
+                content_expected = tomllib.loads(source.read().decode())["version"] >= 2
+        assert detail["walkthrough"] == content_expected, "catalog content availability disagrees with contract"
+        if content_expected:
+            assert detail["hint_count"] == 3
+            assert "go run" not in detail["description"] and file_flag not in detail["description"]
+            for slug in ("rotor-lock", "note-vault"):
+                brief = api(origin, token, "GET", f"/problems/{slug}")
+                assert brief["hint_count"] == 3 and brief["walkthrough"]
+                assert "go run" not in brief["description"] and "solve/README.md" not in brief["description"]
+                for id in ("hint-1", "hint-2", "hint-3", "walkthrough"):
+                    content = api(origin, token, "GET", f"/problems/{slug}/guidance/{id}")
+                    assert content["id"] == id and content["content"].strip()
+                assert api(origin, token, "GET", f"/problems/{slug}/guidance/hint-4", expected=404)["error"]["code"] == "not_found"
+                assert api(origin, "incorrect", "GET", f"/problems/{slug}/guidance/walkthrough", expected=401)["error"]["code"] == "unauthorized"
         file = detail["files"][0]
         assert file["name"] == "files/checker.py" and len(file["id"]) == 64
         with tarfile.open(binary.with_name("catalog.tar.gz"), "r:gz") as archive:

@@ -85,7 +85,7 @@ The service does not coordinate simultaneous callers. Adapters serialize mutatin
 
 ## Details, files and observation
 
-The platform presents the existing problem `README.md` as optional UTF-8 text, up to 1 MiB. A missing README produces an empty description. The browser displays it as text. This is a platform presentation convention; the challenges-owned version 1 execution contract remains intact.
+Contract 2 supplies `[content]`: a player brief, ordered hints and complete walkthrough. `Detail` reads only the brief and reports hint count and walkthrough availability. `Guidance` reads one declared document on explicit request, with opaque `hint-N` or `walkthrough` IDs rather than arbitrary paths. Every read uses repository containment and `os.Root`, requires a regular UTF-8 file and caps content at 1 MiB. Version 1 installations retain optional `README.md` and have no guidance. This is explicit compatibility support; the challenges repository owns content validation and authoring rules.
 
 `Detail` expands each declared `files` entry into regular files, including nested directories and repository-contained symlink targets. Directory cycles, special files and outside targets fail. IDs are SHA-256 identifiers of normalized repository-relative logical paths, stable across process restarts and content edits at the same path. They are lookup identifiers, not content checksums or access tokens. Downloads re-enumerate current declarations, select only a matching ID and open the target through `os.Root`. Names and sizes describe distribution files; solution and configuration files appear only if authors explicitly distribute them. Shared files inside the problem repository remain supported.
 

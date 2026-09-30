@@ -19,6 +19,7 @@ import (
 type fakeBackend struct {
 	list     func(context.Context) ([]application.Problem, error)
 	detail   func(context.Context, string) (application.ProblemDetail, error)
+	guidance func(context.Context, string, string) (string, error)
 	download func(context.Context, string, string) (application.Download, error)
 	status   func(context.Context, string) (application.RunStatus, error)
 	run      func(context.Context, string) (application.RunInfo, error)
@@ -34,6 +35,9 @@ func (b fakeBackend) OpenTerminal(ctx context.Context, slug string, cols, rows i
 func (b fakeBackend) List(ctx context.Context) ([]application.Problem, error) { return b.list(ctx) }
 func (b fakeBackend) Detail(ctx context.Context, slug string) (application.ProblemDetail, error) {
 	return b.detail(ctx, slug)
+}
+func (b fakeBackend) Guidance(ctx context.Context, slug, id string) (string, error) {
+	return b.guidance(ctx, slug, id)
 }
 func (b fakeBackend) Download(ctx context.Context, slug, id string) (application.Download, error) {
 	return b.download(ctx, slug, id)

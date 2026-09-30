@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -18,6 +19,10 @@ import (
 // Details and Files are read capabilities; downloaded streams belong to callers.
 type Details interface {
 	Detail(context.Context, string) (ProblemDetail, error)
+}
+
+type Guidance interface {
+	Guidance(context.Context, string, string) (string, error)
 }
 
 type Files interface {
@@ -34,6 +39,8 @@ type ProblemDetail struct {
 	Problem
 	Description string
 	Files       []ProblemFile
+	HintCount   int
+	Walkthrough bool
 }
 
 type Download struct {
@@ -143,31 +150,95 @@ func (s *Service) Detail(ctx context.Context, slug string) (ProblemDetail, error
 	for _, file := range files {
 		result.Files = append(result.Files, file.ProblemFile)
 	}
-	path, _ := filepath.Rel(c.RepoRoot, filepath.Join(c.Dir, "README.md"))
-	info, err := root.Stat(path)
-	if errors.Is(err, os.ErrNotExist) {
-		return result, nil
+	name := c.Content.Description
+	if c.Schema == 1 {
+		name = "README.md"
+		path, _ := filepath.Rel(c.RepoRoot, filepath.Join(c.Dir, name))
+		if _, err := root.Lstat(path); errors.Is(err, os.ErrNotExist) {
+			return result, nil
+		}
+	} else {
+		result.HintCount = len(c.Content.Hints)
+		result.Walkthrough = c.Content.Walkthrough != ""
 	}
+	result.Description, err = readMarkdown(ctx, c, root, name)
 	if err != nil {
 		return ProblemDetail{}, loadError(ctx, "detail", slug, err)
 	}
+	return result, nil
+}
+
+// Guidance exposes only declared documents, after an explicit player request.
+// It is spoiler control, not a secrecy boundary inside a local author checkout.
+func (s *Service) Guidance(ctx context.Context, slug, id string) (string, error) {
+	c, err := s.load(ctx, "guidance", slug, false)
+	if err != nil {
+		return "", err
+	}
+	name := ""
+	if c.Schema >= 2 {
+		if id == "walkthrough" {
+			name = c.Content.Walkthrough
+		} else if strings.HasPrefix(id, "hint-") {
+			n, err := strconv.Atoi(strings.TrimPrefix(id, "hint-"))
+			if err == nil && id == fmtHint(n) && n > 0 && n <= len(c.Content.Hints) {
+				name = c.Content.Hints[n-1]
+			}
+		}
+	}
+	if name == "" {
+		return "", operationError(ctx, "guidance", slug, NotFound, os.ErrNotExist)
+	}
+	root, err := os.OpenRoot(c.RepoRoot)
+	if err != nil {
+		return "", loadError(ctx, "guidance", slug, err)
+	}
+	defer root.Close()
+	content, err := readMarkdown(ctx, c, root, name)
+	if err != nil {
+		return "", loadError(ctx, "guidance", slug, err)
+	}
+	return content, nil
+}
+
+func fmtHint(n int) string { return "hint-" + strconv.Itoa(n) }
+
+func readMarkdown(ctx context.Context, c *challenge.Loaded, root *os.Root, name string) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	real, err := challenge.Resolve(c.RepoRoot, c.Dir, name)
+	if err != nil {
+		return "", err
+	}
+	path, err := filepath.Rel(c.RepoRoot, real)
+	if err != nil {
+		return "", err
+	}
+	info, err := root.Stat(path)
+	if err != nil {
+		return "", err
+	}
 	if !info.Mode().IsRegular() {
-		return ProblemDetail{}, loadError(ctx, "detail", slug, errors.New("description must be a regular file"))
+		return "", errors.New("content must be a regular file")
 	}
 	f, err := root.Open(path)
 	if err != nil {
-		return ProblemDetail{}, loadError(ctx, "detail", slug, err)
+		return "", err
 	}
 	defer f.Close()
+	opened, err := f.Stat()
+	if err != nil || !opened.Mode().IsRegular() {
+		return "", errors.New("content must be a regular file")
+	}
 	content, err := io.ReadAll(io.LimitReader(f, (1<<20)+1))
 	if err == nil && (len(content) > 1<<20 || !utf8.Valid(content)) {
-		err = errors.New("description must be UTF-8 and at most 1 MiB")
+		err = errors.New("content must be UTF-8 and at most 1 MiB")
 	}
 	if err != nil {
-		return ProblemDetail{}, loadError(ctx, "detail", slug, err)
+		return "", err
 	}
-	result.Description = string(content)
-	return result, nil
+	return string(content), ctx.Err()
 }
 
 func (s *Service) Download(ctx context.Context, slug, id string) (Download, error) {
@@ -212,6 +283,7 @@ func (s *Service) Download(ctx context.Context, slug, id string) (Download, erro
 }
 
 var (
-	_ Details = (*Service)(nil)
-	_ Files   = (*Service)(nil)
+	_ Details  = (*Service)(nil)
+	_ Guidance = (*Service)(nil)
+	_ Files    = (*Service)(nil)
 )
