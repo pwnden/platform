@@ -1,0 +1,7 @@
+**
+!web/
+!web/**
+web/**/node_modules/
+web/dist/
+web/.pnpm-store/
+web/**/*.tsbuildinfo
