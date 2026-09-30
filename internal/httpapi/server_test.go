@@ -82,6 +82,7 @@ func TestShutdownWaitsForDisconnectedHandlerCleanup(t *testing.T) {
 	entered := make(chan struct{})
 	cleaning := make(chan struct{})
 	finish := make(chan struct{})
+	cleanupFailure := &application.Error{Code: application.CleanupFailed, Cause: errors.New("pwnden{private_flag} /private/host/path")}
 	b := fakeBackend{
 		run: func(ctx context.Context, _ string) (application.RunInfo, error) {
 			close(entered)
@@ -95,7 +96,7 @@ func TestShutdownWaitsForDisconnectedHandlerCleanup(t *testing.T) {
 			}
 			close(cleaning)
 			<-finish
-			return application.StopInfo{Slug: slug}, nil
+			return application.StopInfo{}, cleanupFailure
 		},
 	}
 	u, cancelServer, done := startServer(t, b)
@@ -133,8 +134,11 @@ func TestShutdownWaitsForDisconnectedHandlerCleanup(t *testing.T) {
 	close(finish)
 	select {
 	case err := <-done:
-		if err != nil {
-			t.Fatal(err)
+		if !errors.Is(err, cleanupFailure) {
+			t.Fatalf("cleanup cause lost: %v", err)
+		}
+		if strings.Contains(err.Error(), "private_flag") || strings.Contains(err.Error(), "/private") {
+			t.Fatal("server diagnostic exposed cleanup internals")
 		}
 	case <-time.After(3 * time.Second):
 		t.Fatal("cleanup completion did not release server")

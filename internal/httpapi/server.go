@@ -15,6 +15,13 @@ import (
 
 const operationTimeout = 15 * time.Minute
 
+// serverFailure preserves local causes for Go callers without exposing process
+// output or private paths through the CLI's ordinary error printing.
+type serverFailure struct{ cause error }
+
+func (e *serverFailure) Error() string { return "local server failed; check cleanup diagnostics" }
+func (e *serverFailure) Unwrap() error { return e.cause }
+
 // Serve owns a loopback listener until cancellation. Completed problem runs
 // survive shutdown; interrupted starts and failed response delivery are cleaned.
 func Serve(ctx context.Context, backend Backend, stdout, stderr io.Writer) error {
@@ -66,5 +73,8 @@ func Serve(ctx context.Context, backend Backend, stdout, stderr io.Writer) error
 	if errors.Is(err, http.ErrServerClosed) {
 		err = nil
 	}
-	return errors.Join(err, shutdownErr, handler.cleanupError())
+	if failure := errors.Join(err, shutdownErr, handler.cleanupError()); failure != nil {
+		return &serverFailure{cause: failure}
+	}
+	return nil
 }
