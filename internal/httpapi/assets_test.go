@@ -51,9 +51,27 @@ func TestEmbeddedPlayerAssets(t *testing.T) {
 		if w.Header().Get("Content-Type") != expected || w.Header().Get("X-Content-Type-Options") != "nosniff" {
 			t.Fatalf("asset MIME mismatch: %s", path)
 		}
+		if strings.HasSuffix(path, ".css") {
+			fonts := regexp.MustCompile(`url\((/assets/[^)]+\.woff2)\)`).FindAllStringSubmatch(content, -1)
+			if len(fonts) != 3 {
+				t.Fatal("the player must bundle its Latin and Korean monospace fonts")
+			}
+			for _, font := range fonts {
+				w := get("GET", font[1])
+				if w.Code != 200 || w.Header().Get("Content-Type") != "font/woff2" || !strings.HasPrefix(w.Body.String(), "wOF2") {
+					t.Fatalf("invalid bundled font: %s", font[1])
+				}
+			}
+		}
 		head := get("HEAD", path)
 		if head.Code != 200 || head.Body.Len() != 0 || head.Header().Get("Content-Length") != fmt.Sprint(len(content)) {
 			t.Fatal("invalid HEAD response")
+		}
+	}
+	for _, name := range []string{"JetBrainsMono", "D2Coding"} {
+		w := get("GET", "/assets/licenses/"+name+"-OFL.txt")
+		if w.Code != 200 || !strings.Contains(w.Body.String(), "SIL OPEN FONT LICENSE") {
+			t.Fatalf("missing distributed font license: %s", name)
 		}
 	}
 	for _, path := range []string{"/assets/", "/assets/missing.js", "/assets/../index.html", "/assets/../../go.mod", "/assets/index.js.map"} {

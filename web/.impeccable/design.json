@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-30T16:17:30Z",
+  "title": "Design System: pwnden",
+  "extensions": {
+    "shadows": [
+      { "name": "ui-glow", "value": "0 0 18px #54b5ff1c", "purpose": "Primary hover, selected rows, field focus, info dots and cursor marks." }
+    ],
+    "motion": [
+      { "name": "control-state", "value": "background-color 140ms, border-color 140ms, box-shadow 140ms", "purpose": "Enabled button state feedback." },
+      { "name": "cursor-pulse", "value": "1.6s ease-in-out infinite; opacity 0.8 → 0.3 → 0.8", "purpose": "Empty workspace cursor; CSS animation and transitions stop for reduced-motion preferences." }
+    ],
+    "breakpoints": [
+      { "name": "terminal-below-reading", "value": "76rem" },
+      { "name": "catalog-above-content", "value": "48rem" },
+      { "name": "stack-flag-form", "value": "30rem" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Run, submit or connect with the shared blue action treatment.",
+      "html": "<button class=\"ds-primary\">정답 확인</button>",
+      "css": ".ds-primary{font:inherit;min-height:2.75rem;padding:.5rem .9rem;border:1px solid var(--ui-border-active);border-radius:var(--ui-radius);color:var(--ui-accent);background:var(--ui-accent-surface);line-height:1.4;cursor:pointer;transition:background-color 140ms,border-color 140ms,box-shadow 140ms}.ds-primary:hover:enabled{background:var(--ui-surface-hover);box-shadow:var(--ui-glow)}.ds-primary:focus-visible{outline:2px solid var(--ui-accent);outline-offset:3px}.ds-primary:disabled{color:var(--ui-muted);opacity:.5;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none}}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "A raised tonal control for supporting actions.",
+      "html": "<button class=\"ds-secondary\">다운로드</button>",
+      "css": ".ds-secondary{font:inherit;min-height:2.75rem;padding:.5rem .9rem;border:1px solid var(--ui-border);border-radius:var(--ui-radius);color:var(--ui-foreground);background:var(--ui-surface-raised);line-height:1.4;cursor:pointer;transition:background-color 140ms,border-color 140ms,box-shadow 140ms}.ds-secondary:hover:enabled{background:var(--ui-surface-hover);border-color:var(--ui-border-active)}.ds-secondary:focus-visible{outline:2px solid var(--ui-accent);outline-offset:3px}.ds-secondary:disabled{color:var(--ui-muted);opacity:.5;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-secondary{transition:none}}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "A quiet refresh or disconnect action.",
+      "html": "<button class=\"ds-ghost\">목록 새로고침</button>",
+      "css": ".ds-ghost{font:inherit;min-height:2.75rem;padding:.5rem .9rem;border:1px solid transparent;border-radius:var(--ui-radius);color:var(--ui-muted);background:transparent;line-height:1.4;cursor:pointer;transition:background-color 140ms,border-color 140ms,box-shadow 140ms}.ds-ghost:hover:enabled{background:var(--ui-surface-hover);border-color:var(--ui-border-active)}.ds-ghost:focus-visible{outline:2px solid var(--ui-accent);outline-offset:3px}.ds-ghost:disabled{color:var(--ui-muted);opacity:.5;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-ghost{transition:none}}"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "The stop action carries the shared danger text color.",
+      "html": "<button class=\"ds-danger\">문제 중지</button>",
+      "css": ".ds-danger{font:inherit;min-height:2.75rem;padding:.5rem .9rem;border:1px solid var(--ui-border);border-radius:var(--ui-radius);color:var(--ui-danger);background:var(--ui-surface-raised);line-height:1.4;cursor:pointer;transition:background-color 140ms,border-color 140ms,box-shadow 140ms}.ds-danger:hover:enabled{background:var(--ui-surface-hover);border-color:var(--ui-border-active)}.ds-danger:focus-visible{outline:2px solid var(--ui-accent);outline-offset:3px}.ds-danger:disabled{color:var(--ui-muted);opacity:.5;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-danger{transition:none}}"
+    },
+    {
+      "name": "Problem Row",
+      "kind": "nav",
+      "refersTo": "button-row",
+      "description": "Full-width problem navigation with a pressed selection state.",
+      "html": "<button class=\"ds-row\" aria-pressed=\"true\"><span class=\"ds-entry\"><span class=\"ds-title\">문제 제목</span><span class=\"ds-meta\">problem-slug</span><span class=\"ds-meta\">category · 서비스 문제</span></span></button>",
+      "css": ".ds-row{font:inherit;min-height:2.75rem;width:100%;padding:.5rem .9rem;text-align:left;border:1px solid transparent;border-radius:var(--ui-radius);background:transparent;color:var(--ui-foreground);line-height:1.4;cursor:pointer;transition:background-color 140ms,border-color 140ms,box-shadow 140ms}.ds-row[aria-pressed=true]{color:var(--ui-accent);background:var(--ui-accent-surface);border-color:var(--ui-border-active);box-shadow:var(--ui-glow)}.ds-row:hover:enabled{background:var(--ui-surface-hover);border-color:var(--ui-border-active)}.ds-row:focus-visible{outline:2px solid var(--ui-accent);outline-offset:3px}.ds-row:disabled{color:var(--ui-muted);opacity:.5;cursor:not-allowed}.ds-entry{display:grid;gap:.4rem;padding-block:.6rem;min-width:0;overflow-wrap:anywhere}.ds-title{font-weight:500}.ds-meta{color:var(--ui-muted);font-size:.8rem}@media(prefers-reduced-motion:reduce){.ds-row{transition:none}}"
+    },
+    {
+      "name": "Flag Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "A labelled monospace field with an active resting border.",
+      "html": "<div class=\"ds-field\"><label for=\"ds-flag\">플래그</label><input id=\"ds-flag\" class=\"ds-input\" placeholder=\"찾은 플래그를 입력하세요\" autocomplete=\"off\" spellcheck=\"false\" required></div>",
+      "css": ".ds-field{display:grid;gap:.5rem;min-width:0}.ds-field label{color:var(--ui-muted);font-size:.85rem}.ds-input{font:inherit;min-width:0;width:100%;min-height:2.75rem;padding:.6rem .8rem;border:1px solid var(--ui-border-active);border-radius:var(--ui-radius);color:var(--ui-foreground);background:var(--ui-background);caret-color:var(--ui-accent)}.ds-input::placeholder{color:var(--ui-muted)}.ds-input:hover:enabled{border-color:var(--ui-border-active)}.ds-input:focus-visible{outline:2px solid var(--ui-accent);outline-offset:0;box-shadow:var(--ui-glow)}.ds-input:disabled{opacity:.5}@media(max-width:48rem){.ds-input{font-size:16px}}"
+    },
+    {
+      "name": "Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "A straight-edged section with a compact heading and divided content.",
+      "html": "<section class=\"ds-panel\" aria-labelledby=\"ds-heading\"><header class=\"ds-heading\"><h2 id=\"ds-heading\">문제 설명</h2></header><div class=\"ds-body\">문제 내용</div></section>",
+      "css": ".ds-panel{min-width:0;min-height:0;display:flex;flex-direction:column;background:var(--ui-surface);color:var(--ui-foreground)}.ds-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--ui-space-1);min-height:3.5rem;padding:.8rem var(--ui-space-3);border-bottom:1px solid var(--ui-border)}.ds-heading h2{margin:0;font-size:.9rem;font-weight:500;overflow-wrap:anywhere}.ds-body{min-width:0;min-height:0;padding:var(--ui-space-3);flex:1}@media(max-width:48rem){.ds-heading{padding-inline:var(--ui-space-2)}.ds-body{padding:var(--ui-space-2)}}"
+    },
+    {
+      "name": "Info Status",
+      "kind": "custom",
+      "description": "Labelled state with a small accent dot.",
+      "html": "<span class=\"ds-status\"><span class=\"ds-dot\" aria-hidden=\"true\"></span>로컬 세션</span>",
+      "css": ".ds-status{display:inline-flex;align-items:center;gap:.5rem;color:var(--ui-accent);font-size:.8rem;white-space:nowrap}.ds-dot{width:.375rem;height:.375rem;border-radius:50%;background:currentColor;flex:none;box-shadow:var(--ui-glow)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Hacker Terminal Workspace",
+    "overview": "Blue-tinted black surfaces, restrained blue light and monospace text give the player a working terminal character. Dense controls and readable Korean labels support extended challenge sessions. The workspace fills the browser viewport, with reading and execution surfaces divided by thin borders.",
+    "keyCharacteristics": [
+      "Subtly luminous dark blue on blue-tinted black.",
+      "One monospace stack for Latin, Korean and terminal output.",
+      "Full-width workspace with compact framing and bounded terminal geometry.",
+      "State expressed through labels, tonal changes and visible keyboard focus."
+    ],
+    "rules": [
+      { "name": "The Blue Action Rule", "body": "Use the accent, its dark fill and the active stroke together for primary and selected controls.", "section": "colors" },
+      { "name": "The Shared Glyph Rule", "body": "Keep Latin and Korean content in the bundled monospace stack, including controls and terminal output.", "section": "typography" },
+      { "name": "The Bounded Terminal Rule", "body": "Keep terminal measurement inside a positioned, bounded viewport. The terminal screen has a minimum height of (18rem), with its renderer positioned within that screen.", "section": "layout" }
+    ],
+    "dos": [
+      "Do use shared color, spacing and corner tokens for controls and panels.",
+      "Do keep the bundled Latin and Korean monospace stack throughout the workspace.",
+      "Do keep input borders visible at rest and provide the shared keyboard focus outline.",
+      "Do preserve the full viewport layout and bounded terminal screen when adapting widths.",
+      "Do pair status colors with meaningful labels derived from actual state.",
+      "Do honor reduced-motion preferences for CSS animation and transitions."
+    ],
+    "donts": []
+  }
+}

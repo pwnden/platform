@@ -395,6 +395,8 @@ func (h *handler) asset(w http.ResponseWriter, r *http.Request) {
 			typeName = "text/javascript; charset=utf-8"
 		case strings.HasSuffix(r.URL.Path, ".css"):
 			typeName = "text/css; charset=utf-8"
+		case strings.HasSuffix(r.URL.Path, ".woff2"):
+			typeName = "font/woff2"
 		default:
 			typeName = http.DetectContentType(content)
 		}

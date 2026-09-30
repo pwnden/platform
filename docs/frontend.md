@@ -8,7 +8,7 @@ problem execution and answer checking. Node and pnpm are build tools.
 | Package | Location | Responsibility |
 | --- | --- | --- |
 | `@pwnden/player` | `web/apps/player` | Session initialization and composition. |
-| `@pwnden/ui` | `web/packages/ui` | Own button/input/terminal API, Sectile and xterm wrappers, theme tokens. |
+| `@pwnden/ui` | `web/packages/ui` | Own button/input/panel/status/terminal API, Sectile and xterm wrappers, theme tokens and bundled fonts. |
 | `@pwnden/api` | `web/packages/api` | Implement domain ports with the Go HTTP API and WebSocket. |
 | `@pwnden/catalog` | `web/domains/catalog` | Summary/detail/file models and read/download port; pure TypeScript. |
 | `@pwnden/play` | `web/domains/play` | Run/status/submission models and player port; pure TypeScript. |
@@ -57,6 +57,25 @@ checking. Direct, peer and development dependencies use exact versions, and
 internal dependencies use `workspace:0.1.0`. `saveExact` is enabled. pnpm 12
 records package-manager resolution and application resolution as two YAML
 documents in the committed lockfile; use the pinned pnpm to consume it.
+
+## Visual system
+
+The player fills the browser viewport with a blue-black terminal workspace.
+The design contract lives in [DESIGN.md](../web/DESIGN.md), with product context
+in [PRODUCT.md](../web/PRODUCT.md). `@pwnden/ui` owns the shared palette,
+monospace typography, focus treatment, spacing and component variants.
+`UIPanel` provides a labelled section with an optional actions slot; `UIStatus`
+renders a textual status with a decorative dot. Features supply actual state.
+
+The wide layout places the problem list, reading/execution controls and terminal
+in adjacent columns. At 76rem the terminal follows the reading column; at 48rem
+the list moves above the content and the full-width document scrolls vertically.
+The terminal frame constrains xterm independently of its measured row height.
+
+JetBrains Mono and D2Coding WOFF2 files are bundled in the UI package, served
+from the same origin and embedded into the Go executable. Font sources and
+license terms are recorded in `web/packages/ui/src/fonts/README.md`; Vite emits
+both OFL license files under `/assets/licenses/`. Go serves WOFF2 as `font/woff2`.
 
 ## Verification
 

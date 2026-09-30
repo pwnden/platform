@@ -19,11 +19,25 @@ const handle: UITerminalHandle = {
 defineExpose(handle);
 onMounted(() => {
   if (!container.value) return;
+  const style = getComputedStyle(document.documentElement);
+  const color = (token: string) => style.getPropertyValue(token).trim();
   terminal = new Terminal({
     documentOverride: terminalDocument(document),
     disableStdin: !props.enabled, cursorBlink: true, screenReaderMode: true,
-    scrollback: 2000, fontSize: 14,
-    theme: { background: '#ffffff', foreground: '#20252b', cursor: '#174b7a', selectionBackground: '#cddfed' },
+    scrollback: 2000, fontSize: 14, lineHeight: 1.4,
+    fontFamily: color('--ui-font-mono'),
+    theme: {
+      background: color('--ui-terminal-background'), foreground: color('--ui-foreground'),
+      cursor: color('--ui-accent'), selectionBackground: color('--ui-terminal-selection'),
+      black: color('--ui-terminal-background'), brightBlack: color('--ui-muted'),
+      red: color('--ui-danger'), brightRed: color('--ui-danger'),
+      green: color('--ui-success'), brightGreen: color('--ui-success'),
+      yellow: color('--ui-warning'), brightYellow: color('--ui-warning'),
+      blue: color('--ui-accent'), brightBlue: color('--ui-accent'),
+      magenta: '#c5acff', brightMagenta: '#c5acff',
+      cyan: '#8cdce6', brightCyan: '#8cdce6',
+      white: color('--ui-foreground'), brightWhite: '#f1f6ff',
+    },
   });
   const fit = new FitAddon();
   terminal.loadAddon(fit);
@@ -39,6 +53,7 @@ onMounted(() => {
   observer = new ResizeObserver(resize);
   observer.observe(container.value);
   resize();
+  void document.fonts.ready.then(() => { if (alive) resize(); });
 });
 watch(() => props.enabled, enabled => { if (terminal) terminal.options.disableStdin = !enabled; });
 onUnmounted(() => { alive = false; observer?.disconnect(); terminal?.dispose(); terminal = undefined; });
@@ -49,5 +64,5 @@ onUnmounted(() => { alive = false; observer?.disconnect(); terminal?.dispose(); 
 </template>
 
 <style scoped>
-.ui-terminal { min-width: 0; width: 100%; height: clamp(16rem, 40vh, 28rem); padding: var(--ui-space-1); border: 1px solid var(--ui-border); border-radius: var(--ui-radius); background: var(--ui-surface); overflow: hidden; }
+.ui-terminal { min-width: 0; width: 100%; min-height: 18rem; height: 100%; padding: var(--ui-space-2); background: var(--ui-terminal-background); overflow: hidden; }
 </style>

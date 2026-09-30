@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
 import type { Catalog, ProblemDetail, ProblemFile } from '@pwnden/catalog';
-import { UIButton } from '@pwnden/ui';
+import { UIButton, UIPanel } from '@pwnden/ui';
 
 const props = defineProps<{ catalog: Catalog; slug: string; title: string }>();
 const detail = ref<ProblemDetail>();
@@ -51,8 +51,7 @@ onMounted(load);
 </script>
 
 <template>
-  <section aria-labelledby="detail-heading" :aria-busy="pending">
-    <h2 id="detail-heading">{{ title }}</h2>
+  <UIPanel :title="title" headingID="detail-heading" :aria-busy="pending" class="detail-panel">
     <p v-if="pending" role="status">문제 설명과 파일을 불러오는 중…</p>
     <div v-if="failed" role="alert">
       <p>문제 설명과 파일을 불러오지 못했습니다. 서버 연결을 확인하고 다시 시도하세요.</p>
@@ -66,7 +65,7 @@ onMounted(load);
       <ul v-if="detail.files.length" class="files">
         <li v-for="file in detail.files" :key="file.id">
           <span>{{ file.name }} <small>({{ file.size.toLocaleString('ko-KR') }} 바이트)</small></span>
-          <UIButton :busy="downloading === file.id" :disabled="Boolean(downloading)" @click="download(file)">
+          <UIButton size="compact" :busy="downloading === file.id" :disabled="Boolean(downloading)" @click="download(file)">
             {{ downloading === file.id ? '다운로드 중…' : '다운로드' }}
           </UIButton>
         </li>
@@ -74,16 +73,17 @@ onMounted(load);
       <p v-else>배포 파일이 없습니다. 문제 실행 후 제공되는 접속 주소를 이용하세요.</p>
       <p v-if="downloadFailed" role="alert">파일을 다운로드하지 못했습니다. 서버 연결을 확인하고 다시 시도하세요.</p>
     </template>
-  </section>
+  </UIPanel>
 </template>
 
 <style scoped>
-section { min-width: 0; }
-h2 { margin-top: 0; overflow-wrap: anywhere; }
-h3 { margin: var(--ui-space-3) 0 var(--ui-space-1); }
-.description { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; max-width: 75ch; }
-.files { list-style: none; padding: 0; }
-.files li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-space-1); padding-block: var(--ui-space-1); }
+.detail-panel { border-bottom: 1px solid var(--ui-border); }
+.detail-panel :deep(h2) { font-size: 1.2rem; color: var(--ui-foreground); }
+h3 { margin: var(--ui-space-3) 0 var(--ui-space-1); color: var(--ui-muted); font-size: 0.85rem; }
+h3:first-child { margin-top: 0; }
+.description { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; max-width: 75ch; line-height: 1.85; }
+.files { list-style: none; padding: 0; margin: 0; }
+.files li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--ui-space-1); padding-block: var(--ui-space-1); border-top: 1px solid var(--ui-border); }
 .files span { min-width: 0; overflow-wrap: anywhere; }
 small { color: var(--ui-muted); }
 </style>

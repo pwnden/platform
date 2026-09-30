@@ -2,3 +2,6 @@ dist/
 node_modules/
 .pnpm-store/
 *.tsbuildinfo
+/.impeccable/build/
+/web/.impeccable/build/
+/web/.impeccable/review/

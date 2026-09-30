@@ -2,6 +2,17 @@ export interface UIButtonProps {
   readonly type?: 'button' | 'submit';
   readonly disabled?: boolean;
   readonly busy?: boolean;
+  readonly variant?: 'secondary' | 'primary' | 'ghost' | 'danger' | 'row';
+  readonly size?: 'default' | 'compact';
+}
+
+export interface UIPanelProps {
+  readonly title: string;
+  readonly headingID: string;
+}
+
+export interface UIStatusProps {
+  readonly tone?: 'muted' | 'info' | 'success' | 'danger';
 }
 
 export interface UITextFieldProps {
