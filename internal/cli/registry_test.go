@@ -72,6 +72,10 @@ func TestHelpAndDispatchErrors(t *testing.T) {
 		{[]string{"--help"}, true, "Commands:"},
 		{[]string{"validate", "--help"}, true, "validate <slug>"},
 		{[]string{"setup", "--help"}, true, "pwnden setup"},
+		{[]string{"serve", "--help"}, true, "pwnden serve"},
+		{[]string{"serve", "extra"}, false, "accepts no repository or positional arguments"},
+		{[]string{"--repo", "outside", "serve"}, false, "uses the managed installation"},
+		{[]string{"serve"}, false, "run pwnden setup first"},
 		{[]string{"setup", "extra"}, false, "accepts no repository or positional arguments"},
 		{nil, false, "a command is required"},
 		{[]string{"unknown", "missing"}, false, "unknown command"},
@@ -95,6 +99,25 @@ func TestHelpAndDispatchErrors(t *testing.T) {
 				t.Fatalf("response: stdout=%q stderr=%q error=%v", out.String(), stderr.String(), err)
 			}
 		})
+	}
+}
+
+func TestPersistentCommandLifetime(t *testing.T) {
+	r, err := New(append(DefaultCommands(), Command{Name: "watch", Persistent: true, Run: func(context.Context, Invocation) error { return nil }})...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		args       []string
+		persistent bool
+	}{
+		{[]string{"serve"}, true}, {[]string{"--repo", "somewhere", "serve"}, true},
+		{[]string{"watch"}, true}, {[]string{"run", "serve"}, false},
+		{[]string{"--repo", "serve", "list"}, false}, {[]string{"--bad", "serve"}, false}, {nil, false},
+	} {
+		if r.IsPersistent(test.args) != test.persistent {
+			t.Fatalf("lifetime: %v", test.args)
+		}
 	}
 }
 

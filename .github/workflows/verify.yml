@@ -51,3 +51,6 @@ jobs:
       - name: Verify end-user package without Go or Git
         working-directory: platform
         run: python3 -B tools/smoke_package.py --package dist/pwnden-linux-amd64.tar.gz
+      - name: Verify local player HTTP server without host SDKs
+        working-directory: platform
+        run: python3 -B tools/smoke_http.py --package dist/pwnden-linux-amd64.tar.gz

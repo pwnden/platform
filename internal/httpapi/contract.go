@@ -1,5 +1,4 @@
-// Package httpapi defines the player HTTP contract consumed by the future server
-// and web client. It contains no HTTP handlers or Docker operations.
+// Package httpapi adapts the application capabilities to the local player API.
 package httpapi
 
 import (

@@ -11,6 +11,7 @@ Global options precede the command. Each command owns its arguments and flags; c
 | Command | Invocation | Result |
 | --- | --- | --- |
 | `setup` | `pwnden setup` | Docker and Compose check, bundled problem installation, and image preparation. |
+| `serve` | `pwnden serve` | Local Go web/API server for the managed installation; prints its private session URL. |
 | `list` | `pwnden list` | Available problem names, categories, and titles. |
 | `run` | `pwnden run <slug>` | File distribution count, or service project and actual endpoint addresses. |
 | `exec` | `pwnden exec <slug> -- <command> [arguments]` | A completed command's stdout, stderr, and exit status from the declared toolbox. |
@@ -23,13 +24,13 @@ Global options precede the command. Each command owns its arguments and flags; c
 
 `exec` uses the problem's declared toolbox image and mount permissions. File toolboxes have no network access. Service toolboxes use the recorded run's project network and require a prior `run`. Arguments execute directly; use `sh -c` explicitly for a shell command. Interactive stdin and a terminal are outside this completed-command interface. `submit` checks the file flag hash or the current recorded service flag and does not execute a solution or record progress history.
 
-The executable forwards SIGINT and SIGTERM through the caller context and applies a fifteen-minute operation deadline. Independent cleanup may continue after cancellation or the deadline, following the application interface's resource rules.
+The executable forwards SIGINT and SIGTERM through the caller context. Ordinary commands have a fifteen-minute operation deadline. Persistent commands such as `serve` run until interrupted; the server applies deadlines to individual API requests. Independent cleanup may continue after cancellation or a deadline, following the application interface's resource rules. See [local server](local-server.md) for authentication and shutdown behavior.
 
 If `run` starts a service but cannot write its result to stdout, the command attempts to stop that new run before returning the output error. Any cleanup error is retained. A pre-existing run is preserved when startup reports `already_running`.
 
 ## Adding a command
 
-`internal/cli.Command` contains `Name`, `Summary`, and `Run(context.Context, Invocation) error`. `Invocation` contains the parsed repository path, untouched command arguments, stdout, and stderr. `cli.New(commands...)` copies registrations and rejects invalid names, duplicate names, and missing handlers. Names are lowercase words/digits separated by single hyphens, beginning with a letter.
+`internal/cli.Command` contains `Name`, `Summary`, `Run(context.Context, Invocation) error`, and `Persistent`. `Persistent` opts into a signal-controlled lifetime instead of the ordinary command deadline. `Invocation` contains the parsed repository path, untouched command arguments, stdout, and stderr. `cli.New(commands...)` copies registrations and rejects invalid names, duplicate names, and missing handlers. Names are lowercase words/digits separated by single hyphens, beginning with a letter.
 
 Add a handler and its registration to `DefaultCommands`. The handler defines its own positional argument count, options, help, application calls, and output. Commands can accept no slug or multiple arguments without changing the dispatcher. The dispatcher handles global options and lookup only. Returning `flag.ErrHelp` marks a successful help request. Other handler errors pass through unchanged.
 

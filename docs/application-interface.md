@@ -25,7 +25,7 @@ type Verifier interface {
 
 `Service` implements all three, plus `Catalog.List(ctx)` and `Player.Execute(ctx, slug, command)` / `Player.Submit(ctx, slug, flag)`. `SetupService` implements the separate `Bootstrapper.Setup(ctx)` capability. Operations return Go data rather than console output, HTTP status codes, or Docker configuration objects. Command parsing and transport serialization belong to adapters. New capabilities can have their own interfaces and result types; existing consumers keep their current dependencies.
 
-The initial player HTTP capability set and JSON DTOs are defined in `internal/httpapi`, with the versioned [HTTP contract](web-api.md) and [OpenAPI document](openapi.json). Its backend consumes `Catalog`, `Runner`, and `Submit` directly. Browser response mapping includes only published endpoints and uses public messages for typed errors. HTTP handlers and server ownership coordination are the next implementation stage.
+The initial player HTTP capability set, JSON DTOs, handlers, and local server are implemented in `internal/httpapi`, with the versioned [HTTP contract](web-api.md) and [OpenAPI document](openapi.json). Its backend consumes `Catalog`, `Runner`, and `Submit` directly. Browser response mapping includes only published endpoints and uses public messages for typed errors. The adapter serializes mutations by slug and owns cleanup for starts whose responses cannot be delivered. [Local server](local-server.md) documents its lifecycle.
 
 ## Inputs and results
 

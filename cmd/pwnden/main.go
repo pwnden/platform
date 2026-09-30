@@ -30,6 +30,9 @@ func run(args []string) error {
 	}
 	signalCtx, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stopSignals()
+	if commands.IsPersistent(args) {
+		return commands.Execute(signalCtx, args, os.Stdout, os.Stderr)
+	}
 	ctx, cancel := context.WithTimeout(signalCtx, 15*time.Minute)
 	defer cancel()
 	return commands.Execute(ctx, args, os.Stdout, os.Stderr)

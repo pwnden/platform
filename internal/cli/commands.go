@@ -12,6 +12,7 @@ import (
 func DefaultCommands() []Command {
 	return []Command{
 		{Name: "setup", Summary: "prepare the bundled problems and execution environment", Run: setup},
+		{Name: "serve", Summary: "start the local player web and API server", Run: serve, Persistent: true},
 		{Name: "list", Summary: "list available problems", Run: list},
 		{Name: "exec", Summary: "run a command inside a problem toolbox", Run: execute},
 		{Name: "submit", Summary: "check a flag you found", Run: submit},

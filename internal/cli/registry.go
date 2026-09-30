@@ -19,9 +19,27 @@ type Invocation struct {
 
 // Command owns its argument parsing, help, and response formatting.
 type Command struct {
-	Name    string
-	Summary string
-	Run     func(context.Context, Invocation) error
+	Name       string
+	Summary    string
+	Run        func(context.Context, Invocation) error
+	Persistent bool
+}
+
+// IsPersistent identifies commands whose lifetime is controlled by signals
+// rather than the ordinary operation deadline. Argument parsing stays in Execute.
+func (r *Registry) IsPersistent(args []string) bool {
+	flags := flag.NewFlagSet("pwnden", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	flags.String("repo", "", "")
+	if err := flags.Parse(args); err != nil {
+		return false
+	}
+	for _, command := range r.commands {
+		if flags.NArg() > 0 && flags.Arg(0) == command.Name {
+			return command.Persistent
+		}
+	}
+	return false
 }
 
 type Registry struct {
