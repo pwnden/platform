@@ -4,6 +4,7 @@ import type { Catalog } from '../domains/catalog/src/index';
 import type { Player, RunStatus } from '../domains/play/src/index';
 import ProblemDetail from '../features/catalog/src/ProblemDetail.vue';
 import PlayPanel from '../features/play/src/PlayPanel.vue';
+import TerminalPanel from '../features/terminal/src/TerminalPanel.vue';
 
 // Exercise feature lifecycle and async handlers; UI/Sectile have their own tests.
 vi.mock('../packages/ui/src/index.ts', async () => {
@@ -11,7 +12,33 @@ vi.mock('../packages/ui/src/index.ts', async () => {
   return {
     UIButton: defineComponent({ setup: (_, { attrs, slots }) => () => h('button', attrs, slots.default?.()) }),
     UITextField: defineComponent({ setup: (_, { attrs }) => () => h('input', attrs) }),
+    UITerminal: defineComponent({ setup: (_, { attrs, expose }) => {
+      expose({ write: (_data: Uint8Array, rendered: () => void) => rendered(), clear: () => {}, focus: () => {} });
+      return () => h('terminal', attrs);
+    } }),
   };
+});
+
+it('owns pending and ready terminal connections across cancellation and unmount', async () => {
+  const close = vi.fn();
+  let resolve: (value: unknown) => void = () => {};
+  const session = { input: vi.fn(), resize: vi.fn(), close: vi.fn() };
+  const terminals = { connect: vi.fn(() => ({ ready: new Promise<any>(done => { resolve = done; }), close })) };
+  const root = node('root');
+  renderer.render(h(TerminalPanel, { terminals, slug: 'test', enabled: true, busy: false }), root);
+  const pending = click(button(root, '터미널 연결')); await settle();
+  expect(text(root)).toContain('연결하는 중');
+  await click(button(root, '연결 종료')); resolve(session); await pending; await settle();
+  expect(close).toHaveBeenCalledOnce();
+  expect(session.close).toHaveBeenCalledOnce();
+  expect(text(root)).not.toContain('연결됨');
+  const next = click(button(root, '터미널 연결')); resolve(session); await next; await settle();
+  expect(text(root)).toContain('연결됨');
+  const terminal = flatten(root).find(item => item.type === 'terminal')!;
+  (terminal.props.onInput as (data: Uint8Array) => void)(new Uint8Array([3]));
+  expect(session.input).toHaveBeenCalledWith(new Uint8Array([3]));
+  renderer.render(null, root);
+  expect(close).toHaveBeenCalledTimes(2);
 });
 
 interface Node {

@@ -11,3 +11,10 @@ export interface UITextFieldProps {
   readonly disabled?: boolean;
   readonly required?: boolean;
 }
+
+export interface UITerminalProps { readonly label: string; readonly enabled: boolean }
+export interface UITerminalHandle {
+  write(data: Uint8Array, rendered: () => void): void;
+  clear(): void;
+  focus(): void;
+}

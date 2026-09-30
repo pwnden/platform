@@ -8,18 +8,20 @@ problem execution and answer checking. Node and pnpm are build tools.
 | Package | Location | Responsibility |
 | --- | --- | --- |
 | `@pwnden/player` | `web/apps/player` | Session initialization and composition. |
-| `@pwnden/ui` | `web/packages/ui` | Own button/input API, Sectile wrappers and theme tokens. |
-| `@pwnden/api` | `web/packages/api` | Implement domain ports with the Go HTTP API. |
+| `@pwnden/ui` | `web/packages/ui` | Own button/input/terminal API, Sectile and xterm wrappers, theme tokens. |
+| `@pwnden/api` | `web/packages/api` | Implement domain ports with the Go HTTP API and WebSocket. |
 | `@pwnden/catalog` | `web/domains/catalog` | Summary/detail/file models and read/download port; pure TypeScript. |
 | `@pwnden/play` | `web/domains/play` | Run/status/submission models and player port; pure TypeScript. |
 | `@pwnden/catalog-feature` | `web/features/catalog` | Vue catalog, description text and authenticated file downloads. |
 | `@pwnden/play-feature` | `web/features/play` | Vue observed execution state, controls and submissions. |
+| `@pwnden/terminal` | `web/domains/terminal` | Connection/session/dimensions/byte-event ports; pure TypeScript. |
+| `@pwnden/terminal-feature` | `web/features/terminal` | Connection controls, input/output flow and session lifetime. |
 
 The app injects API implementations into features. Features import their domain
 and the UI package. The API package imports domain ports and models. Domains
 use ES libraries without browser, framework or transport dependencies. The UI
 package alone imports Sectile; its public props and events belong to pwnden.
-Progress and terminal packages are introduced with their actual capabilities.
+Progress packages are introduced with their actual capabilities.
 
 Use public package exports between packages and relative imports inside one
 package. `web/tools/boundaries.mjs` keeps the allowlist independently of package
@@ -47,6 +49,7 @@ their upstream spelling. Repository guidance records the general convention.
 | vue-tsc | `3.3.11` |
 | Sectile Vue | `0.18.2` |
 | Vitest | `5.0.2` |
+| xterm / fit addon | `6.0.0` / `0.11.0` |
 
 `typescript` is an exact npm alias to `typescript-native-bridge`, also overridden
 throughout the workspace. Both `tsc` and `vue-tsc` report `TNB ACTIVE` during
@@ -87,7 +90,7 @@ docker build --file Dockerfile.web --target assets --output type=local,dest=dist
 
 ## Integration status
 
-The Vue app composes catalog and play features for the seven HTTP operations,
+The Vue app composes catalog, play and terminal features for seven HTTP reads/mutations and a WebSocket upgrade,
 including detail, declared file downloads and observed run status. Descriptions
 are displayed as text, with no HTML execution or active author links. Download
 ports return plain `Uint8Array`; the catalog feature creates the browser Blob URL
@@ -122,6 +125,8 @@ go test ./...
 The embed directives make a missing frontend build a compile error. The
 bootstrap context excludes host `node_modules` and generated frontend directories.
 A separate Vite server does not provide authenticated access to Go's API: the
-server allows its own local origin. Container terminal access and submission
-history remain subsequent implementation stages. Reopening a full server URL and
+server allows its own local origin. [Container terminal access](terminal.md) uses
+first-frame authentication, a render acknowledgement per output frame and cleanup
+on disconnect/unmount. Its UI styles use a page-specific CSP nonce through xterm's
+document override. Submission history remains a subsequent stage. Reopening a full server URL and
 selecting the problem recovers its current run from Go, without browser persistence.

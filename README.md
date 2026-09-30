@@ -37,7 +37,7 @@ Rotor Lock is an introductory reversing problem. Analyze its input checker and f
 ./pwnden submit rotor-lock 'pwnden{your_answer}'
 ```
 
-File problem tools need no service startup. Their problem directory is read-only by default, and their toolbox has no network access. `exec` preserves command arguments and returns the command's exit status. It runs completed commands; an interactive terminal is a later feature.
+File problem tools need no service startup. Their problem directory is read-only by default, and their toolbox has no network access. `exec` preserves command arguments and returns the command's exit status. The web player's [interactive terminal](docs/terminal.md) opens a shell in the same isolated toolbox, with input, resize and cleanup on disconnect.
 
 `./pwnden --help` lists commands. Linux/WSL is the current execution target for checkout verification. Windows and macOS actual host checks are a later stage.
 

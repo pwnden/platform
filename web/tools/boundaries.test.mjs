@@ -32,6 +32,7 @@ for (const [name, file, content, expected] of [
   ['alias', 'domains/catalog/src/invalid.ts', "import '#api';", /not allowed/],
   ['Vue script', 'features/catalog/src/Invalid.vue', '<script setup lang="ts">import { createAPI } from "@pwnden/api";</script><template><div /></template>', /not allowed/],
   ['Sectile outside UI', 'apps/player/src/invalid.ts', "import '@sectile/vue/text';", /not allowed/],
+  ['xterm outside UI', 'features/terminal/src/invalid.ts', "import '@xterm/xterm';", /not allowed/],
   ['Sectile public re-export', 'packages/ui/src/invalid.ts', "export { TextField } from '@sectile/vue/text';", /must stay private/],
   ['computed loading', 'apps/player/src/invalid.ts', 'const name = "vue"; import(name);', /literal/],
   ['mixed acronym', 'packages/api/src/invalid.ts', 'export interface HttpApiClient {}', /acronyms/],

@@ -71,8 +71,10 @@ owns their CSS and exports its own props, events and handle.
 
 Each HTML response issues a fresh style nonce in CSP and a meta element. The UI
 uses xterm's documented `documentOverride` with a document proxy to assign that
-nonce only to its generated styles. Global DOM methods remain unchanged. Scripts
-retain `default-src 'self'`; arbitrary inline styles remain blocked.
+nonce only to its generated styles. Global DOM methods remain unchanged.
+The viewport's styles receive the nonce before insertion into xterm's own
+containers, including styles created through the native document in xterm 6.
+Scripts retain `default-src 'self'`; arbitrary inline styles remain blocked.
 WebSocket connections are explicitly permitted only to the printed server host.
 
 ## Verification

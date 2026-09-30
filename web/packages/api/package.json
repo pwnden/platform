@@ -7,6 +7,7 @@
   "scripts": { "typecheck": "tsc -p tsconfig.json" },
   "dependencies": {
     "@pwnden/catalog": "workspace:0.1.0",
-    "@pwnden/play": "workspace:0.1.0"
+    "@pwnden/play": "workspace:0.1.0",
+    "@pwnden/terminal": "workspace:0.1.0"
   }
 }

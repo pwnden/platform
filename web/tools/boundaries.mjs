@@ -8,13 +8,15 @@ import { parse } from '@vue/compiler-sfc';
 export const policy = {
   '@pwnden/catalog': { directory: 'domains/catalog', dependencies: [] },
   '@pwnden/play': { directory: 'domains/play', dependencies: [] },
-  '@pwnden/ui': { directory: 'packages/ui', dependencies: ['vue', '@sectile/vue'] },
-  '@pwnden/api': { directory: 'packages/api', dependencies: ['@pwnden/catalog', '@pwnden/play'] },
+  '@pwnden/terminal': { directory: 'domains/terminal', dependencies: [] },
+  '@pwnden/ui': { directory: 'packages/ui', dependencies: ['vue', '@sectile/vue', '@xterm/xterm', '@xterm/addon-fit'] },
+  '@pwnden/api': { directory: 'packages/api', dependencies: ['@pwnden/catalog', '@pwnden/play', '@pwnden/terminal'] },
   '@pwnden/catalog-feature': { directory: 'features/catalog', dependencies: ['vue', '@pwnden/catalog', '@pwnden/ui'] },
   '@pwnden/play-feature': { directory: 'features/play', dependencies: ['vue', '@pwnden/play', '@pwnden/ui'] },
+  '@pwnden/terminal-feature': { directory: 'features/terminal', dependencies: ['vue', '@pwnden/terminal', '@pwnden/ui'] },
   '@pwnden/player': {
     directory: 'apps/player',
-    dependencies: ['vue', '@pwnden/api', '@pwnden/catalog', '@pwnden/catalog-feature', '@pwnden/play-feature', '@pwnden/ui'],
+    dependencies: ['vue', '@pwnden/api', '@pwnden/catalog', '@pwnden/catalog-feature', '@pwnden/play-feature', '@pwnden/terminal-feature', '@pwnden/ui'],
     development: ['vite', '@vitejs/plugin-vue'],
   },
 };

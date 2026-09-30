@@ -4,12 +4,14 @@ import type { APIClient } from '@pwnden/api';
 import type { Problem } from '@pwnden/catalog';
 import { ProblemDetail, ProblemList } from '@pwnden/catalog-feature';
 import { PlayPanel } from '@pwnden/play-feature';
+import { TerminalPanel } from '@pwnden/terminal-feature';
 
 defineProps<{ client?: APIClient | undefined }>();
 const selected = ref<Problem>();
 const busy = ref(false);
+const terminalEnabled = ref(false);
 function select(problem: Problem) {
-  if (!busy.value) selected.value = problem;
+  if (!busy.value) { terminalEnabled.value = false; selected.value = problem; }
 }
 </script>
 
@@ -21,7 +23,8 @@ function select(problem: Problem) {
       <ProblemList :catalog="client.catalog" :selection-disabled="busy" @select="select" />
       <div v-if="selected" :key="selected.slug" class="selected-problem">
         <ProblemDetail :catalog="client.catalog" :slug="selected.slug" :title="selected.title" />
-        <PlayPanel :player="client.player" :slug="selected.slug" :kind="selected.kind" @busy="busy = $event" />
+        <PlayPanel :player="client.player" :slug="selected.slug" :kind="selected.kind" @busy="busy = $event" @status="terminalEnabled = $event?.state === 'ready' || $event?.state === 'running'" />
+        <TerminalPanel :terminals="client.terminals" :slug="selected.slug" :enabled="terminalEnabled" :busy="busy" />
       </div>
       <p v-else>목록에서 풀어볼 문제를 선택하세요.</p>
     </div>
@@ -32,6 +35,6 @@ function select(problem: Problem) {
 main { max-width: 72rem; padding: var(--ui-space-4); margin: auto; }
 h1 { margin-top: 0; }
 .workspace { display: grid; grid-template-columns: minmax(14rem, 1fr) minmax(0, 2fr); gap: var(--ui-space-4); }
-.selected-problem { min-width: 0; display: grid; align-content: start; gap: var(--ui-space-4); }
-@media (max-width: 44rem) { .workspace { grid-template-columns: 1fr; } main { padding: var(--ui-space-2); } }
+.selected-problem { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: var(--ui-space-4); }
+@media (max-width: 44rem) { .workspace { grid-template-columns: minmax(0, 1fr); } main { padding: var(--ui-space-2); } }
 </style>

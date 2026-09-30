@@ -1,5 +1,8 @@
 import type { Catalog, Problem, ProblemDetail } from '@pwnden/catalog';
 import type { Endpoint, Player, Run, RunStatus, Submission } from '@pwnden/play';
+import type { Terminals } from '@pwnden/terminal';
+import { connectTerminal } from './terminal';
+import type { TerminalTransport } from './terminal';
 
 export class APIError extends Error {
   constructor(readonly code: string, readonly status: number) {
@@ -11,11 +14,13 @@ export class APIError extends Error {
 export interface APIClient {
   readonly catalog: Catalog;
   readonly player: Player;
+  readonly terminals: Terminals;
 }
 
 export interface APIOptions {
   readonly token: string;
   readonly fetch?: typeof globalThis.fetch;
+  readonly socket?: (url: string, protocol: string) => TerminalTransport;
 }
 
 function object(value: unknown): Record<string, unknown> {
@@ -110,6 +115,13 @@ export function createAPI(options: APIOptions): APIClient {
   }
 
   return {
+    terminals: {
+      connect(slug, size, receive) {
+        const path = `/api/v1${route(slug)}/terminal`;
+        return connectTerminal(path, options.token, size, receive,
+          options.socket ?? ((url, protocol) => new WebSocket(url, protocol)), globalThis.location.origin);
+      },
+    },
     catalog: {
       async list(): Promise<readonly Problem[]> {
         const payload = await request('/problems');

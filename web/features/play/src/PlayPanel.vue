@@ -4,7 +4,7 @@ import type { Player, RunStatus } from '@pwnden/play';
 import { UIButton, UITextField } from '@pwnden/ui';
 
 const props = defineProps<{ player: Player; slug: string; kind: RunStatus['kind'] }>();
-const emit = defineEmits<{ busy: [value: boolean] }>();
+const emit = defineEmits<{ busy: [value: boolean]; status: [value: RunStatus | undefined] }>();
 const pending = ref(false);
 const status = ref<RunStatus>();
 const flag = ref('');
@@ -45,7 +45,7 @@ async function perform(operation: 'run' | 'stop' | 'submit' | 'status') {
     } else if (active) status.value = undefined;
     if (active) { failed.value = true; message.value = '요청을 완료하지 못했습니다. 서버 연결을 확인하고 실행 상태를 새로고침하세요.'; }
   } finally {
-    if (active) { pending.value = false; emit('busy', false); }
+    if (active) { pending.value = false; emit('busy', false); emit('status', status.value); }
   }
 }
 onMounted(() => perform('status'));
