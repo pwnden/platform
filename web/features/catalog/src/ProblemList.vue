@@ -36,7 +36,7 @@ onMounted(load);
     <ul v-if="problems.length" class="problem-list">
       <li v-for="problem in problems" :key="problem.slug">
         <UIButton variant="row" :aria-pressed="selectedSlug === problem.slug" :disabled="selectionDisabled" @click="emit('select', problem)">
-          <span class="problem-entry"><span class="problem-title">{{ problem.title }}</span><span class="problem-slug">{{ problem.slug }}</span><span class="problem-meta">{{ problem.category }} · {{ problem.kind === 'file' ? '파일 문제' : '서비스 문제' }}</span></span>
+          <span class="problem-entry"><span class="problem-title" :title="problem.title">{{ problem.title }}</span><span class="problem-slug" :title="problem.slug">{{ problem.slug }}</span><span class="problem-meta">{{ problem.category }} · {{ problem.kind === 'file' ? '파일 문제' : '서비스 문제' }}</span></span>
         </UIButton>
       </li>
     </ul>
@@ -47,7 +47,8 @@ onMounted(load);
 .catalog-panel { height: 100%; }
 .catalog-panel :deep(.ui-panel-body) { padding: var(--ui-space-1); }
 .problem-list { padding: 0; margin: var(--ui-space-1) 0; list-style: none; display: grid; gap: 0.35rem; }
-.problem-entry { display: grid; gap: 0.4rem; padding-block: 0.6rem; min-width: 0; overflow-wrap: anywhere; }
+.problem-entry { display: grid; gap: 0.4rem; padding-block: 0.6rem; min-width: 0; width: 100%; }
+.problem-title, .problem-slug, .problem-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .problem-title { font-weight: 500; }
 .problem-slug { color: var(--ui-muted); font-size: 0.8rem; }
 .problem-meta { color: var(--ui-muted); font-size: 0.8rem; }

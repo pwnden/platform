@@ -11,6 +11,13 @@ export interface UIPanelProps {
   readonly headingID: string;
 }
 
+export interface UISplitProps {
+  readonly label: string;
+  readonly modelValue: number;
+  readonly min?: number;
+  readonly max?: number;
+}
+
 export interface UIMarkdownProps {
   readonly source: string;
 }

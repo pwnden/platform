@@ -46,7 +46,7 @@ const MarkdownContent = () => nodes.value.map(node => renderMarkdownNode(node, p
 </template>
 
 <style scoped>
-.ui-markdown { min-width: 0; max-width: 75ch; overflow-wrap: anywhere; line-height: 1.85; }
+.ui-markdown { min-width: 0; max-width: 75ch; word-break: keep-all; overflow-wrap: break-word; line-height: 1.85; }
 .ui-markdown :deep(p), .ui-markdown :deep(ul), .ui-markdown :deep(ol), .ui-markdown :deep(blockquote), .ui-markdown :deep(pre), .ui-markdown :deep(.markdown-table) { margin-block: 0 var(--ui-space-2); }
 .ui-markdown :deep(h4), .ui-markdown :deep(h5), .ui-markdown :deep(h6) { margin-block: var(--ui-space-3) var(--ui-space-1); color: var(--ui-foreground); line-height: 1.5; scroll-margin-top: var(--ui-space-2); }
 .ui-markdown :deep(h4) { font-size: 1.2rem; }

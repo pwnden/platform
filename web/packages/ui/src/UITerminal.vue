@@ -23,7 +23,7 @@ onMounted(() => {
   const color = (token: string) => style.getPropertyValue(token).trim();
   terminal = new Terminal({
     documentOverride: terminalDocument(document),
-    disableStdin: !props.enabled, cursorBlink: true, screenReaderMode: true,
+    disableStdin: !props.enabled, cursorBlink: props.enabled, screenReaderMode: true,
     scrollback: 2000, fontSize: 14, lineHeight: 1.4,
     fontFamily: color('--ui-font-mono'),
     theme: {
@@ -55,7 +55,9 @@ onMounted(() => {
   resize();
   void document.fonts.ready.then(() => { if (alive) resize(); });
 });
-watch(() => props.enabled, enabled => { if (terminal) terminal.options.disableStdin = !enabled; });
+watch(() => props.enabled, enabled => {
+  if (terminal) { terminal.options.disableStdin = !enabled; terminal.options.cursorBlink = enabled; }
+});
 onUnmounted(() => { alive = false; observer?.disconnect(); terminal?.dispose(); terminal = undefined; });
 </script>
 

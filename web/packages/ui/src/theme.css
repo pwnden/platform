@@ -49,6 +49,8 @@
   color: var(--ui-foreground);
   background: var(--ui-background);
   line-height: 1.65;
+  word-break: keep-all;
+  overflow-wrap: break-word;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -73,6 +75,8 @@ a { color: var(--ui-accent); text-underline-offset: 0.25em; overflow-wrap: anywh
   color: var(--ui-foreground);
   background: var(--ui-surface-raised);
   line-height: 1.4;
+  white-space: nowrap;
+  flex-shrink: 0;
   cursor: pointer;
   transition: background-color 140ms, border-color 140ms, box-shadow 140ms;
 }

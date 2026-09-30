@@ -147,17 +147,17 @@ Semantic success, warning and danger colors support status and terminal output. 
 
 The frontmatter's display role is the empty workspace prompt; headline is the problem title; title is the shared panel heading. Body sets the root scale, and label covers field and supporting labels. Smaller status and footnote text use the same stack. Headings and problem titles use medium weight. Numeric text uses tabular figures; ligatures are disabled.
 
-Problem descriptions render Markdown, wrap long content, use a reading measure of (75ch) and line height of (1.85). Code preserves literal whitespace inside a scrollable block. The real terminal uses (14px) type and line height of (1.4). Text inputs use (16px) at the narrow layout breakpoint.
+Problem descriptions render Markdown, wrap at word boundaries, use a reading measure of (75ch) and line height of (1.85). Korean words stay together; controls keep whole labels and wrap as units. Code preserves literal whitespace inside a scrollable block. The real terminal uses (14px) type and line height of (1.4). Text inputs use (16px) at the narrow layout breakpoint.
 
 **The Shared Glyph Rule.** Keep Latin and Korean content in the bundled monospace stack, including controls and terminal output.
 
 ## Layout
 
-The player occupies (100dvh), with a minimum height of (38rem), between a compact header and footer. The desktop sidebar is (17rem). The remaining area divides into reading and terminal columns: `minmax(21rem, 0.9fr)` and `minmax(0, 1.2fr)`. Sidebar and reading content scroll within their bounds.
+The player occupies (100dvh), with a minimum height of (38rem), between a compact header and footer. Two nested `UISplit` controls divide the catalog, reading and terminal columns. The catalog starts at (20%) of the workspace and adjusts between (14%) and (36%). Reading starts at (50%) of the remaining width and adjusts between (30%) and (70%). Both boundaries support pointer dragging and keyboard arrows through Sectile separator semantics. Sidebar and reading content scroll within their bounds. Column changes preserve the selected problem and terminal session.
 
-At (76rem), the sidebar becomes (15rem) and the terminal follows the reading column, with a minimum terminal panel height of (32rem). At (48rem), the sidebar moves above the content with a maximum height of (18rem), the page uses document scrolling, and panel padding changes from `ui-space-3` to `ui-space-2`. At (30rem), the flag field and submit button stack. The document supports widths from (320px).
+At (48rem), panes stack in reading order and the resize handles are hidden. The sidebar has a maximum height of (18rem), the terminal a minimum height of (32rem), and the page uses document scrolling. Panel padding changes from `ui-space-3` to `ui-space-2`. The flag field and submit button stack when their own panel is narrower than (30rem). The document supports widths from (320px).
 
-Shared panel bodies use `ui-space-3`; terminal controls and output use `ui-space-2`. Control groups use `ui-space-1`. Panel headings wrap their actions as needed. Long names, URLs and descriptions wrap within their columns.
+Shared panel bodies use `ui-space-3`; headings, terminal controls and output use `ui-space-2`. Control groups use `ui-space-1`. Panel headings wrap actions as whole units. Navigation labels ellipsize within narrow panes and retain full titles; URLs and file paths can wrap while prose preserves words.
 
 **The Bounded Terminal Rule.** Keep terminal measurement inside a positioned, bounded viewport. The terminal screen has a minimum height of (18rem), with its renderer positioned within that screen.
 
@@ -207,7 +207,7 @@ Source: [UIStatus.vue](packages/ui/src/UIStatus.vue).
 
 ### Terminal
 
-`UITerminal` owns xterm and its fit addon inside the UI package. It maps shared tokens to the terminal theme, enables screen reader mode and resizes after fonts load. The surrounding panel supplies connection controls and real connection status. A centered prompt explains the closed state, and a footnote explains session cleanup.
+`UITerminal` owns xterm and its fit addon inside the UI package. It maps shared tokens to the terminal theme, enables screen reader mode and resizes after fonts load or column changes. The surrounding panel supplies connection controls and real connection status. A stopped service offers **문제 실행 후 터미널 연결**, delegating startup to the play feature through the app before opening a terminal. Failed preparation keeps the shell closed. Connection errors name the recovery action. The renderer is hidden until ready, then receives focus after Vue updates its input state. A centered prompt explains the closed state, and a footnote explains session cleanup.
 
 Source: [UITerminal.vue](packages/ui/src/UITerminal.vue), [TerminalPanel.vue](features/terminal/src/TerminalPanel.vue).
 

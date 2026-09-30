@@ -1,7 +1,13 @@
 # Browser terminal
 
 Select a problem and choose **터미널 연결** in the local player. File problems
-need no service; service problems must be running. The terminal opens `/bin/sh -i`
+need no service. A stopped service offers **문제 실행 후 터미널 연결**: the play
+feature starts the problem and refreshes its observed state before the terminal
+connects. An already-running service connects directly. Failed or canceled
+preparation keeps the shell closed. Connection errors provide recovery guidance,
+and input receives focus only after the shell is ready. Both desktop column
+boundaries support resizing; the existing connection receives new dimensions.
+The terminal opens `/bin/sh -i`
 inside the declared solution image at `/challenge`; that image must provide
 `/bin/sh`. The Docker Engine allocates the TTY. The official Docker CLI connection
 helper preserves the same context, TLS and endpoint selection as Compose.

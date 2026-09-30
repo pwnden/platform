@@ -18,7 +18,7 @@ Selecting a problem highlights its row and opens the associated workspace. Selec
 
 ## Responsive behavior
 
-At 76rem the terminal follows the reading column. At 48rem the problem list moves above the content, with bounded scrolling; the page uses the full width and vertical document scroll. The terminal viewport has a bounded independent layout so terminal row measurements cannot grow the page.
+Catalog, description and terminal columns have two draggable and keyboard-accessible boundaries. Resizing preserves the terminal connection and refits its rows and columns. At 48rem the panes stack in reading order, with bounded catalog scrolling and full-width document scrolling. Korean prose keeps words together; control labels remain whole. The terminal viewport has a bounded independent layout so terminal row measurements cannot grow the page.
 
 ## Validation
 

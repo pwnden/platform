@@ -2,6 +2,7 @@
 import { onMounted, onUnmounted, ref } from 'vue';
 import type { Player, RunStatus } from '@pwnden/play';
 import { UIButton, UITextField, UIPanel, UIStatus } from '@pwnden/ui';
+import type { PlayPanelHandle } from './props';
 
 const props = defineProps<{ player: Player; slug: string; kind: RunStatus['kind'] }>();
 const emit = defineEmits<{ busy: [value: boolean]; status: [value: RunStatus | undefined] }>();
@@ -47,12 +48,21 @@ async function perform(operation: 'run' | 'stop' | 'submit' | 'status') {
   } finally {
     if (active) { pending.value = false; emit('busy', false); emit('status', status.value); }
   }
+  return status.value;
 }
 onMounted(() => perform('status'));
+const handle: PlayPanelHandle = {
+  async start() {
+    if (!active || pending.value || props.kind !== 'service' || status.value?.state !== 'stopped') return false;
+    const result = await perform('run');
+    return active && result?.state === 'running';
+  },
+};
+defineExpose(handle);
 </script>
 
 <template>
-  <UIPanel title="실행과 정답 확인" headingID="play-heading" :aria-busy="pending">
+  <UIPanel title="실행과 정답 확인" headingID="play-heading" :aria-busy="pending" class="play-panel">
     <template #actions><UIStatus :tone="status?.state === 'running' || status?.state === 'ready' ? 'info' : status?.state === 'unavailable' ? 'danger' : 'muted'">{{ status?.state === 'running' ? '실행 중' : status?.state === 'ready' ? '준비됨' : status?.state === 'stopped' ? '중지됨' : status?.state === 'unavailable' ? '확인 필요' : '상태 확인' }}</UIStatus></template>
     <p v-if="!status && !pending">실행 상태를 확인하지 못했습니다.</p>
     <p v-else-if="status?.state === 'ready'">파일 문제입니다. 서비스 실행 없이 배포 파일을 분석하고 정답을 제출할 수 있습니다.</p>
@@ -82,10 +92,11 @@ onMounted(() => perform('status'));
 
 <style scoped>
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-space-1); margin-block: var(--ui-space-2); }
+.play-panel { container-type: inline-size; }
 p { color: var(--ui-muted); font-size: 0.9rem; margin-block: var(--ui-space-1); }
 p[role='alert'] { color: var(--ui-danger); }
 form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: var(--ui-space-1); margin-top: var(--ui-space-3); padding-top: var(--ui-space-3); border-top: 1px solid var(--ui-border); }
 .ui-field { width: 100%; }
 .endpoints { padding-left: var(--ui-space-3); overflow-wrap: anywhere; }
-@media (max-width: 30rem) { form { grid-template-columns: minmax(0, 1fr); } form > .ui-button { justify-self: start; } }
+@container (max-width: 30rem) { form { grid-template-columns: minmax(0, 1fr); } form > .ui-button { justify-self: start; } }
 </style>
