@@ -90,6 +90,8 @@ def check_assets(origin, token):
         assert response.headers.get("Cache-Control") == "no-store"
         assert "default-src 'self'" in response.headers.get("Content-Security-Policy", "")
     assert 'id="app"' in page and 'type="module"' in page
+    nonce = re.search(r'name="pwnden-style-nonce" content="([a-f0-9]{64})"', page)
+    assert nonce
     assert "/session.js" not in page and token not in page
     assets = re.findall(r'(?:src|href)="(/assets/[^" ]+)"', page)
     assert len(assets) >= 2
@@ -125,9 +127,20 @@ def interrupted(_signum, _frame):
     raise KeyboardInterrupt
 
 
+def terminal(driver, origin, token, work, slug, mode):
+    catalogs = list((work / "config" / "pwnden" / "catalogs").glob("*/catalog"))
+    assert len(catalogs) == 1
+    settings = {"origin": origin, "token": token, "root": str(catalogs[0]), "slug": slug, "mode": mode}
+    result = subprocess.run([str(driver)], input=json.dumps(settings), capture_output=True, text=True, timeout=120)
+    if result.returncode:
+        raise RuntimeError(result.stderr)
+    print(result.stdout.strip(), flush=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--package", type=Path, required=True)
+    parser.add_argument("--terminal-driver", type=Path)
     args = parser.parse_args()
     package = args.package.resolve()
     docker = shutil.which("docker")
@@ -167,6 +180,9 @@ def main():
         assert api(origin, "incorrect", "GET", f"/problems/rotor-lock/files/{file['id']}", expected=401)["error"]["code"] == "unauthorized"
         assert api(origin, token, "GET", "/problems/rotor-lock/files/" + "0" * 64, expected=404)["error"]["code"] == "not_found"
         assert api(origin, token, "GET", "/problems/rotor-lock/status") == {"slug": "rotor-lock", "kind": "file", "state": "ready", "endpoints": []}
+        if args.terminal_driver:
+            for mode in ("exit", "disconnect"):
+                terminal(args.terminal_driver.resolve(), origin, token, work, "rotor-lock", mode)
         assert api(origin, token, "GET", "/problems/note-vault")["files"] == []
         assert api(origin, token, "GET", "/problems/note-vault/status")["state"] == "stopped"
         assert api(origin, token, "POST", "/problems/rotor-lock/run")["endpoints"] == []
@@ -182,6 +198,8 @@ def main():
         assert api(origin, token, "POST", "/problems/note-vault/run", expected=409)["error"]["code"] == "already_running"
         assert not api(origin, token, "POST", "/problems/note-vault/submissions", {"flag": "wrong"})["accepted"]
         assert api(origin, token, "POST", "/problems/note-vault/submissions", {"flag": flag})["accepted"]
+        if args.terminal_driver:
+            terminal(args.terminal_driver.resolve(), origin, token, work, "note-vault", "disconnect")
         stop(server)
         server = None
         # Completed runs retain their state; a new process rotates credentials.
@@ -207,6 +225,9 @@ def main():
         assert api(origin, next_token, "POST", "/problems/note-vault/run", expected=409)["error"]["code"] == "already_running"
         for _ in range(2):
             assert api(origin, next_token, "DELETE", "/problems/note-vault/run") == {"slug": "note-vault"}
+        if args.terminal_driver:
+            api(origin, next_token, "POST", "/problems/note-vault/run")
+            terminal(args.terminal_driver.resolve(), origin, next_token, work, "note-vault", "stop")
         owned_run = False
         assert api(origin, next_token, "GET", "/problems/note-vault/status")["state"] == "stopped"
         assert api(origin, next_token, "POST", "/problems/note-vault/submissions", {"flag": flag}, expected=409)["error"]["code"] == "not_running"

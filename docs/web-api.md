@@ -1,6 +1,6 @@
 # Local player HTTP contract
 
-The platform owns the web client and HTTP adapter in the same repository. The initial API contract is [OpenAPI 3.1.2](https://spec.openapis.org/oas/v3.1.2.html), recorded in [openapi.json](openapi.json). JSON DTOs, handlers, server lifecycle, and public error mapping live in `internal/httpapi`. `pwnden serve` opens the managed installation, serves the embedded Vue player and provides these operations. Interactive terminal access is a subsequent implementation stage. See [local server](local-server.md) for startup and verification.
+The platform owns the web client and HTTP adapter in the same repository. The HTTP contract is [OpenAPI 3.1.2](https://spec.openapis.org/oas/v3.1.2.html), recorded in [openapi.json](openapi.json). JSON DTOs, handlers, server lifecycle, and public error mapping live in `internal/httpapi`. `pwnden serve` opens the managed installation, serves the embedded Vue player and provides these operations. [Terminal protocol](terminal.md) defines WebSocket frames and session ownership. See [local server](local-server.md) for startup and verification.
 
 The API version is independent of the challenges-owned problem contract. Version 1 uses `/api/v1`, snake_case JSON keys and `application/json`. API changes are maintained with the platform. Compatible additions stay in version 1; incompatible request/response semantics require another major API path. Clients tolerate additional response fields and use error codes rather than matching messages.
 
@@ -15,6 +15,7 @@ The API version is independent of the challenges-owned problem contract. Version
 | `POST /api/v1/problems/{slug}/run` | `Runner.Run` | `200`, problem kind, file count and published endpoints. |
 | `DELETE /api/v1/problems/{slug}/run` | `Runner.Stop` | `200`, stopped slug after cleanup. |
 | `POST /api/v1/problems/{slug}/submissions` | `Submit` | `200`, slug and `accepted` boolean. |
+| `GET /api/v1/problems/{slug}/terminal` | `Terminals.OpenTerminal` | `101`, same-origin WebSocket with first-frame authentication. |
 
 Problem summaries contain `slug`, `title`, `category`, and `kind`. Missing display titles use the slug. Kind is `file` or `service`. Arrays are JSON arrays, including empty arrays; they never serialize as `null`.
 
@@ -26,7 +27,7 @@ Start and stop accept no body. File starts create no service resources and retur
 
 Submission accepts exactly one JSON object with a nonempty string `flag`, up to 4096 body bytes. Unknown request fields, trailing JSON values, malformed JSON, query parameters, and unexpected bodies are rejected. The media type must be `application/json` with an optional charset. Leading and trailing whitespace is trimmed by the application. An incorrect answer is `200 {"slug":"...","accepted":false}`. Service submissions require a recorded run. Submission history is a later feature.
 
-The API exposes the player operations above. Author solution verification remains a CLI operation. Interactive terminal streaming and submission history are subsequent capabilities with their own application contracts.
+The API exposes the player operations above. Author solution verification remains a CLI operation. Submission history is a subsequent capability.
 
 ## Errors
 

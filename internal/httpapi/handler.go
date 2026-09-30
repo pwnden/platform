@@ -2,7 +2,9 @@ package httpapi
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/subtle"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -33,10 +35,11 @@ type handler struct {
 	active          sync.WaitGroup
 	locks           map[string]*problemLock
 	cleanupFailures error
+	terminals       map[string]*terminalConnection
 }
 
 func newHandler(base context.Context, backend Backend, host, token string, diagnostics io.Writer) *handler {
-	return &handler{base: base, backend: backend, host: host, token: token, diagnostics: diagnostics, locks: make(map[string]*problemLock)}
+	return &handler{base: base, backend: backend, host: host, token: token, diagnostics: diagnostics, locks: make(map[string]*problemLock), terminals: make(map[string]*terminalConnection)}
 }
 
 func (h *handler) closeAdmission() {
@@ -81,6 +84,15 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.URL.Path == "/" || strings.HasPrefix(r.URL.Path, "/assets/") {
 		h.asset(w, r)
+		return
+	}
+	if strings.HasPrefix(r.URL.Path, BasePath+"/problems/") && strings.HasSuffix(r.URL.Path, "/terminal") {
+		slug := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, BasePath+"/problems/"), "/terminal")
+		if len(slug) > 40 || !apiSlug.MatchString(slug) {
+			transportError(w, 400, "invalid_argument", "The problem slug is invalid.")
+			return
+		}
+		h.terminal(w, r, slug)
 		return
 	}
 	if len(r.Header.Values("Authorization")) != 1 || subtle.ConstantTimeCompare([]byte(r.Header.Get("Authorization")), []byte("Bearer "+h.token)) != 1 {
@@ -193,6 +205,10 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		writeJSON(w, 200, Submission{Slug: result.Slug, Accepted: result.Accepted})
 	case r.Method == "DELETE":
+		if err := h.stopTerminal(slug); err != nil {
+			applicationError(w, err)
+			return
+		}
 		result, err := h.backend.Stop(ctx, slug)
 		if err != nil {
 			applicationError(w, err)
@@ -382,6 +398,17 @@ func (h *handler) asset(w http.ResponseWriter, r *http.Request) {
 		default:
 			typeName = http.DetectContentType(content)
 		}
+	} else {
+		secret := make([]byte, 32)
+		if _, err := rand.Read(secret); err != nil {
+			transportError(w, 500, "internal_error", "The page could not be prepared.")
+			return
+		}
+		nonce := hex.EncodeToString(secret)
+		// Only generated terminal styles carry this per-page nonce. Scripts keep
+		// the original default-src policy and arbitrary inline styles stay blocked.
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; connect-src 'self' ws://"+h.host+"; style-src 'self' 'nonce-"+nonce+"'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
+		content = []byte(strings.Replace(string(content), "<head>", "<head><meta name=\"pwnden-style-nonce\" content=\""+nonce+"\">", 1))
 	}
 	w.Header().Set("Content-Type", typeName)
 	w.Header().Set("Content-Length", fmt.Sprint(len(content)))

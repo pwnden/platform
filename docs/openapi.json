@@ -2,12 +2,26 @@
   "openapi": "3.1.2",
   "info": {
     "title": "pwnden local player API",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": "Local player API implemented by the Go server and serve command."
   },
   "servers": [{"url": "/api/v1"}],
   "security": [{"LocalSession": []}],
   "paths": {
+    "/problems/{slug}/terminal": {
+      "parameters": [{"$ref": "#/components/parameters/Slug"}],
+      "get": {
+        "operationId": "connectTerminal",
+        "summary": "Upgrade to the interactive toolbox terminal",
+        "description": "Same-origin Origin and pwnden.terminal.v1 subprotocol required. No bearer header in the native browser handshake: authenticate in the first WebSocket text frame within five seconds, before container creation. Frames and cleanup ownership are documented in terminal.md.",
+        "security": [],
+        "x-websocket-subprotocol": "pwnden.terminal.v1",
+        "responses": {
+          "101": {"description": "WebSocket upgraded; first-frame authentication still required"},
+          "default": {"$ref": "#/components/responses/Failure"}
+        }
+      }
+    },
     "/problems": {
       "get": {
         "operationId": "listProblems",

@@ -24,6 +24,16 @@ func TestEmbeddedPlayerAssets(t *testing.T) {
 		t.Fatal("the built player entry point was not served")
 	}
 	assets := regexp.MustCompile(`(?:src|href)="(/assets/[^" ]+)"`).FindAllStringSubmatch(page.Body.String(), -1)
+	nonce := regexp.MustCompile(`name="pwnden-style-nonce" content="([a-f0-9]{64})"`).FindStringSubmatch(page.Body.String())
+	if len(nonce) != 2 || !strings.Contains(page.Header().Get("Content-Security-Policy"), "style-src 'self' 'nonce-"+nonce[1]+"'") || strings.Contains(page.Header().Get("Content-Security-Policy"), "unsafe-inline") {
+		t.Fatal("terminal style nonce policy is missing or broad")
+	}
+	if !strings.Contains(page.Header().Get("Content-Security-Policy"), "connect-src 'self' ws://"+testHost+";") {
+		t.Fatal("terminal WebSocket policy is not confined to the server")
+	}
+	if next := get("GET", "/"); strings.Contains(next.Body.String(), nonce[1]) {
+		t.Fatal("style nonce reused")
+	}
 	if len(assets) < 2 {
 		t.Fatal("missing script or style references")
 	}

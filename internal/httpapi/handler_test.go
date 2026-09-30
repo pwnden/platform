@@ -24,6 +24,11 @@ type fakeBackend struct {
 	run      func(context.Context, string) (application.RunInfo, error)
 	stop     func(context.Context, string) (application.StopInfo, error)
 	submit   func(context.Context, string, string) (application.Submission, error)
+	terminal func(context.Context, string, int, int) (application.TerminalSession, error)
+}
+
+func (b fakeBackend) OpenTerminal(ctx context.Context, slug string, cols, rows int) (application.TerminalSession, error) {
+	return b.terminal(ctx, slug, cols, rows)
 }
 
 func (b fakeBackend) List(ctx context.Context) ([]application.Problem, error) { return b.list(ctx) }

@@ -17,6 +17,7 @@ type Backend interface {
 	application.Details
 	application.Files
 	application.Observer
+	application.Terminals
 	application.Runner
 	Submit(context.Context, string, string) (application.Submission, error)
 }
