@@ -1,0 +1,12 @@
+{
+  "name": "@pwnden/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "typecheck": "tsc -p tsconfig.json" },
+  "dependencies": {
+    "@pwnden/catalog": "workspace:0.1.0",
+    "@pwnden/play": "workspace:0.1.0"
+  }
+}

@@ -1,0 +1,46 @@
+:root {
+  color-scheme: light;
+  --ui-background: #f8f9fa;
+  --ui-surface: #ffffff;
+  --ui-foreground: #20252b;
+  --ui-muted: #505962;
+  --ui-border: #8a939c;
+  --ui-accent: #174b7a;
+  --ui-space-1: 0.5rem;
+  --ui-space-2: 1rem;
+  --ui-space-3: 1.5rem;
+  --ui-space-4: 2rem;
+  --ui-radius: 0.375rem;
+  font-family: system-ui, sans-serif;
+  color: var(--ui-foreground);
+  background: var(--ui-background);
+  line-height: 1.6;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+button, input { font: inherit; }
+a { color: var(--ui-accent); text-underline-offset: 0.2em; }
+::selection { color: var(--ui-surface); background: var(--ui-accent); }
+:focus-visible { outline: 3px solid var(--ui-accent); outline-offset: 3px; }
+.ui-button {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  color: var(--ui-foreground);
+  background: var(--ui-surface);
+  cursor: pointer;
+}
+.ui-button:hover:enabled { background: #e9eef3; }
+.ui-button:disabled { opacity: 0.65; cursor: default; }
+.ui-field { display: grid; gap: 0.25rem; }
+.ui-input {
+  min-width: 0;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  color: var(--ui-foreground);
+  background: var(--ui-surface);
+  caret-color: var(--ui-accent);
+}

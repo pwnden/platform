@@ -1,0 +1,11 @@
+packages:
+  - apps/*
+  - packages/*
+  - domains/*
+  - features/*
+
+saveExact: true
+engineStrict: true
+strictPeerDependencies: true
+overrides:
+  typescript: npm:typescript-native-bridge@6.0.3-bridge.18.tsgo.7.0.2

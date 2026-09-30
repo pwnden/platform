@@ -1,0 +1,16 @@
+{
+  "name": "@pwnden/player",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "typecheck": "vue-tsc -p tsconfig.json", "build": "vite build" },
+  "dependencies": {
+    "@pwnden/api": "workspace:0.1.0",
+    "@pwnden/catalog": "workspace:0.1.0",
+    "@pwnden/catalog-feature": "workspace:0.1.0",
+    "@pwnden/play-feature": "workspace:0.1.0",
+    "@pwnden/ui": "workspace:0.1.0",
+    "vue": "3.5.43"
+  },
+  "devDependencies": { "@vitejs/plugin-vue": "6.0.9", "vite": "8.3.1" }
+}

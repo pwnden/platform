@@ -1,0 +1,13 @@
+{
+  "name": "@pwnden/catalog-feature",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "typecheck": "vue-tsc -p tsconfig.json" },
+  "dependencies": {
+    "@pwnden/catalog": "workspace:0.1.0",
+    "@pwnden/ui": "workspace:0.1.0",
+    "vue": "3.5.43"
+  }
+}

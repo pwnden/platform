@@ -1,0 +1,25 @@
+{
+  "name": "@pwnden/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.8.1",
+  "engines": { "node": "24.21.0", "pnpm": "12.8.1" },
+  "scripts": {
+    "check:boundaries": "node tools/boundaries.mjs",
+    "typecheck": "pnpm -r typecheck",
+    "test": "node --test tools/*.test.mjs && vitest run",
+    "build": "pnpm --filter @pwnden/player build",
+    "verify": "pnpm check:boundaries && pnpm typecheck && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "6.0.9",
+    "@vue/compiler-sfc": "3.5.43",
+    "@vue/server-renderer": "3.5.43",
+    "typescript": "npm:typescript-native-bridge@6.0.3-bridge.18.tsgo.7.0.2",
+    "vite": "8.3.1",
+    "vitest": "5.0.2",
+    "vue": "3.5.43",
+    "vue-tsc": "3.3.11"
+  }
+}
