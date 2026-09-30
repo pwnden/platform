@@ -23,7 +23,7 @@ type Verifier interface {
 }
 ```
 
-`Service` implements all three, plus `Catalog.List(ctx)`, `Details.Detail(ctx, slug)`, `Files.Download(ctx, slug, id)`, `Observer.Status(ctx, slug)`, `Terminals.OpenTerminal(ctx, slug, cols, rows)` and `Player.Execute(ctx, slug, command)` / `Player.Submit(ctx, slug, flag)`. `SetupService` implements the separate `Bootstrapper.Setup(ctx)` capability. Operations return Go data rather than console output, HTTP status codes, or Docker configuration objects. Command parsing and transport serialization belong to adapters. New capabilities have their own interfaces and result types; existing consumers keep their current dependencies.
+`Service` implements all three, plus `Catalog.List(ctx)`, `Details.Detail(ctx, slug)`, `Files.Download(ctx, slug, id)`, `Observer.Status(ctx, slug)`, `Terminals.OpenTerminal(ctx, slug, cols, rows)` and `Player.Execute(ctx, slug, command)` / `Player.Submit(ctx, slug, flag)`. `Preparer.Prepare(ctx)` prepares that service's live source checkout. `SetupService` implements the separate `Bootstrapper.Setup(ctx)` capability. Operations return Go data rather than console output, HTTP status codes, or Docker configuration objects. Command parsing and transport serialization belong to adapters. New capabilities have their own interfaces and result types; existing consumers keep their current dependencies.
 
 The player HTTP capability set, JSON DTOs, handlers, and local server are implemented in `internal/httpapi`, with the versioned [HTTP contract](web-api.md) and [OpenAPI document](openapi.json). Its backend consumes catalog, detail, file, observation, execution and submission capabilities directly. Browser response mapping includes only published endpoints and uses public messages for typed errors. The adapter serializes mutations and status reads by slug and owns cleanup for starts whose responses cannot be delivered. [Local server](local-server.md) documents its lifecycle.
 
@@ -45,6 +45,7 @@ Problem operations take a slug; `Execute` also takes an argument array and `Subm
 | `OpenTerminal` | `TerminalSession` | Owned toolbox TTY with byte reads/writes, resize, wait and repeatable close. See [terminal](terminal.md). |
 | `Submit` | `Slug`, `Accepted` | The candidate flag was compared with the file hash or recorded service flag. Incorrect flags are ordinary results. |
 | `Setup` | `ProblemCount`, `ContractVersion` | Docker and Compose are available; the bundled snapshot passed integrity, compatibility, and execution checks; images were prepared and the managed snapshot activated. |
+| `Prepare` | `ProblemCount`, `ContractVersion` | The live checkout passed compatibility and execution policy checks and its images were prepared. Services were not started and the managed installation was not changed. |
 
 `Kind` is `"file"` or `"service"`. File results have no project or endpoints, and validation reports zero services. `FileCount` counts distribution entries, including entries that name directories. `ServiceCount` counts the vulnerable configuration's services. `Validation.Patched` indicates that a patch is declared; `Verification.Patched` indicates that its complete verification passed.
 

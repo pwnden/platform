@@ -16,6 +16,10 @@ type Bootstrapper interface {
 	Setup(context.Context) (SetupInfo, error)
 }
 
+type Preparer interface {
+	Prepare(context.Context) (SetupInfo, error)
+}
+
 type SetupInfo struct {
 	ProblemCount    int
 	ContractVersion int
@@ -111,6 +115,38 @@ func (s *SetupService) Setup(ctx context.Context) (result SetupInfo, err error) 
 	return SetupInfo{ProblemCount: len(problems), ContractVersion: problems[0].Contract.Version}, nil
 }
 
+// Prepare checks the same execution policy and tools as managed setup, using
+// the live author checkout. It neither starts services nor changes installation.
+func (s *Service) Prepare(ctx context.Context) (result SetupInfo, err error) {
+	defer func() {
+		if err != nil {
+			result = SetupInfo{}
+			code := SetupFailed
+			var version *challenge.VersionError
+			if errors.As(err, &version) {
+				code = IncompatibleContract
+			}
+			err = operationError(ctx, "prepare", "", code, err)
+		}
+	}()
+	if err := runtime.CheckEngine(ctx); err != nil {
+		return SetupInfo{}, err
+	}
+	problems, err := loadProblems(s.repo)
+	if err != nil {
+		return SetupInfo{}, err
+	}
+	for _, c := range problems {
+		if err := runtime.Prepare(ctx, c); err != nil {
+			return SetupInfo{}, err
+		}
+	}
+	if err := ctx.Err(); err != nil {
+		return SetupInfo{}, err
+	}
+	return SetupInfo{ProblemCount: len(problems), ContractVersion: problems[0].Contract.Version}, nil
+}
+
 func loadProblems(root string) ([]*challenge.Loaded, error) {
 	entries, err := os.ReadDir(filepath.Join(root, "challenges"))
 	if err != nil {
@@ -134,9 +170,10 @@ func loadProblems(root string) ([]*challenge.Loaded, error) {
 		problems = append(problems, c)
 	}
 	if len(problems) == 0 {
-		return nil, errors.New("bundled distribution contains no problems")
+		return nil, errors.New("problem repository contains no problems")
 	}
 	return problems, nil
 }
 
 var _ Bootstrapper = (*SetupService)(nil)
+var _ Preparer = (*Service)(nil)

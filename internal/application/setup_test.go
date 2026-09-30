@@ -114,6 +114,29 @@ func TestSetupPreparesAndActivates(t *testing.T) {
 	}
 }
 
+func TestPrepareLiveCheckoutPreservesFilesAndDoesNotStartServices(t *testing.T) {
+	for _, service := range []bool{false, true} {
+		t.Run(fmt.Sprintf("service=%t", service), func(t *testing.T) {
+			s, c := fixture(t, service)
+			calls := testutil.Docker(t, setupReplies(c)...)
+			result, err := s.Prepare(context.Background())
+			if err != nil || result.ProblemCount != 1 {
+				t.Fatalf("prepare: %+v %v", result, err)
+			}
+			for _, call := range calls() {
+				for _, arg := range call {
+					if arg == "up" || arg == "run" {
+						t.Fatal("prepare started services", call)
+					}
+				}
+			}
+			if _, err := os.Stat(c.Dir); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
 func TestSetupFailurePublishesNoInstallation(t *testing.T) {
 	s, c := setupFixture(t, false)
 	testutil.Docker(t,

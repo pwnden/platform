@@ -2,22 +2,40 @@
 set -eu
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
-if [ -L "$root/dist" ] || [ ! -f "$root/dist/active" ]; then
-    printf 'Run ./setup first.\n' >&2
+case $(uname -s) in
+    Linux) target_os=linux ;;
+    Darwin) target_os=darwin ;;
+    *) printf 'Use pwnden.ps1 on native Windows.\n' >&2; exit 1 ;;
+esac
+case $(uname -m) in
+    x86_64|amd64) target_arch=amd64 ;;
+    aarch64|arm64) target_arch=arm64 ;;
+    *) printf 'Unsupported host architecture.\n' >&2; exit 1 ;;
+esac
+if [ -L "$root/dist" ]; then
+    printf 'Generated paths must stay inside this checkout.\n' >&2
     exit 1
 fi
-IFS= read -r build < "$root/dist/active"
-case "$build" in
-    ''|*[!a-zA-Z0-9.]*) printf 'Invalid generated build reference; run ./setup.\n' >&2; exit 1 ;;
-esac
-case "$build" in
-    build.?*) ;;
-    *) printf 'Invalid generated build reference; run ./setup.\n' >&2; exit 1 ;;
-esac
-directory="$root/dist/$build"
-if [ -L "$directory" ] || [ -L "$directory/payload" ] || \
-    [ -L "$directory/payload/pwnden" ] || [ ! -x "$directory/payload/pwnden" ]; then
-    printf 'Generated executable is unavailable; run ./setup.\n' >&2
-    exit 1
-fi
-exec "$directory/payload/pwnden" "$@"
+mkdir -p "$root/dist"
+entry=$(mktemp -d "$root/dist/.entry.XXXXXX")
+child=
+cleanup() { rm -rf -- "$entry"; }
+interrupt() {
+    if [ -n "$child" ]; then
+        kill -TERM "$child" 2>/dev/null || :
+        wait "$child" 2>/dev/null || :
+    fi
+    exit "$1"
+}
+run_child() {
+    "$@" <&3 3<&- &
+    child=$!
+    if wait "$child"; then child=; else status=$?; child=; return "$status"; fi
+}
+exec 3<&0
+trap cleanup 0
+trap 'interrupt 130' INT
+trap 'interrupt 143' TERM
+run_child docker buildx build --file "$root/Dockerfile.bootstrap" --target entry \
+    --build-arg "PWNDEN_TARGET=$target_os/$target_arch" --output "$entry/payload" "$root"
+run_child "$entry/payload/pwnden-entry" "$root" "$@"

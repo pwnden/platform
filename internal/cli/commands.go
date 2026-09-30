@@ -12,6 +12,7 @@ import (
 func DefaultCommands() []Command {
 	return []Command{
 		{Name: "setup", Summary: "prepare the bundled problems and execution environment", Run: setup},
+		{Name: "dev", Summary: "prepare local problems and start the development player", Run: dev, Persistent: true},
 		{Name: "serve", Summary: "start the local player web and API server", Run: serve, Persistent: true},
 		{Name: "list", Summary: "list available problems", Run: list},
 		{Name: "exec", Summary: "run a command inside a problem toolbox", Run: execute},
@@ -70,7 +71,7 @@ func setup(ctx context.Context, invocation Invocation) error {
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(invocation.Stdout, "Ready: %d problems. Start with pwnden run <problem>.\n", result.ProblemCount)
+	_, err = fmt.Fprintf(invocation.Stdout, "Ready: %d problems. Start with pwnden serve.\n", result.ProblemCount)
 	return err
 }
 

@@ -16,5 +16,7 @@ web/**/*.tsbuildinfo
 !tools/
 !tools/package/
 !tools/package/**
+!tools/checkout/
+!tools/checkout/**
 !Dockerfile.bootstrap
 !Dockerfile.bootstrap.dockerignore

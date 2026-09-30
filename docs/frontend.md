@@ -112,9 +112,10 @@ redirects or route fallbacks. Host/origin checks and security headers apply to
 these requests. The Vue entry point owns fragment initialization. Reloading
 after fragment removal requires reopening the server's printed full URL.
 
-`./setup` builds the pinned Node frontend stage inside Docker, copies its
-generated assets into the Go stage, and packages the executable and official
-catalog. The executable needs neither Node nor a separate asset directory.
+`./pwnden setup` and `./pwnden dev` build the pinned Node frontend inside Docker
+and copy its assets into the Go stage. Setup also packages the official catalog;
+development serves the live local checkout. The executable needs neither Node
+nor a separate asset directory.
 Source Go builds and tests must first prepare the ignored embed directory:
 
 ```sh

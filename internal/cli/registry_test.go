@@ -72,6 +72,9 @@ func TestHelpAndDispatchErrors(t *testing.T) {
 		{[]string{"--help"}, true, "Commands:"},
 		{[]string{"validate", "--help"}, true, "validate <slug>"},
 		{[]string{"setup", "--help"}, true, "pwnden setup"},
+		{[]string{"dev", "--help"}, true, "pwnden dev"},
+		{[]string{"dev", "web"}, false, "no positional arguments"},
+		{[]string{"dev"}, false, "requires a platform checkout"},
 		{[]string{"serve", "--help"}, true, "pwnden serve"},
 		{[]string{"serve", "extra"}, false, "accepts no repository or positional arguments"},
 		{[]string{"--repo", "outside", "serve"}, false, "uses the managed installation"},
@@ -112,6 +115,7 @@ func TestPersistentCommandLifetime(t *testing.T) {
 		persistent bool
 	}{
 		{[]string{"serve"}, true}, {[]string{"--repo", "somewhere", "serve"}, true},
+		{[]string{"dev"}, true}, {[]string{"--repo", "somewhere", "dev"}, true},
 		{[]string{"watch"}, true}, {[]string{"run", "serve"}, false},
 		{[]string{"--repo", "serve", "list"}, false}, {[]string{"--bad", "serve"}, false}, {nil, false},
 	} {

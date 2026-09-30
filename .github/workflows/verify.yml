@@ -62,6 +62,9 @@ jobs:
         run: |
           go build -o dist/smoke-terminal ./tools/smoke_terminal
           python3 -B tools/smoke_http.py --package dist/pwnden-linux-amd64.tar.gz --terminal-driver dist/smoke-terminal
+      - name: Verify development startup without host development tools
+        working-directory: platform
+        run: python3 -B tools/smoke_dev.py --checkout . --terminal-driver dist/smoke-terminal
       - name: Verify clone setup without host development tools
         working-directory: platform
         run: python3 -B tools/smoke_package.py --checkout .

@@ -6,6 +6,13 @@ After managed setup, start the server from the platform checkout:
 ./pwnden serve
 ```
 
+For source development, use `./pwnden dev`. It builds current platform and
+frontend sources through Docker, prepares the live sibling `challenges`
+checkout and starts this same server. Repeat after source changes to rebuild
+with Docker's cache. Local problem edits are read directly. Its source root and
+resource identities are separate from the managed installation. Native Windows
+uses `./pwnden.ps1 dev`; actual Windows and macOS checks are deferred.
+
 A native package uses `./pwnden serve` from its unpacked directory. `serve` accepts no repository, address, port, or positional arguments. It checks that the managed catalog can be loaded before opening a listener. Missing setup reports `setup_required`.
 
 The server prints one private session URL such as `http://127.0.0.1:49152/#<token>`. Open the entire URL. The listener uses an available IPv4 loopback port. Its bearer token is regenerated for each process and must be kept private. The Vue entry point removes the fragment from the current history entry before rendering and injects the token into the API client in memory. It writes no cookie or browser storage. Reopening the printed full URL initializes another page; refreshing after fragment removal shows recovery instructions.

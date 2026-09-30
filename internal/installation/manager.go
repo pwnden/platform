@@ -119,7 +119,7 @@ func (m *Manager) Stage(ctx context.Context) (_ *Pending, err error) {
 	r := receipt{Revision: m.Distribution.Revision, SHA256: m.Distribution.SHA256}
 	dir, err := m.directory(r)
 	if err != nil {
-		return nil, errors.New("this build has no valid problem distribution; run the checkout's ./setup or use a built platform package")
+		return nil, errors.New("this build has no valid problem distribution; run the checkout's ./pwnden setup or use a built platform package")
 	}
 	if installed, readErr := readReceipt(filepath.Join(dir, "receipt.json")); readErr == nil && installed == r {
 		root, err := m.root(dir)

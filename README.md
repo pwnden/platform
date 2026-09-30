@@ -9,7 +9,7 @@ Install Git and Docker with Linux containers, Compose, and Buildx, then:
 ```sh
 git clone https://github.com/pwnden/platform.git
 cd platform
-./setup
+./pwnden setup
 ./pwnden serve
 ```
 
@@ -47,7 +47,22 @@ Maintainers can also build a platform package containing the native executable a
 
 ## Development
 
-Development commands require Go 1.27.1, Docker with Compose and Buildx, and a local problem checkout.
+For development, keep the local challenges checkout next to platform and run:
+
+```sh
+./pwnden dev
+```
+
+This command builds current sources inside Docker, prepares the live local
+problems and starts the same Go web/API server. Open its printed full URL.
+Repeat the command after source changes; unchanged Docker layers use the build
+cache. Ctrl+C stops the server and closes its terminals. Local problem edits
+need no commit or package build. The official installation stays separate.
+Host Go, Node and pnpm are unnecessary. On native Windows, use `./pwnden.ps1`
+with the same commands; actual Windows and macOS execution checks are deferred.
+
+Maintainer validation commands below require Go 1.27.1, Docker with Compose and
+Buildx, and the local problem checkout.
 
 ```sh
 docker build --file Dockerfile.web --target assets --output type=local,dest=internal/playerweb/dist .

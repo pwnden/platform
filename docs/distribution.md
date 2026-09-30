@@ -4,15 +4,32 @@ The main entry point is a platform checkout with automated setup. Maintainers ca
 
 ## Clone and setup
 
-Install Git and Docker with Linux containers, Compose, and Buildx, clone the platform, and run `./setup`. The script checks Docker availability, builds the Vue frontend and Go platform inside Docker, acquires the official problem revision in `catalog.lock`, and invokes the generated executable's setup. Host Go, Node, pnpm, and Python are unnecessary. Then run `./pwnden serve` and open its printed full session URL to use the [local Vue player](local-server.md).
+Install Git and Docker with Linux containers, Compose, and Buildx, clone the
+platform, and run `./pwnden setup`. The entry script builds a small native Go
+checkout launcher inside Docker. That common launcher checks Docker, builds
+the Vue frontend and Go platform, acquires the official revision in
+`catalog.lock`, and invokes the generated executable's setup. Host Go, Node,
+pnpm, and Python are unnecessary. Then run `./pwnden serve` and open its printed
+full session URL to use the [local Vue player](local-server.md).
 
 `catalog.lock` contains a full commit hash. The builder fetches exactly that commit from the official public problem repository, exports it with `git archive`, and embeds its archive checksum and revision in the executable. A missing commit fails acquisition. Publish the pinned problem commit before testing the public clone path. End users acquire no separate checkout and supply no problem path.
 
 Builder images fix Node 24.21.0 and Go 1.27.1 to OCI image digests, with pnpm 12.8.1 pinned and Go toolchain downloads disabled. The frontend uses a frozen lockfile and its assets are copied into the Go embed directory. Docker's build cache reuses unchanged source and dependency layers. The context includes declared platform sources, frontend manifests/lockfile and the catalog lock; host dependency and generated asset directories are excluded. No host directory or Docker socket is mounted into the builder. Export writes generated files inside the platform checkout.
 
-Each attempt creates `dist/build.*/payload/` containing `pwnden`, `catalog.tar.gz`, and `distribution.json`. After build and problem setup succeed, the script atomically replaces the `dist/active` build reference. Failed attempts remove only their own new output and preserve the previous reference. Successful previous builds remain under `dist/`. The checked-in `./pwnden` launcher resolves the active generated executable and forwards arguments and signals by `exec`; generated output is ignored by Git. Symlink redirects outside the generated build directory are rejected.
+Each setup attempt creates `dist/build.*/payload/` containing `pwnden`,
+`catalog.tar.gz`, and `distribution.json`. After build and problem setup succeed,
+the Go checkout launcher atomically replaces `dist/active`. Failed attempts
+remove their own new output and preserve the previous reference. Successful
+previous builds remain under `dist/`. Arguments and streams pass to the native
+player; cancellation gives it time to clean up before forcing an exit.
+Generated output is ignored by Git. Generated paths reject symlink redirects.
 
-Repeat `./setup` after source updates. It rebuilds through the Docker cache and repeats the existing managed setup, preserving installed problem edits for the same content identity. Commands and setup are invoked sequentially. Shell launchers detect the host build target; actual Windows and macOS execution verification remains a later stage.
+Repeat `./pwnden setup` after source updates. Docker's cache reuses unchanged
+layers; managed setup preserves installed edits for the same content identity.
+Commands and setup run sequentially. POSIX `pwnden` and native Windows
+`pwnden.ps1` only select the native build target, build the entry tool, and
+invoke it. Build, preparation, activation and command routing live in Go.
+Actual Windows and macOS execution checks remain a later stage.
 
 ```sh
 python3 -B tools/test_bootstrap.py
@@ -62,4 +79,32 @@ Platform CI verifies the consumed problems, builds the native Linux package, run
 
 ## Development builds
 
-Source builds can use `pwnden --repo PATH <command>` to select an explicit checkout. Ordinary unconfigured `go build` executables contain no bundled content identity. The Docker bootstrap uses the package builder's `--official --unpacked` mode; maintainers can use `--unpacked` with a local checkout as well. [Execution verification](verification.md) describes the author and runtime verification procedures.
+Keep `platform` and `challenges` next to each other, then run `./pwnden dev`.
+It builds current platform/frontend sources inside Docker and calls the native
+CLI with the live local challenges path. `Service.Prepare` applies the same
+contract and execution policy and prepares images without starting services.
+The same Go HTTP server serves the embedded frontend and local problem operations.
+Local problem edits need no commit. Platform/frontend changes take effect after
+stopping and rerunning `dev`; Docker caches unchanged inputs. Ctrl+C stops the
+server and its terminal sessions; completed problem services retain their state.
+
+Development builds live in `dist/dev.*/payload/`; `dist/development` identifies
+the latest built executable. `dev` leaves the official `dist/active` reference
+and managed installation unchanged. Source CLI checks use
+`./pwnden --repo ../challenges <command>` with the development build. Ordinary
+player commands prefer the official build. Missing or invalid referenced
+executables fail explicitly.
+
+The development build prepares the live checkout without host bind mounts or
+a Docker socket in the builder. The native runtime mounts only validated
+problem paths as usual. Native packages keep the separate fixed content
+identity flow. [Execution verification](verification.md) describes author checks.
+
+```sh
+go build -o dist/smoke-terminal ./tools/smoke_terminal
+python3 -B tools/smoke_dev.py --checkout . --terminal-driver dist/smoke-terminal
+```
+
+This maintainer check runs `dev` twice with host SDKs absent from the player's
+PATH. It checks cache reuse, local HTTP content and file bytes, real isolated
+terminal behavior and cleanup, independent official activation and server shutdown.

@@ -5,9 +5,22 @@ COPY web/ ./
 RUN pnpm install --frozen-lockfile
 RUN pnpm verify
 
-FROM --platform=$BUILDPLATFORM golang:1.27.1-bookworm@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195 AS source
+FROM --platform=$BUILDPLATFORM golang:1.27.1-bookworm@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195 AS toolchain
 ENV GOTOOLCHAIN=local
 WORKDIR /src
+
+FROM toolchain AS entry-build
+COPY go.mod ./
+COPY internal/checkout/ internal/checkout/
+COPY tools/checkout/ tools/checkout/
+ARG PWNDEN_TARGET
+RUN suffix=""; case "$PWNDEN_TARGET" in windows/*) suffix=".exe" ;; esac; \
+    CGO_ENABLED=0 GOOS="${PWNDEN_TARGET%/*}" GOARCH="${PWNDEN_TARGET#*/}" go build -trimpath -o "/output/pwnden-entry${suffix}" ./tools/checkout
+
+FROM scratch AS entry
+COPY --from=entry-build /output/ /
+
+FROM toolchain AS source
 COPY go.mod go.sum ./
 RUN go mod download
 COPY cmd/ cmd/
@@ -15,6 +28,14 @@ COPY internal/ internal/
 COPY --from=web /web/dist/player/ internal/playerweb/dist/
 COPY tools/package/ tools/package/
 COPY catalog.lock ./
+
+FROM source AS development-build
+ARG PWNDEN_TARGET
+RUN suffix=""; case "$PWNDEN_TARGET" in windows/*) suffix=".exe" ;; esac; \
+    CGO_ENABLED=0 GOOS="${PWNDEN_TARGET%/*}" GOARCH="${PWNDEN_TARGET#*/}" go build -trimpath -o "/output/pwnden${suffix}" ./cmd/pwnden
+
+FROM scratch AS development-export
+COPY --from=development-build /output/ /
 
 FROM source AS build
 ARG PWNDEN_TARGET

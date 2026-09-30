@@ -102,8 +102,8 @@ def main():
         for name in ("node", "pnpm", "python3"):
             assert shutil.which(name, path=environment["PATH"]) is None
         if checkout:
-            execute(checkout / "setup", environment, [])
-            execute(checkout / "setup", environment, [])
+            execute(binary, environment, ["setup"])
+            execute(binary, environment, ["setup"])
         else:
             execute(binary, environment, ["setup"])
             execute(binary, environment, ["setup"])

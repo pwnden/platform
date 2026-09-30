@@ -1,6 +1,12 @@
 # Command interface
 
-The CLI consumes the [platform application interface](application-interface.md). A cloned platform starts with `./setup`, which builds inside Docker and prepares its managed problems. The tracked `./pwnden` launcher forwards to the generated executable. Native packages invoke `pwnden setup` directly. [Distribution](distribution.md) describes both entry points. `serve` provides the local Go server, embedded Vue player and implemented [HTTP API](web-api.md).
+The CLI consumes the [platform application interface](application-interface.md).
+A cloned platform starts with `./pwnden setup`, which builds inside Docker and
+prepares its managed problems. `./pwnden dev` builds and serves the live local
+problem checkout. The tracked entry script calls a common Go checkout launcher;
+player commands reach the generated executable. Native packages invoke
+`pwnden setup` directly. [Distribution](distribution.md) describes the lifecycle.
+`serve` provides the local Go server, embedded Vue player and [HTTP API](web-api.md).
 
 ```text
 pwnden [--repo PATH] <command> [command arguments]
@@ -11,6 +17,7 @@ Global options precede the command. Each command owns its arguments and flags; c
 | Command | Invocation | Result |
 | --- | --- | --- |
 | `setup` | `pwnden setup` | Docker and Compose check, bundled problem installation, and image preparation. |
+| `dev` | `pwnden dev` | In a source checkout, Docker build and local problem preparation, then the development web/API server. |
 | `serve` | `pwnden serve` | Local Go web/API server for the managed installation; prints its private session URL. |
 | `list` | `pwnden list` | Available problem names, categories, and titles. |
 | `run` | `pwnden run <slug>` | File distribution count, or service project and actual endpoint addresses. |
@@ -24,7 +31,7 @@ Global options precede the command. Each command owns its arguments and flags; c
 
 `exec` uses the problem's declared toolbox image and mount permissions. File toolboxes have no network access. Service toolboxes use the recorded run's project network and require a prior `run`. Arguments execute directly; use `sh -c` explicitly for a shell command. Interactive stdin and a terminal are outside this completed-command interface. `submit` checks the file flag hash or the current recorded service flag and does not execute a solution or record progress history.
 
-The executable forwards SIGINT and SIGTERM through the caller context. Ordinary commands have a fifteen-minute operation deadline. Persistent commands such as `serve` run until interrupted; the server applies deadlines to individual API requests. Independent cleanup may continue after cancellation or a deadline, following the application interface's resource rules. See [local server](local-server.md) for authentication and shutdown behavior.
+The executable forwards SIGINT and SIGTERM through the caller context. Ordinary commands have a fifteen-minute operation deadline. Persistent commands `serve` and `dev` run until interrupted; development preparation and individual API requests have their own fifteen-minute deadlines. Independent cleanup may continue after cancellation or a deadline, following the application interface's resource rules. See [local server](local-server.md) for authentication and shutdown behavior.
 
 If `run` starts a service but cannot write its result to stdout, the command attempts to stop that new run before returning the output error. Any cleanup error is retained. A pre-existing run is preserved when startup reports `already_running`.
 
@@ -36,4 +43,8 @@ Add a handler and its registration to `DefaultCommands`. The handler defines its
 
 New platform functions define their own capability interfaces and result types when needed. Existing command signatures remain intact. A command invokes the application service in process; an HTTP adapter can consume the same service directly. These are compiled command registrations.
 
-Source development first prepares the embedded frontend as described in [frontend](frontend.md), then uses `go run ./cmd/pwnden --repo PATH <command>` with the Go version declared in `go.mod`. End-user packages contain their own executable, embedded frontend and bundled content identity.
+Use `./pwnden dev` for source development. Explicit source CLI checks can use
+`./pwnden --repo ../challenges <command>` with the latest development build.
+Maintainers can also prepare the embedded frontend as described in
+[frontend](frontend.md) and use `go run ./cmd/pwnden --repo PATH <command>`.
+End-user packages contain their executable, embedded frontend and content identity.
