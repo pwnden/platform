@@ -6,6 +6,12 @@ import * as markdown from '../packages/ui/src/markdown';
 
 const render = (source: string) => renderToString(createSSRApp({ render: () => h(UIMarkdown, { source }) }));
 
+it('places brief headings under the panel title with preserved source hierarchy', async () => {
+  const html = await renderToString(createSSRApp({ render: () => h(UIMarkdown, { source: '## Objective\n\n### Start here', headingOffset: 1 }) }));
+  expect(html).toMatch(/<h3[^>]*>Objective<\/h3>/);
+  expect(html).toMatch(/<h4[^>]*>Start here<\/h4>/);
+});
+
 it('initializes real WASM and renders headings, nested lists, tables, tasks and escaped code', async () => {
   const html = await render('# 설명\n\n**강조** &amp; `code`\n\n- 바깥\n  - 안쪽\n\n- [x] 완료\n- [ ] 대기\n\n| A | B |\n| :- | -: |\n| x | y |\n\n```html\n<script>alert(1)</script>\n```');
   expect(html).toMatch(/<h4 id="markdown-[^"]+">설명<\/h4>/);

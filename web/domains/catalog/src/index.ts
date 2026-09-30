@@ -10,7 +10,8 @@ export interface Problem {
 export interface Catalog {
   list(): Promise<readonly Problem[]>;
   detail(slug: string): Promise<ProblemDetail>;
-  download(slug: string, id: string): Promise<Uint8Array>;
+  download(slug: string, id: string, maxBytes?: number): Promise<Uint8Array>;
+  guidance(slug: string, id: string): Promise<string>;
 }
 
 export interface ProblemFile {
@@ -22,4 +23,6 @@ export interface ProblemFile {
 export interface ProblemDetail extends Problem {
   readonly description: string;
   readonly files: readonly ProblemFile[];
+  readonly hintCount: number;
+  readonly walkthrough: boolean;
 }

@@ -62,12 +62,12 @@ defineExpose(handle);
 </script>
 
 <template>
-  <UIPanel title="실행과 정답 확인" headingID="play-heading" :aria-busy="pending" class="play-panel">
+  <UIPanel title="플래그 제출" headingID="play-heading" :aria-busy="pending" class="play-panel">
     <template #actions><UIStatus :tone="status?.state === 'running' || status?.state === 'ready' ? 'info' : status?.state === 'unavailable' ? 'danger' : 'muted'">{{ status?.state === 'running' ? '실행 중' : status?.state === 'ready' ? '준비됨' : status?.state === 'stopped' ? '중지됨' : status?.state === 'unavailable' ? '확인 필요' : '상태 확인' }}</UIStatus></template>
     <p v-if="!status && !pending">실행 상태를 확인하지 못했습니다.</p>
-    <p v-else-if="status?.state === 'ready'">파일 문제입니다. 서비스 실행 없이 배포 파일을 분석하고 정답을 제출할 수 있습니다.</p>
-    <p v-else-if="status?.state === 'stopped'">중지됨</p>
-    <p v-else-if="status?.state === 'running'">실행 중</p>
+    <p v-else-if="status?.state === 'ready'">자료를 읽고 필요하면 터미널을 연결하세요. 서비스 실행 없이 찾은 플래그를 제출할 수 있습니다.</p>
+    <p v-else-if="status?.state === 'stopped'">문제를 실행하면 접속할 수 있습니다.</p>
+    <p v-else-if="status?.state === 'running'">아래에서 문제를 열고, 찾은 플래그를 여기에 제출하세요.</p>
     <p v-else-if="status?.state === 'unavailable'" role="alert">서비스가 정상 실행 중이지 않습니다. 문제를 중지해 정리한 뒤 다시 실행하세요.</p>
     <div class="actions">
       <UIButton v-if="kind === 'service'" variant="primary" :disabled="pending || status?.state !== 'stopped'" @click="perform('run')">문제 실행</UIButton>
@@ -78,8 +78,7 @@ defineExpose(handle);
     <p v-if="message" :role="failed ? 'alert' : 'status'">{{ message }}</p>
     <ul v-if="status?.endpoints.length" class="endpoints">
       <li v-for="endpoint in status.endpoints" :key="endpoint.name">
-        {{ endpoint.name }}:
-        <a v-if="endpoint.url.startsWith('http://')" :href="endpoint.url" target="_blank" rel="noopener noreferrer">{{ endpoint.url }} (새 탭)</a>
+        <a v-if="endpoint.url.startsWith('http://')" :href="endpoint.url" target="_blank" rel="noopener noreferrer">문제 열기 · {{ endpoint.name }} (새 탭)</a>
         <code v-else>{{ endpoint.url }}</code>
       </li>
     </ul>

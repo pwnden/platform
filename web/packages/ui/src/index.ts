@@ -5,4 +5,6 @@ export { default as UIPanel } from './UIPanel.vue';
 export { default as UIStatus } from './UIStatus.vue';
 export { default as UIMarkdown } from './UIMarkdown.vue';
 export { default as UISplit } from './UISplit.vue';
-export type { UIButtonProps, UITextFieldProps, UITerminalProps, UITerminalHandle, UIPanelProps, UIStatusProps, UIMarkdownProps, UISplitProps } from './props';
+export { default as UIReveal } from './UIReveal.vue';
+export { default as UICode } from './UICode.vue';
+export type { UIButtonProps, UITextFieldProps, UITerminalProps, UITerminalHandle, UIPanelProps, UIStatusProps, UIMarkdownProps, UISplitProps, UIRevealProps, UICodeProps } from './props';

@@ -1,14 +1,28 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { APIError, createAPI } from '../packages/api/src/index';
 
 const token = 'a'.repeat(64);
 const response = (payload: unknown, status = 200) => new Response(JSON.stringify(payload), { status, headers: { 'Content-Type': 'application/json' } });
 
+it('requests only explicit guidance IDs and cancels oversized preview streams', async () => {
+  const request = vi.fn(async (_input: RequestInfo | URL, _options?: RequestInit) => response({ id: 'hint-1', content: 'One clue', path: 'private' }));
+  const client = createAPI({ token, fetch: request });
+  expect(await client.catalog.guidance('test', 'hint-1')).toBe('One clue');
+  expect(request.mock.calls[0]?.[0]).toBe('/api/v1/problems/test/guidance/hint-1');
+  await expect(client.catalog.guidance('test', '../solve.py')).rejects.toMatchObject({ code: 'invalid_argument' });
+  expect(request).toHaveBeenCalledOnce();
+  const cancel = vi.fn();
+  const stream = new ReadableStream<Uint8Array>({ start(controller) { controller.enqueue(new Uint8Array(5)); }, cancel });
+  const download = createAPI({ token, fetch: async () => new Response(stream, { headers: { 'Content-Type': 'application/octet-stream' } }) });
+  await expect(download.catalog.download('test', 'a'.repeat(64), 4)).rejects.toMatchObject({ code: 'preview_too_large' });
+  expect(cancel).toHaveBeenCalledOnce();
+});
+
 it('maps details, binary downloads and restored run status without exposing internal fields', async () => {
   const id = 'b'.repeat(64);
   const calls: string[] = [];
   const replies = [
-    response({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', description: '<script>text</script>', files: [{ id, name: 'files/data.bin', size: 3 }], private: 'hidden' }),
+    response({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', description: '<script>text</script>', files: [{ id, name: 'files/data.bin', size: 3 }], hint_count: 3, walkthrough: true, private: 'hidden' }),
     new Response(new Uint8Array([0, 1, 255]), { headers: { 'Content-Type': 'application/octet-stream' } }),
     response({ slug: 'test', kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:8000' }], flag: 'hidden' }),
   ];
@@ -18,7 +32,7 @@ it('maps details, binary downloads and restored run status without exposing inte
     expect(options?.redirect).toBe('error');
     return replies.shift()!;
   } });
-  expect(await client.catalog.detail('test')).toEqual({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', description: '<script>text</script>', files: [{ id, name: 'files/data.bin', size: 3 }] });
+  expect(await client.catalog.detail('test')).toEqual({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', description: '<script>text</script>', files: [{ id, name: 'files/data.bin', size: 3 }], hintCount: 3, walkthrough: true });
   expect(await client.catalog.download('test', id)).toEqual(new Uint8Array([0, 1, 255]));
   expect(await client.player.status('test')).toEqual({ slug: 'test', kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:8000' }] });
   expect(calls).toEqual(['/api/v1/problems/test', `/api/v1/problems/test/files/${id}`, '/api/v1/problems/test/status']);
@@ -40,7 +54,7 @@ it('rejects undeclared path inputs and malformed detail/status/download response
     const client = createAPI({ token, fetch: async () => response(item) });
     await expect(client.player.status('test')).rejects.toMatchObject({ code: 'invalid_response' });
   }
-  const badFile = createAPI({ token, fetch: async () => response({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', description: '', files: [{ id: 'bad', name: 'data', size: -1 }] }) });
+  const badFile = createAPI({ token, fetch: async () => response({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', description: '', files: [{ id: 'bad', name: 'data', size: -1 }], hint_count: 0, walkthrough: false }) });
   await expect(badFile.catalog.detail('test')).rejects.toMatchObject({ code: 'invalid_response' });
   await expect(invalid.catalog.download('test', 'a'.repeat(64))).rejects.toMatchObject({ code: 'invalid_response' });
   const missing = createAPI({ token, fetch: async () => response({ error: { code: 'not_found' } }, 404) });

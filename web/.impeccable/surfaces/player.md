@@ -2,7 +2,7 @@
 
 ## Mode
 
-Operate: read a challenge, inspect files, use the isolated terminal and submit a flag.
+Operate: understand a challenge's objective and context, inspect materials, use its service and isolated terminal, submit a flag, and learn through progressive hints and a complete explanation.
 
 ## Direction
 
@@ -15,6 +15,8 @@ A compact header and footer frame a full-width workspace. A persistent problem s
 ## Interaction
 
 Selecting a problem highlights its row and opens the associated workspace. Selecting the current problem keeps its terminal session. Focus and primary actions use the blue accent. The empty prompt softly pulses; reduced-motion preferences stop its animation.
+
+The brief describes the player's situation and starting actions. Materials open as escaped source in the reading pane; downloading is optional. Hints open individually in increasing specificity. The walkthrough is labeled as containing answers and loads only when opened. All documents stay within the workspace, with independent loading, error and retry states. Large or binary materials use the prepared terminal. Player steps use actual UI labels and the prepared environment.
 
 ## Responsive behavior
 

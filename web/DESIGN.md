@@ -213,7 +213,9 @@ Source: [UITerminal.vue](packages/ui/src/UITerminal.vue), [TerminalPanel.vue](fe
 
 ### Markdown
 
-`UIMarkdown` renders source through md4x's WASM parser and an allowlisted Vue AST renderer. Source headings fit below the problem description heading. Inline code uses the accent and raised surface; code blocks use the terminal background. Tables scroll inside their own region. Quotes use a thin active stroke, and task markers are read-only. Links use the shared accent and keyboard focus. Images display alternative text. Loading is announced; failure offers retry and escaped source.
+`UIMarkdown` renders source through md4x's WASM parser and an allowlisted Vue AST renderer. Source headings fit below the panel title. Inline code uses the accent and raised surface; code blocks use the terminal background. Tables scroll inside their own region. Quotes use a thin active stroke, and task markers are read-only. Links use the shared accent and keyboard focus. Images display alternative text. Loading is announced; failure offers retry and escaped source.
+
+`UIReveal` uses native details/summary semantics with shared border, spacing and visible keyboard focus. File sources, individually numbered hints and answer-labeled walkthroughs open inside the reading pane. Closed spoilers have no content DOM. `UICode` displays escaped selectable source, preserves whitespace, and scrolls in both dimensions with a maximum height of (32rem). The catalog feature fetches revealed content on demand and keeps it across close/reopen within the selected problem. Text previews stop at (1 MiB); binary and larger materials direct players to the prepared terminal. Downloads are secondary actions.
 
 Source: [UIMarkdown.vue](packages/ui/src/UIMarkdown.vue), [markdown.ts](packages/ui/src/markdown.ts).
 

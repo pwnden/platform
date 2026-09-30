@@ -3,7 +3,21 @@ import { createSSRApp, h } from 'vue';
 import { renderToString } from '@vue/server-renderer';
 import UIButton from '../packages/ui/src/UIButton.vue';
 import UITextField from '../packages/ui/src/UITextField.vue';
+import UIReveal from '../packages/ui/src/UIReveal.vue';
+import UICode from '../packages/ui/src/UICode.vue';
 import { terminalDocument } from '../packages/ui/src/terminal-document';
+
+it('omits hidden spoilers and renders material source as escaped selectable code', async () => {
+  const render = (open: boolean) => renderToString(createSSRApp({ render: () => h(UIReveal, { label: '해설 보기 · 정답 포함', modelValue: open }, () => 'answer spoiler') }));
+  const closed = await render(false);
+  expect(closed).toContain('<summary');
+  expect(closed).not.toContain('answer spoiler');
+  expect(await render(true)).toContain('answer spoiler');
+  const source = await renderToString(createSSRApp({ render: () => h(UICode, { label: 'checker.py', source: '<script>run()</script>\n  indent' }) }));
+  expect(source).toContain('&lt;script&gt;run()&lt;/script&gt;');
+  expect(source).not.toContain('<script>');
+  expect(source).toContain('tabindex="0"');
+});
 
 it('uses a native non-submit button and disables it while busy', async () => {
   const html = await renderToString(createSSRApp({ render: () => h(UIButton, { busy: true }, () => '실행') }));

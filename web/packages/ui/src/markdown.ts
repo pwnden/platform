@@ -22,10 +22,10 @@ function linkTarget(value: unknown, prefix: string): string | undefined {
   } catch { /* Invalid and relative URLs remain text. */ }
 }
 
-export function renderMarkdownNode(node: ComarkNode, prefix: string): VNodeChild {
+export function renderMarkdownNode(node: ComarkNode, prefix: string, headingOffset = 3): VNodeChild {
   if (typeof node === 'string') return node;
   const [tag, attributes, ...content] = node;
-  const children = content.map(child => renderMarkdownNode(child, prefix));
+  const children = content.map(child => renderMarkdownNode(child, prefix, headingOffset));
   if (tag === 'a') {
     const href = linkTarget(attributes.href, prefix);
     if (!href) return h('span', children);
@@ -34,7 +34,7 @@ export function renderMarkdownNode(node: ComarkNode, prefix: string): VNodeChild
   if (tag === 'img') return h('span', { class: 'markdown-image' }, typeof attributes.alt === 'string' ? `[이미지: ${attributes.alt}]` : '[이미지]');
   if (tag && /^h[1-6]$/.test(tag)) {
     const id = typeof attributes.id === 'string' ? `${prefix}-${attributes.id}` : undefined;
-    return h(`h${Math.min(Number(tag[1]) + 3, 6)}`, { id }, children);
+    return h(`h${Math.min(Number(tag[1]) + headingOffset, 6)}`, { id }, children);
   }
   // Unknown components and raw HTML contribute escaped text/allowed children only.
   if (!tag || !elements.has(tag)) return children;

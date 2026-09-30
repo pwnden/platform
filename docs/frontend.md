@@ -8,11 +8,11 @@ problem execution and answer checking. Node and pnpm are build tools.
 | Package | Location | Responsibility |
 | --- | --- | --- |
 | `@pwnden/player` | `web/apps/player` | Session initialization and composition. |
-| `@pwnden/ui` | `web/packages/ui` | Own button/input/panel/status/terminal API, Sectile and xterm wrappers, theme tokens and bundled fonts. |
+| `@pwnden/ui` | `web/packages/ui` | Own button/input/panel/status/terminal/Markdown/reveal/code API, Sectile and xterm wrappers, theme tokens and bundled fonts. |
 | `@pwnden/api` | `web/packages/api` | Implement domain ports with the Go HTTP API and WebSocket. |
-| `@pwnden/catalog` | `web/domains/catalog` | Summary/detail/file models and read/download port; pure TypeScript. |
+| `@pwnden/catalog` | `web/domains/catalog` | Summary/detail/file models and read/download/guidance port; pure TypeScript. |
 | `@pwnden/play` | `web/domains/play` | Run/status/submission models and player port; pure TypeScript. |
-| `@pwnden/catalog-feature` | `web/features/catalog` | Vue catalog, description text and authenticated file downloads. |
+| `@pwnden/catalog-feature` | `web/features/catalog` | Player brief, bounded source preview, optional authenticated downloads, progressive hints and walkthrough. |
 | `@pwnden/play-feature` | `web/features/play` | Vue observed execution state, controls and submissions. |
 | `@pwnden/terminal` | `web/domains/terminal` | Connection/session/dimensions/byte-event ports; pure TypeScript. |
 | `@pwnden/terminal-feature` | `web/features/terminal` | Connection controls, input/output flow and session lifetime. |

@@ -12,7 +12,7 @@ Players solve locally installed security challenges in their browser. Authors de
 
 ## Product Purpose
 
-Provide a local workspace for reading challenges, downloading their files, running isolated services, using a real terminal and submitting flags.
+Provide a local browser workspace where players understand a challenge's objective and context, inspect materials, use target services and a prepared terminal, submit flags, and learn through progressive hints and complete explanations. Every solving and learning step is available from the website; downloads are optional.
 
 ## Operating Context
 
@@ -20,7 +20,7 @@ Go serves the embedded Vue player and HTTP API. Docker is preinstalled. Players 
 
 ## Capabilities and Constraints
 
-The challenges repository owns the versioned problem contract. Problem host mounts and build inputs stay inside the allowed problem root. The pnpm workspace separates pure TypeScript domains, features, the API transport and UI. Only `packages/ui` consumes Sectile and xterm. Dependencies use exact versions.
+The challenges repository owns the versioned problem contract and player content. Briefs are written for solvers using actual UI controls. Hints open independently; complete explanations are labeled as containing answers and fetched only on request. Maintainer installation and automated verification instructions live in author documentation. Player commands run in the prepared website terminal. Problem host mounts and build inputs stay inside the allowed problem root. The pnpm workspace separates pure TypeScript domains, features, the API transport and UI. Only `packages/ui` consumes Sectile and xterm. Dependencies use exact versions.
 
 ## Brand Commitments
 
@@ -28,4 +28,4 @@ The name is `pwnden`. The player uses a hacker terminal visual language, monospa
 
 ## Evidence on Hand
 
-The local challenges checkout contains `rotor-lock` and `note-vault`. The player already supports list, detail, download, run, stop, status, flag submission and interactive terminals. Demonstration content used in visual verification is synthetic and stays separate from player data.
+The local challenges checkout contains `rotor-lock` and `note-vault`, each with a player brief, three progressive hints and a complete explanation. The player supports list, detail, source preview, optional download, hints, walkthrough, run, stop, status, flag submission and interactive terminals. Demonstration content used in visual verification is synthetic and stays separate from player data.

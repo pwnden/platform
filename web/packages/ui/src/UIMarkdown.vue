@@ -30,7 +30,7 @@ let rendering: Promise<void>;
 watch(() => props.source, () => { rendering = load(); }, { immediate: true });
 onServerPrefetch(() => rendering);
 onUnmounted(() => { revision++; });
-const MarkdownContent = () => nodes.value.map(node => renderMarkdownNode(node, prefix));
+const MarkdownContent = () => nodes.value.map(node => renderMarkdownNode(node, prefix, props.headingOffset ?? 3));
 </script>
 
 <template>
@@ -48,11 +48,12 @@ const MarkdownContent = () => nodes.value.map(node => renderMarkdownNode(node, p
 <style scoped>
 .ui-markdown { min-width: 0; max-width: 75ch; word-break: keep-all; overflow-wrap: break-word; line-height: 1.85; }
 .ui-markdown :deep(p), .ui-markdown :deep(ul), .ui-markdown :deep(ol), .ui-markdown :deep(blockquote), .ui-markdown :deep(pre), .ui-markdown :deep(.markdown-table) { margin-block: 0 var(--ui-space-2); }
-.ui-markdown :deep(h4), .ui-markdown :deep(h5), .ui-markdown :deep(h6) { margin-block: var(--ui-space-3) var(--ui-space-1); color: var(--ui-foreground); line-height: 1.5; scroll-margin-top: var(--ui-space-2); }
+.ui-markdown :deep(h2), .ui-markdown :deep(h3), .ui-markdown :deep(h4), .ui-markdown :deep(h5), .ui-markdown :deep(h6) { margin-block: var(--ui-space-3) var(--ui-space-1); color: var(--ui-foreground); line-height: 1.5; scroll-margin-top: var(--ui-space-2); }
+.ui-markdown :deep(h2), .ui-markdown :deep(h3) { font-size: 1.2rem; }
 .ui-markdown :deep(h4) { font-size: 1.2rem; }
 .ui-markdown :deep(h5) { font-size: 1rem; }
 .ui-markdown :deep(h6) { font-size: 0.9rem; }
-.ui-markdown :deep(h4:first-child), .ui-markdown :deep(h5:first-child), .ui-markdown :deep(h6:first-child) { margin-top: 0; }
+.ui-markdown :deep(h2:first-child), .ui-markdown :deep(h3:first-child), .ui-markdown :deep(h4:first-child), .ui-markdown :deep(h5:first-child), .ui-markdown :deep(h6:first-child) { margin-top: 0; }
 .ui-markdown :deep(ul), .ui-markdown :deep(ol) { padding-left: var(--ui-space-3); }
 .ui-markdown :deep(li > ul), .ui-markdown :deep(li > ol) { margin-block: var(--ui-space-1); }
 .ui-markdown :deep(blockquote) { margin-inline: 0; padding-left: var(--ui-space-2); border-left: 1px solid var(--ui-border-active); color: var(--ui-muted); }

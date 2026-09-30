@@ -20,6 +20,17 @@ export interface UISplitProps {
 
 export interface UIMarkdownProps {
   readonly source: string;
+  readonly headingOffset?: 1 | 2 | 3;
+}
+
+export interface UIRevealProps {
+  readonly label: string;
+  readonly modelValue: boolean;
+}
+
+export interface UICodeProps {
+  readonly source: string;
+  readonly label: string;
 }
 
 export interface UIStatusProps {

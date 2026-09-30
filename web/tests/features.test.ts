@@ -15,6 +15,8 @@ vi.mock('../packages/ui/src/index.ts', async () => {
     UIStatus: (await import('../packages/ui/src/UIStatus.vue')).default,
     UISplit: defineComponent({ setup: (_, { attrs, slots }) => () => h('split', attrs, [slots.before?.(), slots.after?.()]) }),
     UIMarkdown: defineComponent({ props: ['source'], setup: props => () => h('markdown', props.source) }),
+    UICode: defineComponent({ props: ['source'], setup: props => () => h('code', props.source) }),
+    UIReveal: defineComponent({ props: ['label', 'modelValue'], setup: (props, { attrs, slots }) => () => h('reveal', { ...attrs, label: props.label, modelValue: props.modelValue }, [props.label, props.modelValue ? slots.default?.() : null]) }),
     UIButton: defineComponent({ setup: (_, { attrs, slots }) => () => h('button', attrs, slots.default?.()) }),
     UITextField: defineComponent({ setup: (_, { attrs }) => () => h('input', attrs) }),
     UITerminal: defineComponent({ setup: (_, { attrs, expose }) => {
@@ -52,7 +54,7 @@ it('starts a stopped Note Vault, connects its shell and preserves it across colu
   const session = { input: vi.fn(), resize: vi.fn(), close: vi.fn() };
   const close = vi.fn();
   const client = {
-    catalog: { list: vi.fn(async () => [problem]), detail: vi.fn(async () => ({ ...problem, description: '설명', files: [] })), download: vi.fn() },
+    catalog: { list: vi.fn(async () => [problem]), detail: vi.fn(async () => ({ ...problem, description: '설명', files: [], hintCount: 0, walkthrough: false })), download: vi.fn(), guidance: vi.fn() },
     player: {
       status: vi.fn(async () => status),
       run: vi.fn(async () => { status = { ...status, state: 'running' }; return { ...status, fileCount: 0 }; }),
@@ -136,6 +138,64 @@ const click = (item: Node) => (item.props.onClick as () => unknown)();
 async function settle() { for (let i = 0; i < 8; i++) { await Promise.resolve(); await nextTick(); } }
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
+it('loads material and spoiler documents on demand, retries failures and caches reopened hints', async () => {
+  const id = 'd'.repeat(64);
+  const catalog: Catalog = {
+    list: vi.fn(),
+    detail: vi.fn(async () => ({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', description: 'Find the key', files: [{ id, name: 'checker.py', size: 30 }], hintCount: 2, walkthrough: true })),
+    download: vi.fn(async () => new TextEncoder().encode('<script>plain source</script>')),
+    guidance: vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce('first clue').mockResolvedValueOnce('full answer'),
+  };
+  const root = node('root');
+  renderer.render(h(ProblemDetail, { catalog, slug: 'test', title: 'Test' }), root);
+  await settle();
+  const reveal = async (label: string, open = true) => {
+    const item = flatten(root).find(item => item.type === 'reveal' && item.props.label === label)!;
+    await (item.props['onUpdate:modelValue'] as (open: boolean) => unknown)(open);
+    await settle();
+  };
+  expect(catalog.guidance).not.toHaveBeenCalled();
+  expect(catalog.download).not.toHaveBeenCalled();
+  await reveal('힌트 1');
+  expect(text(root)).toContain('힌트를 불러오지 못했습니다.');
+  await click(button(root, '힌트 다시 불러오기')); await settle();
+  expect(text(root)).toContain('first clue');
+  await reveal('힌트 1', false);
+  expect(text(root)).not.toContain('first clue');
+  await reveal('힌트 1');
+  expect(catalog.guidance).toHaveBeenCalledTimes(2);
+  expect(text(root)).not.toContain('full answer');
+  await reveal('해설 보기 · 정답 포함');
+  expect(catalog.guidance).toHaveBeenLastCalledWith('test', 'walkthrough');
+  expect(text(root)).toContain('full answer');
+  await reveal('자료 열기 · checker.py');
+  expect(catalog.download).toHaveBeenCalledWith('test', id, 1 << 20);
+  expect(text(root)).toContain('<script>plain source</script>');
+  expect(flatten(root).some(item => item.type === 'script')).toBe(false);
+  renderer.render(null, root);
+});
+
+it('routes binary and large materials to the prepared terminal without fetching a large preview', async () => {
+  const small = 'a'.repeat(64), large = 'b'.repeat(64);
+  const catalog: Catalog = {
+    list: vi.fn(),
+    detail: vi.fn(async () => ({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', description: 'Find the key', files: [{ id: small, name: 'binary', size: 2 }, { id: large, name: 'large', size: (1 << 20) + 1 }], hintCount: 0, walkthrough: false })),
+    download: vi.fn(async () => new Uint8Array([0, 255])), guidance: vi.fn(),
+  };
+  const root = node('root');
+  renderer.render(h(ProblemDetail, { catalog, slug: 'test', title: 'Test' }), root);
+  await settle();
+  for (const label of ['자료 열기 · binary', '자료 열기 · large']) {
+    const item = flatten(root).find(item => item.type === 'reveal' && item.props.label === label)!;
+    await (item.props['onUpdate:modelValue'] as (open: boolean) => unknown)(true);
+    await settle();
+  }
+  expect(text(root)).toContain('텍스트로 표시할 수 없는 자료');
+  expect(text(root)).toContain('큰 자료는 오른쪽 터미널');
+  expect(catalog.download).toHaveBeenCalledOnce();
+  renderer.render(null, root);
+});
+
 it('restores an existing service on mount and refreshes endpoints after stop/start', async () => {
   let state: RunStatus = { slug: 'test', kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:8000' }] };
   const player: Player = {
@@ -151,7 +211,7 @@ it('restores an existing service on mount and refreshes endpoints after stop/sta
   expect(flatten(root).find(item => item.type === 'a')?.props.href).toBe('http://127.0.0.1:8000');
   expect(button(root, '문제 실행').props.disabled).toBe(true);
   await click(button(root, '문제 중지')); await settle();
-  expect(text(root)).toContain('중지됨');
+  expect(text(root)).toContain('문제를 실행하면');
   expect(flatten(root).some(item => item.type === 'a')).toBe(false);
   await click(button(root, '문제 실행')); await settle();
   expect(flatten(root).find(item => item.type === 'a')?.props.href).toBe('http://127.0.0.1:9000');
@@ -214,8 +274,9 @@ it('clears stale endpoints on failed refresh and ignores a response after unmoun
 it('loads a description as text and downloads only the selected declared file', async () => {
   const id = 'a'.repeat(64);
   const catalog: Catalog = {
-    list: vi.fn(), detail: vi.fn(async () => ({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', description: '<script>alert(1)</script>', files: [{ id, name: 'files/data.bin', size: 3 }] })),
+    list: vi.fn(), detail: vi.fn(async () => ({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', description: '<script>alert(1)</script>', files: [{ id, name: 'files/data.bin', size: 3 }], hintCount: 0, walkthrough: false })),
     download: vi.fn(async () => new Uint8Array([0, 1, 255])),
+    guidance: vi.fn(),
   };
   const link = { href: '', download: '', click: vi.fn(), remove: vi.fn() };
   vi.stubGlobal('document', { createElement: () => link, body: { append: vi.fn() } });

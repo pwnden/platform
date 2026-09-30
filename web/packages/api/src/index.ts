@@ -133,9 +133,12 @@ export function createAPI(options: APIOptions): APIClient {
       async detail(slug): Promise<ProblemDetail> {
         const item = await request(route(slug));
         if (item.slug !== slug) throw new APIError('invalid_response', 0);
+        const hintCount = size(item.hint_count);
+        if (hintCount > 10 || typeof item.walkthrough !== 'boolean') throw new APIError('invalid_response', 0);
         return {
           slug, title: string(item.title), category: string(item.category), kind: kind(item.kind),
           description: string(item.description),
+          hintCount, walkthrough: item.walkthrough,
           files: array(item.files).map(value => {
             const file = object(value);
             const id = string(file.id);
@@ -144,13 +147,41 @@ export function createAPI(options: APIOptions): APIClient {
           }),
         };
       },
-      async download(slug, id): Promise<Uint8Array> {
+      async guidance(slug, id): Promise<string> {
+        if (!/^(walkthrough|hint-([1-9]|10))$/.test(id)) throw new APIError('invalid_argument', 0);
+        const item = await request(`${route(slug)}/guidance/${id}`);
+        if (item.id !== id) throw new APIError('invalid_response', 0);
+        return string(item.content);
+      },
+      async download(slug, id, maxBytes): Promise<Uint8Array> {
+        if (maxBytes !== undefined && (!Number.isSafeInteger(maxBytes) || maxBytes <= 0)) throw new APIError('invalid_argument', 0);
         const response = await fetchResponse(`${route(slug)}/files/${fileID(id)}`);
         if (response.headers.get('Content-Type') !== 'application/octet-stream') {
           throw new APIError('invalid_response', response.status);
         }
-        try { return new Uint8Array(await response.arrayBuffer()); }
-        catch { throw new APIError('network_error', 0); }
+        try {
+          if (maxBytes === undefined) return new Uint8Array(await response.arrayBuffer());
+          const reader = response.body?.getReader();
+          if (!reader) throw new APIError('invalid_response', 0);
+          const chunks: Uint8Array[] = [];
+          let length = 0;
+          try {
+            while (true) {
+              const part = await reader.read();
+              if (part.done) break;
+              length += part.value.byteLength;
+              if (length > maxBytes) throw new APIError('preview_too_large', 0);
+              chunks.push(part.value);
+            }
+          } finally { await reader.cancel(); reader.releaseLock(); }
+          const result = new Uint8Array(length);
+          let offset = 0;
+          for (const chunk of chunks) { result.set(chunk, offset); offset += chunk.length; }
+          return result;
+        } catch (error) {
+          if (error instanceof APIError) throw error;
+          throw new APIError('network_error', 0);
+        }
       },
     },
     player: {
