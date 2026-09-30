@@ -31,6 +31,9 @@ func TestEmbeddedPlayerAssets(t *testing.T) {
 	if !strings.Contains(page.Header().Get("Content-Security-Policy"), "connect-src 'self' ws://"+testHost+";") {
 		t.Fatal("terminal WebSocket policy is not confined to the server")
 	}
+	if policy := page.Header().Get("Content-Security-Policy"); !strings.Contains(policy, "script-src 'self' 'wasm-unsafe-eval';") || strings.Contains(policy, "'unsafe-eval'") {
+		t.Fatal("markdown WASM policy is missing or permits JavaScript eval")
+	}
 	if next := get("GET", "/"); strings.Contains(next.Body.String(), nonce[1]) {
 		t.Fatal("style nonce reused")
 	}

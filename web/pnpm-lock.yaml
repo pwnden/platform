@@ -290,6 +290,9 @@ importers:
       '@xterm/xterm':
         specifier: 6.0.0
         version: 6.0.0
+      md4x:
+        specifier: 0.0.30
+        version: 0.0.30
       vue:
         specifier: 3.5.43
         version: 3.5.43(typescript-native-bridge@6.0.3-bridge.18.tsgo.7.0.2)
@@ -715,6 +718,10 @@ packages:
 
   magic-string@1.4.2:
     resolution: {integrity: sha512-vG+rjFRj1PqdIBozIxAGMjPlOhaVe+GXpbttY/iSK7rGcJRMlwNJO7dcUwmUqkymsFLJiNGI06t4D7Fr7yRC9g==}
+
+  md4x@0.0.30:
+    resolution: {integrity: sha512-N3Fab3VlK1Pvv62DABS3h8Eg9HN2JDVMrFra207GE89+RCj+egn20/rx6eMKgVrKwPPxCbKP0YYSoM5NblgwdA==}
+    hasBin: true
 
   muggle-string@0.4.1:
     resolution: {integrity: sha512-VNTrAak/KhO2i8dqqnqnAHOa3cYBwXEZe9h+D5h/1ZqFSTEFHdM65lR7RoIqq3tBBYavsOXV84NoHXZ0AkPyqQ==}
@@ -1176,6 +1183,8 @@ snapshots:
   magic-string@1.4.2:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.6.0
+
+  md4x@0.0.30: {}
 
   muggle-string@0.4.1: {}
 

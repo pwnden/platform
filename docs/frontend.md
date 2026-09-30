@@ -50,6 +50,7 @@ their upstream spelling. Repository guidance records the general convention.
 | Sectile Vue | `0.18.2` |
 | Vitest | `5.0.2` |
 | xterm / fit addon | `6.0.0` / `0.11.0` |
+| md4x | `0.0.30` |
 
 `typescript` is an exact npm alias to `typescript-native-bridge`, also overridden
 throughout the workspace. Both `tsc` and `vue-tsc` report `TNB ACTIVE` during
@@ -76,6 +77,21 @@ JetBrains Mono and D2Coding WOFF2 files are bundled in the UI package, served
 from the same origin and embedded into the Go executable. Font sources and
 license terms are recorded in `web/packages/ui/src/fonts/README.md`; Vite emits
 both OFL license files under `/assets/licenses/`. Go serves WOFF2 as `font/woff2`.
+
+`UIMarkdown` accepts a `source` string. The UI package lazily imports the
+md4x standalone module and initializes its embedded WASM once. It renders the
+AST through Vue nodes: headings, lists, tables, fenced code, emphasis, quotes
+and read-only task markers share the theme. Raw HTML displays as escaped text;
+author components and attributes are excluded. HTTP/HTTPS links open with
+`noopener noreferrer`, and document anchors use instance-prefixed heading IDs.
+Relative and unsupported links remain text; images display their alternative
+text. Problem-local image/file URL resolution is not part of this component.
+Loading is announced, and parser failure preserves escaped source with retry.
+
+The page CSP explicitly allows `script-src 'self' 'wasm-unsafe-eval'` for this
+parser. JavaScript eval and inline scripts remain blocked. WASM is bundled into
+a same-origin JavaScript chunk; no CDN, native addon or additional host tool is
+needed at runtime.
 
 ## Verification
 
@@ -111,7 +127,7 @@ docker build --file Dockerfile.web --target assets --output type=local,dest=dist
 
 The Vue app composes catalog, play and terminal features for seven HTTP reads/mutations and a WebSocket upgrade,
 including detail, declared file downloads and observed run status. Descriptions
-are displayed as text, with no HTML execution or active author links. Download
+are rendered as Markdown through the UI-owned AST renderer. Download
 ports return plain `Uint8Array`; the catalog feature creates the browser Blob URL
 and revokes it after initiating the download. The bearer token stays in the fetch
 header. Play loads status on selection, refreshes it after mutations and provides

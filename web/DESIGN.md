@@ -147,7 +147,7 @@ Semantic success, warning and danger colors support status and terminal output. 
 
 The frontmatter's display role is the empty workspace prompt; headline is the problem title; title is the shared panel heading. Body sets the root scale, and label covers field and supporting labels. Smaller status and footnote text use the same stack. Headings and problem titles use medium weight. Numeric text uses tabular figures; ligatures are disabled.
 
-Problem descriptions preserve line breaks, wrap long content, use a reading measure of (75ch) and line height of (1.85). The real terminal uses (14px) type and line height of (1.4). Text inputs use (16px) at the narrow layout breakpoint.
+Problem descriptions render Markdown, wrap long content, use a reading measure of (75ch) and line height of (1.85). Code preserves literal whitespace inside a scrollable block. The real terminal uses (14px) type and line height of (1.4). Text inputs use (16px) at the narrow layout breakpoint.
 
 **The Shared Glyph Rule.** Keep Latin and Korean content in the bundled monospace stack, including controls and terminal output.
 
@@ -210,6 +210,12 @@ Source: [UIStatus.vue](packages/ui/src/UIStatus.vue).
 `UITerminal` owns xterm and its fit addon inside the UI package. It maps shared tokens to the terminal theme, enables screen reader mode and resizes after fonts load. The surrounding panel supplies connection controls and real connection status. A centered prompt explains the closed state, and a footnote explains session cleanup.
 
 Source: [UITerminal.vue](packages/ui/src/UITerminal.vue), [TerminalPanel.vue](features/terminal/src/TerminalPanel.vue).
+
+### Markdown
+
+`UIMarkdown` renders source through md4x's WASM parser and an allowlisted Vue AST renderer. Source headings fit below the problem description heading. Inline code uses the accent and raised surface; code blocks use the terminal background. Tables scroll inside their own region. Quotes use a thin active stroke, and task markers are read-only. Links use the shared accent and keyboard focus. Images display alternative text. Loading is announced; failure offers retry and escaped source.
+
+Source: [UIMarkdown.vue](packages/ui/src/UIMarkdown.vue), [markdown.ts](packages/ui/src/markdown.ts).
 
 ## Do's and Don'ts
 

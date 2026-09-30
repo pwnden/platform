@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
 import type { Catalog, ProblemDetail, ProblemFile } from '@pwnden/catalog';
-import { UIButton, UIPanel } from '@pwnden/ui';
+import { UIButton, UIPanel, UIMarkdown } from '@pwnden/ui';
 
 const props = defineProps<{ catalog: Catalog; slug: string; title: string }>();
 const detail = ref<ProblemDetail>();
@@ -59,7 +59,7 @@ onMounted(load);
     </div>
     <template v-else-if="detail">
       <h3>문제 설명</h3>
-      <pre v-if="detail.description" class="description">{{ detail.description }}</pre>
+      <UIMarkdown v-if="detail.description" :source="detail.description" />
       <p v-else>등록된 문제 설명이 없습니다.</p>
       <h3>배포 파일</h3>
       <ul v-if="detail.files.length" class="files">
@@ -81,7 +81,6 @@ onMounted(load);
 .detail-panel :deep(h2) { font-size: 1.2rem; color: var(--ui-foreground); }
 h3 { margin: var(--ui-space-3) 0 var(--ui-space-1); color: var(--ui-muted); font-size: 0.85rem; }
 h3:first-child { margin-top: 0; }
-.description { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; max-width: 75ch; line-height: 1.85; }
 .files { list-style: none; padding: 0; margin: 0; }
 .files li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--ui-space-1); padding-block: var(--ui-space-1); border-top: 1px solid var(--ui-border); }
 .files span { min-width: 0; overflow-wrap: anywhere; }

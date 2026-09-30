@@ -12,6 +12,7 @@ vi.mock('../packages/ui/src/index.ts', async () => {
   return {
     UIPanel: (await import('../packages/ui/src/UIPanel.vue')).default,
     UIStatus: (await import('../packages/ui/src/UIStatus.vue')).default,
+    UIMarkdown: defineComponent({ props: ['source'], setup: props => () => h('markdown', props.source) }),
     UIButton: defineComponent({ setup: (_, { attrs, slots }) => () => h('button', attrs, slots.default?.()) }),
     UITextField: defineComponent({ setup: (_, { attrs }) => () => h('input', attrs) }),
     UITerminal: defineComponent({ setup: (_, { attrs, expose }) => {

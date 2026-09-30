@@ -407,9 +407,9 @@ func (h *handler) asset(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		nonce := hex.EncodeToString(secret)
-		// Only generated terminal styles carry this per-page nonce. Scripts keep
-		// the original default-src policy and arbitrary inline styles stay blocked.
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; connect-src 'self' ws://"+h.host+"; style-src 'self' 'nonce-"+nonce+"'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
+		// Only generated terminal styles carry this per-page nonce. Scripts stay
+		// same-origin with WASM enabled; inline scripts and styles stay blocked.
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' ws://"+h.host+"; style-src 'self' 'nonce-"+nonce+"'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
 		content = []byte(strings.Replace(string(content), "<head>", "<head><meta name=\"pwnden-style-nonce\" content=\""+nonce+"\">", 1))
 	}
 	w.Header().Set("Content-Type", typeName)

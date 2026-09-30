@@ -11,6 +11,10 @@ export interface UIPanelProps {
   readonly headingID: string;
 }
 
+export interface UIMarkdownProps {
+  readonly source: string;
+}
+
 export interface UIStatusProps {
   readonly tone?: 'muted' | 'info' | 'success' | 'danger';
 }
