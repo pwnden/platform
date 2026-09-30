@@ -12,6 +12,9 @@ import (
 func DefaultCommands() []Command {
 	return []Command{
 		{Name: "setup", Summary: "prepare the bundled problems and execution environment", Run: setup},
+		{Name: "list", Summary: "list available problems", Run: list},
+		{Name: "exec", Summary: "run a command inside a problem toolbox", Run: execute},
+		{Name: "submit", Summary: "check a flag you found", Run: submit},
 		{Name: "validate", Summary: "check compatibility and execution policy", Run: validate},
 		{Name: "run", Summary: "start a problem and show its endpoints", Run: run},
 		{Name: "verify", Summary: "check the automatic solution and optional patch", Run: verify},
@@ -97,7 +100,7 @@ func run(ctx context.Context, invocation Invocation) (err error) {
 		return err
 	}
 	if result.Kind == application.KindFile {
-		_, err = fmt.Fprintf(invocation.Stdout, "file challenge %s: %d files; run verify to check the solution\n", result.Slug, result.FileCount)
+		_, err = fmt.Fprintf(invocation.Stdout, "file challenge %s: %d files; use pwnden exec to run toolbox commands\n", result.Slug, result.FileCount)
 		return err
 	}
 	// A failed command must not leave a new run owned by nobody. Existing runs

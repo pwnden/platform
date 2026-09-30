@@ -41,6 +41,8 @@ type Contract struct {
 type Challenge struct {
 	Schema    int        `toml:"schema"`
 	Slug      string     `toml:"slug"`
+	Title     any        `toml:"title"`
+	Category  any        `toml:"category"`
 	Files     []string   `toml:"files"`
 	Compose   string     `toml:"compose"`
 	Endpoints []Endpoint `toml:"endpoints"`

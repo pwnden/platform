@@ -448,15 +448,38 @@ type ToolExitError struct {
 func (e *ToolExitError) Error() string { return fmt.Sprintf("toolbox exited %d: %s", e.Code, e.Stderr) }
 
 func RunTool(ctx context.Context, c *challenge.Loaded, project, image string, args []string) (string, error) {
+	out, _, err := runTool(ctx, c, project, image, args)
+	return out, err
+}
+
+type CommandResult struct {
+	Stdout   string
+	Stderr   string
+	ExitCode int
+}
+
+// RunCommand distinguishes a completed user command from a runtime failure.
+func RunCommand(ctx context.Context, c *challenge.Loaded, project, image string, args []string) (CommandResult, error) {
+	out, stderr, err := runTool(ctx, c, project, image, args)
+	if err == nil {
+		return CommandResult{Stdout: out, Stderr: stderr}, nil
+	}
+	if exit, ok := err.(*ToolExitError); ok {
+		return CommandResult{Stdout: out, Stderr: stderr, ExitCode: exit.Code}, nil
+	}
+	return CommandResult{}, err
+}
+
+func runTool(ctx context.Context, c *challenge.Loaded, project, image string, args []string) (string, string, error) {
 	// A cold image download uses the caller's deadline, not the solution's runtime limit.
 	if err := prepareToolImage(ctx, c, image); err != nil {
-		return "", err
+		return "", "", err
 	}
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(c.Solve.TimeoutSeconds)*time.Second)
 	defer cancel()
 	id := make([]byte, 8)
 	if _, err := rand.Read(id); err != nil {
-		return "", err
+		return "", "", err
 	}
 	container := "pwnden-tool-" + hex.EncodeToString(id)
 	network := "none"
@@ -464,7 +487,7 @@ func RunTool(ctx context.Context, c *challenge.Loaded, project, image string, ar
 		var err error
 		network, err = networkID(ctx, c, project)
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 	}
 	mount := toolboxMount(c.Dir, c.Solve.Writable)
@@ -479,13 +502,13 @@ func RunTool(ctx context.Context, c *challenge.Loaded, project, image string, ar
 		var exit *exec.ExitError
 		if ctx.Err() == nil && errors.As(err, &exit) && exit.ExitCode() > 0 && exit.ExitCode() < 125 {
 			// --rm already removed a container whose command completed.
-			return out, &ToolExitError{Code: exit.ExitCode(), Stderr: stderr}
+			return out, stderr, &ToolExitError{Code: exit.ExitCode(), Stderr: stderr}
 		}
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cleanupCancel()
-		return out, errors.Join(fmt.Errorf("toolbox: %w: %s", errors.Join(err, ctx.Err()), stderr), removeTool(cleanupCtx, c, container))
+		return out, stderr, errors.Join(fmt.Errorf("toolbox: %w: %s", errors.Join(err, ctx.Err()), stderr), removeTool(cleanupCtx, c, container))
 	}
-	return out, nil
+	return out, stderr, nil
 }
 
 func removeTool(ctx context.Context, c *challenge.Loaded, container string) error {

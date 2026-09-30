@@ -4,9 +4,9 @@
 
 ## Construction and capabilities
 
-`application.New(repo)` binds a service to one challenges checkout. The path is required; construction performs no filesystem or Docker operations. Each operation loads the current problem through the existing contract consumer and execution policy. Callers provide a non-nil `context.Context` and the problem's slug. Repository-relative paths resolve using the process working directory, so callers keep that directory stable during operations.
+`application.New(repo)` binds a service to an explicit challenges checkout. The path is required; construction performs no filesystem or Docker operations. `application.Open()` instead resolves the managed problem snapshot installed by `application.NewSetup().Setup(ctx)`. Each problem operation loads the current problem through the existing contract consumer and execution policy. Callers provide a non-nil `context.Context`. Repository-relative paths resolve using the process working directory, so callers keep that directory stable during operations.
 
-Consumers depend on the capabilities they need:
+Consumers depend on the capabilities they need. Core execution capabilities are:
 
 ```go
 type Validator interface {
@@ -23,11 +23,11 @@ type Verifier interface {
 }
 ```
 
-`Service` implements all three. Operations return Go data rather than console output, HTTP status codes, or Docker configuration objects. Command parsing and transport serialization belong to adapters. New capabilities can have their own interfaces and result types; existing consumers keep their current dependencies.
+`Service` implements all three, plus `Catalog.List(ctx)` and `Player.Execute(ctx, slug, command)` / `Player.Submit(ctx, slug, flag)`. `SetupService` implements the separate `Bootstrapper.Setup(ctx)` capability. Operations return Go data rather than console output, HTTP status codes, or Docker configuration objects. Command parsing and transport serialization belong to adapters. New capabilities can have their own interfaces and result types; existing consumers keep their current dependencies.
 
 ## Inputs and results
 
-All four operations take a slug. Problem lookup, contract version support, allowed paths, and Docker resource boundaries retain the existing runtime rules.
+Problem operations take a slug; `Execute` also takes an argument array and `Submit` a candidate flag. `List` and `Setup` take no slug. Problem lookup, contract version support, allowed paths, and Docker resource boundaries retain the existing runtime rules.
 
 | Operation | Result fields | Success meaning |
 | --- | --- | --- |
@@ -35,6 +35,10 @@ All four operations take a slug. Problem lookup, contract version support, allow
 | `Run` | `Slug`, `Kind`, `FileCount`, `Project`, `Endpoints` | Service startup completed and endpoint addresses were resolved; file problems require no service. |
 | `Stop` | `Slug` | The problem's service and patch resources and saved state were removed. File problems require no service cleanup. |
 | `Verify` | `Slug`, `Flag`, `Patched` | The declared automatic solution passed, along with patch attack, functional check, and patch cleanup when present. |
+| `List` | Slice of `Problem`: `Slug`, `Title`, `Category`, `Kind` | Available declarations loaded; display metadata uses strings with the slug as a missing title fallback. Author metadata validation remains with the problem owner. |
+| `Execute` | `Stdout`, `Stderr`, `ExitCode` | The requested toolbox command completed with exit code 0–124; runtime failures return an error. |
+| `Submit` | `Slug`, `Accepted` | The candidate flag was compared with the file hash or recorded service flag. Incorrect flags are ordinary results. |
+| `Setup` | `ProblemCount`, `ContractVersion` | Docker and Compose are available; the bundled snapshot passed integrity, compatibility, and execution checks; images were prepared and the managed snapshot activated. |
 
 `Kind` is `"file"` or `"service"`. File results have no project or endpoints, and validation reports zero services. `FileCount` counts distribution entries, including entries that name directories. `ServiceCount` counts the vulnerable configuration's services. `Validation.Patched` indicates that a patch is declared; `Verification.Patched` indicates that its complete verification passed.
 
@@ -44,7 +48,7 @@ Any error returns the zero result; failed verification exposes no partial flag. 
 
 ## Errors
 
-Use `errors.As(err, &applicationError)` with `var applicationError *application.Error`. Its fields are `Code`, `Operation`, `Slug`, and `Cause`. `Operation` is `configure`, `validate`, `run`, `stop`, or `verify`. `Unwrap` preserves underlying filesystem, contract, process, cancellation, and joined cleanup errors for `errors.Is` and `errors.As`.
+Use `errors.As(err, &applicationError)` with `var applicationError *application.Error`. Its fields are `Code`, `Operation`, `Slug`, and `Cause`. `Operation` identifies `configure`, `setup`, `list`, `validate`, `run`, `stop`, `verify`, `exec`, or `submit`. `Unwrap` preserves underlying filesystem, contract, process, cancellation, and joined cleanup errors for `errors.Is` and `errors.As`.
 
 | Code | Meaning |
 | --- | --- |
@@ -54,11 +58,13 @@ Use `errors.As(err, &applicationError)` with `var applicationError *application.
 | `already_running` | A service run is already recorded. |
 | `not_running` | A service operation requires saved run state that is absent. |
 | `validation_failed` | Resolved Compose validation could not complete or rejected the execution configuration. |
-| `execution_failed` | Startup or endpoint discovery failed. |
+| `execution_failed` | Startup, endpoint discovery, or user toolbox execution failed. |
 | `verification_failed` | Automatic solution or patch verification failed, including execution errors without a more specific code. |
 | `cleanup_failed` | Resource teardown or state removal failed; inspect the cause for resource identities and all failures. |
 | `canceled` | Work was canceled and cleanup did not fail. |
 | `deadline_exceeded` | The caller deadline or toolbox runtime limit expired and cleanup did not fail. |
+| `setup_required` | The managed problem snapshot is absent or incomplete; run setup. |
+| `setup_failed` | Bundled content loading, integrity checking, Docker availability, image preparation, or managed activation failed. |
 
 Classification uses typed errors and operation boundaries. Adapters map these codes to their own presentation. Cleanup failure takes precedence over cancellation or timeout because resources may remain. Both causes remain inspectable.
 
@@ -69,3 +75,11 @@ The caller chooses the operation deadline. The application service adds no globa
 Explicit `Stop` completes cleanup with an independent context even when its caller is canceled. It reports success only after cleanup and state removal complete. Failed teardown retains saved state for another attempt. File preparation and cleanup create no Docker resources.
 
 The service does not coordinate simultaneous callers. Adapters serialize mutating operations for a given repository and slug; concurrent `Run`, `Stop`, and `Verify` calls for the same problem are outside this interface's supported usage. Adding a concurrent HTTP adapter requires enforcing that ownership before exposing these operations.
+
+## Managed setup and player commands
+
+Setup uses the fixed archive identity embedded by the package builder. It activates the installed snapshot after all preparations succeed, preserves the current active snapshot on failure, and rejects switching snapshots while a previous service run is recorded. Sequential setup reuses the same snapshot and image caches. [Distribution](distribution.md) defines the storage and extraction boundaries.
+
+`Execute` uses the declared solution image as the player's toolbox. It retains the same problem-directory mount permissions, network selection, image preparation, runtime deadline, and independent cleanup as automatic verification. It accepts direct command arguments and captures completed output. A service command checks the saved run and execution policy before using its project network.
+
+`Submit` trims leading and trailing Unicode whitespace and uses the same flag comparison strategy as automatic verification. A service submission requires the current saved run flag. This operation performs no solution execution and writes no progress record.

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -13,6 +14,10 @@ import (
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
+		var exit *cli.ExitError
+		if errors.As(err, &exit) {
+			os.Exit(exit.Code)
+		}
 		fmt.Fprintln(os.Stderr, "pwnden:", err)
 		os.Exit(1)
 	}

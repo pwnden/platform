@@ -76,7 +76,7 @@ func TestFileCommandOutputAndTypedError(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
 	for _, test := range []struct{ command, output string }{
 		{"validate", "compatible file challenge example (contract 1; 1 files)\n"},
-		{"run", "file challenge example: 1 files; run verify to check the solution\n"},
+		{"run", "file challenge example: 1 files; use pwnden exec to run toolbox commands\n"},
 		{"stop", "stopped example\n"},
 	} {
 		var out, stderr bytes.Buffer
