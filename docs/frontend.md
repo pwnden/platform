@@ -147,10 +147,15 @@ redirects or route fallbacks. Host/origin checks and security headers apply to
 these requests. The Vue entry point owns fragment initialization. Reloading
 after fragment removal requires reopening the server's printed full URL.
 
-`./pwnden setup` and `./pwnden dev` build the pinned Node frontend inside Docker
-and copy its assets into the Go stage. Setup also packages the official catalog;
-development serves the live local checkout. The executable needs neither Node
-nor a separate asset directory.
+`./pwnden setup` builds the pinned Node frontend inside Docker, copies its assets
+into the Go stage and packages the official catalog. The executable needs neither
+Node nor a separate asset directory. `./pwnden dev` builds Go with the `development`
+tag and runs Vite in Docker against the live workspace. Vue, TypeScript and CSS
+edits update through HMR, including workspace UI and feature packages. Go proxies
+Vite assets and WebSockets on the player's origin; API and terminal requests keep
+their existing authentication and origin checks. Vite's CSP nonce also authorizes
+its generated HMR styles. Restart after Go or dependency changes. Full verification
+runs separately through `pnpm verify` or the `Dockerfile.web` verification target.
 Source Go builds and tests must first prepare the ignored embed directory:
 
 ```sh
@@ -160,8 +165,8 @@ go test ./...
 
 The embed directives make a missing frontend build a compile error. The
 bootstrap context excludes host `node_modules` and generated frontend directories.
-A separate Vite server does not provide authenticated access to Go's API: the
-server allows its own local origin. [Container terminal access](terminal.md) uses
+The development frontend is accessed through Go's printed URL so requests use
+the server's own local origin. [Container terminal access](terminal.md) uses
 first-frame authentication, a render acknowledgement per output frame and cleanup
 on disconnect/unmount. Its UI styles use a page-specific CSP nonce through xterm's
 document override. Submission history remains a subsequent stage. Reopening a full server URL and

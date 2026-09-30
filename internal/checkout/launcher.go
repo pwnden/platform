@@ -21,6 +21,7 @@ type Launcher struct {
 	Stdin          io.Reader
 	Stdout, Stderr io.Writer
 	execute        func(context.Context, string, []string, io.Writer, io.Writer) error
+	startWeb       func(context.Context, string) (string, string, func() error, error)
 }
 
 var buildName = regexp.MustCompile(`^(build|dev)\.[a-zA-Z0-9]+$`)
@@ -37,6 +38,9 @@ func (l *Launcher) Run(ctx context.Context, args []string) error {
 	}
 	if l.execute == nil {
 		l.execute = l.command
+	}
+	if l.startWeb == nil {
+		l.startWeb = l.web
 	}
 	if err := plainPath(filepath.Join(l.Root, "dist"), true); err != nil {
 		return err
@@ -116,7 +120,7 @@ func (l *Launcher) setup(ctx context.Context) (err error) {
 	return err
 }
 
-func (l *Launcher) dev(ctx context.Context) error {
+func (l *Launcher) dev(ctx context.Context) (err error) {
 	workspace := filepath.Dir(l.Root)
 	repo, err := filepath.EvalSymlinks(filepath.Join(workspace, "challenges"))
 	if err != nil {
@@ -139,7 +143,12 @@ func (l *Launcher) dev(ctx context.Context) error {
 	if err := l.activate("development", directory); err != nil {
 		return errors.Join(err, os.RemoveAll(directory))
 	}
-	return l.execute(ctx, l.binary(directory), []string{"--repo", repo, "dev"}, l.Stdout, l.Stderr)
+	target, nonce, stop, err := l.startWeb(ctx, directory)
+	if err != nil {
+		return err
+	}
+	defer func() { err = errors.Join(err, stop()) }()
+	return l.execute(ctx, l.binary(directory), []string{"--repo", repo, "dev", "--web", target, "--nonce", nonce}, l.Stdout, l.Stderr)
 }
 
 func (l *Launcher) checkDocker(ctx context.Context) error {

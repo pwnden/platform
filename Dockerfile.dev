@@ -1,0 +1,13 @@
+FROM node:24.21.0-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6
+WORKDIR /web
+RUN npm install --global --no-audit --no-fund pnpm@12.8.1
+# The launcher supplies only workspace manifests and the frozen lockfile.
+# Hoisting keeps dependencies in the one writable anonymous volume beneath
+# the read-only source mount. Source edits do not rebuild this image.
+COPY . ./
+RUN pnpm install --frozen-lockfile --config.node-linker=hoisted && chmod -R a+rwX node_modules \
+    && find apps packages domains features -name package.json -not -path '*/node_modules/*' \
+       -exec sh -c 'mkdir -p "$(dirname "$1")/node_modules"; chmod 777 "$(dirname "$1")/node_modules"' sh {} \;
+EXPOSE 5173
+ENV HOME=/tmp
+CMD ["node", "/web/node_modules/vite/bin/vite.js", "/web/apps/player", "--config", "/web/apps/player/vite.config.mjs", "--configLoader", "native"]

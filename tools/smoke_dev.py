@@ -13,7 +13,8 @@ import time
 from urllib.parse import urlsplit
 from urllib.error import URLError
 
-from smoke_http import api, check_assets, download
+from smoke_http import api, download
+from smoke_hmr import check_hmr
 
 
 def interrupted(_signum, _frame):
@@ -68,7 +69,9 @@ def main():
                     raise RuntimeError("pwnden dev startup timed out")
                 problems = api(origin, token, "GET", "/problems")
                 assert {"rotor-lock", "note-vault"} <= {item["slug"] for item in problems["problems"]}
-                check_assets(origin, token)
+                check_hmr(origin, root)
+                assert "pnpm verify" not in diagnostic.read_text(), "dev ran full verification"
+                assert "Preparing local problems" not in output.read_text(), "dev eagerly prepared problem images"
                 detail = api(origin, token, "GET", "/problems/rotor-lock")
                 assert detail["description"] == (repo / "challenges/rotor-lock/README.md").read_text()
                 file = next(item for item in detail["files"] if item["name"] == "files/checker.py")
@@ -102,7 +105,7 @@ def main():
                             pass
                         else:
                             raise RuntimeError("development server survived entry shutdown")
-            print(f"Development smoke passed: {'first' if attempt == 0 else 'cached'} startup, HTTP, terminal, shutdown; no host SDKs.", flush=True)
+            print(f"Development smoke passed: {'first' if attempt == 0 else 'cached'} startup, HTTP, live HMR, terminal, shutdown; no host SDKs.", flush=True)
 
 
 if __name__ == "__main__":

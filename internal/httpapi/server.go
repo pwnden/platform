@@ -25,6 +25,10 @@ func (e *serverFailure) Unwrap() error { return e.cause }
 // Serve owns a loopback listener until cancellation. Completed problem runs
 // survive shutdown; interrupted starts and failed response delivery are cleaned.
 func Serve(ctx context.Context, backend Backend, stdout, stderr io.Writer) error {
+	return serve(ctx, backend, stdout, stderr, nil)
+}
+
+func serve(ctx context.Context, backend Backend, stdout, stderr io.Writer, frontend *Frontend) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -41,6 +45,7 @@ func Serve(ctx context.Context, backend Backend, stdout, stderr io.Writer) error
 	base, cancel := context.WithCancel(ctx)
 	defer cancel()
 	handler := newHandler(base, backend, listener.Addr().String(), token, stderr)
+	handler.frontend = frontend
 	server := &http.Server{
 		Handler: handler, ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout: 10 * time.Second, WriteTimeout: operationTimeout + 10*time.Second,

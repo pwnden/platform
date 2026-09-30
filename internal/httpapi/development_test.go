@@ -1,0 +1,142 @@
+package httpapi
+
+import (
+	"context"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/coder/websocket"
+	"github.com/pwnden/platform/internal/application"
+)
+
+func TestDevelopmentAssetProxyKeepsAPIBoundaries(t *testing.T) {
+	calls := 0
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		if r.Header.Get("Authorization") != "" || r.Header.Get("Cookie") != "" {
+			t.Error("player credentials reached Vite")
+		}
+		if r.URL.RawQuery != "vue&type=style" {
+			t.Error("Vite transform query was changed")
+		}
+		w.Header().Set("Content-Type", "text/javascript")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Set-Cookie", "private=value")
+		io.WriteString(w, "export default 'live';")
+	}))
+	defer upstream.Close()
+	frontend, err := DevelopmentFrontend(upstream.URL, strings.Repeat("a", 64))
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := newHandler(context.Background(), fakeBackend{list: func(context.Context) ([]application.Problem, error) { return nil, nil }}, testHost, testToken, io.Discard)
+	h.frontend = frontend
+	r := request("GET", "/src/App.vue?vue&type=style", "")
+	r.Header.Set("Cookie", "secret=value")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != 200 || calls != 1 || w.Header().Get("Content-Type") != "text/javascript" || !strings.Contains(w.Header().Get("Content-Security-Policy"), "'nonce-"+frontend.nonce+"'") || w.Header().Get("Access-Control-Allow-Origin") != "" || w.Header().Get("Set-Cookie") != "" {
+		t.Fatal("invalid development asset response", w.Code, w.Header())
+	}
+	for _, test := range []struct {
+		path string
+		code int
+	}{
+		{BasePath + "/problems", 401}, {BasePath + "/problems?vue", 400},
+		{"/__open-in-editor?file=go.mod", 404}, {"/@fs/etc/passwd", 404}, {"/__vite_hmr?token=dev", 403},
+	} {
+		r := request("GET", test.path, "")
+		r.Header.Del("Authorization")
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		if w.Code != test.code || calls != 1 {
+			t.Fatalf("route boundary %s: %d", test.path, w.Code)
+		}
+	}
+	for _, change := range []func(*http.Request){
+		func(r *http.Request) { r.Host = "other.invalid" },
+		func(r *http.Request) { r.Header.Set("Origin", "http://other.invalid") },
+		func(r *http.Request) { r.Header.Set("Sec-Fetch-Site", "cross-site") },
+	} {
+		r := request("GET", "/src/App.vue", "")
+		change(r)
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		if w.Code != 403 || calls != 1 {
+			t.Fatal("development bypassed origin checks")
+		}
+	}
+}
+
+func TestDevelopmentWebSocketAndShutdown(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/__vite_hmr" || r.URL.RawQuery != "token=dev" {
+			t.Error("HMR path/query changed")
+		}
+		connection, err := websocket.Accept(w, r, &websocket.AcceptOptions{Subprotocols: []string{"vite-hmr"}, OriginPatterns: []string{"127.0.0.1:*"}})
+		if err != nil {
+			return
+		}
+		defer connection.CloseNow()
+		connection.Write(r.Context(), websocket.MessageText, []byte(`{"type":"connected"}`))
+		connection.Read(r.Context())
+	}))
+	defer upstream.Close()
+	frontend, err := DevelopmentFrontend(upstream.URL, strings.Repeat("a", 64))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	announced := make(announcedURL, 1)
+	done := make(chan error, 1)
+	go func() { done <- ServeDevelopment(ctx, fakeBackend{}, announced, io.Discard, frontend) }()
+	var address *url.URL
+	select {
+	case value := <-announced:
+		address, err = url.Parse(value)
+	case err := <-done:
+		t.Fatal(err)
+	case <-time.After(3 * time.Second):
+		t.Fatal("development server did not start")
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	clientCtx, stop := context.WithTimeout(context.Background(), 3*time.Second)
+	defer stop()
+	connection, _, err := websocket.Dial(clientCtx, "ws://"+address.Host+"/__vite_hmr?token=dev", &websocket.DialOptions{Subprotocols: []string{"vite-hmr"}, HTTPHeader: http.Header{"Origin": []string{"http://" + address.Host}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer connection.CloseNow()
+	_, message, err := connection.Read(clientCtx)
+	if err != nil || string(message) != `{"type":"connected"}` {
+		t.Fatal("HMR handshake failed", err)
+	}
+	cancel()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("HMR connection prevented shutdown")
+	}
+}
+
+func TestDevelopmentEndpointValidation(t *testing.T) {
+	for _, address := range []string{"", "http://localhost:5173", "http://127.0.0.1:0", "http://127.0.0.1:65536", "https://127.0.0.1:5173", "http://127.0.0.1:5173/path", "http://127.0.0.1:5173?", "http://private@127.0.0.1:5173"} {
+		if _, err := DevelopmentFrontend(address, strings.Repeat("a", 64)); err == nil {
+			t.Fatal("invalid frontend accepted", address)
+		}
+	}
+	if _, err := DevelopmentFrontend("http://127.0.0.1:5173", "injected-style-policy"); err == nil {
+		t.Fatal("invalid nonce accepted")
+	}
+}

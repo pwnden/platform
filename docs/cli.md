@@ -17,7 +17,7 @@ Global options precede the command. Each command owns its arguments and flags; c
 | Command | Invocation | Result |
 | --- | --- | --- |
 | `setup` | `pwnden setup` | Docker and Compose check, bundled problem installation, and image preparation. |
-| `dev` | `pwnden dev` | In a source checkout, Docker build and local problem preparation, then the development web/API server. |
+| `dev` | `pwnden dev` | In a source checkout, start the Go web/API server and Docker Vite with frontend HMR. Verification runs separately; problem images are prepared when used. |
 | `serve` | `pwnden serve` | Local Go web/API server for the managed installation; prints its private session URL. |
 | `list` | `pwnden list` | Available problem names, categories, and titles. |
 | `run` | `pwnden run <slug>` | File distribution count, or service project and actual endpoint addresses. |
@@ -31,7 +31,7 @@ Global options precede the command. Each command owns its arguments and flags; c
 
 `exec` uses the problem's declared toolbox image and mount permissions. File toolboxes have no network access. Service toolboxes use the recorded run's project network and require a prior `run`. Arguments execute directly; use `sh -c` explicitly for a shell command. Interactive stdin and a terminal are outside this completed-command interface. `submit` checks the file flag hash or the current recorded service flag and does not execute a solution or record progress history.
 
-The executable forwards SIGINT and SIGTERM through the caller context. Ordinary commands have a fifteen-minute operation deadline. Persistent commands `serve` and `dev` run until interrupted; development preparation and individual API requests have their own fifteen-minute deadlines. Independent cleanup may continue after cancellation or a deadline, following the application interface's resource rules. See [local server](local-server.md) for authentication and shutdown behavior.
+The executable forwards SIGINT and SIGTERM through the caller context. Ordinary commands have a fifteen-minute operation deadline. Persistent commands `serve` and `dev` run until interrupted; individual API requests have their own fifteen-minute deadlines. Independent cleanup may continue after cancellation or a deadline, following the application interface's resource rules. See [local server](local-server.md) for authentication and shutdown behavior.
 
 If `run` starts a service but cannot write its result to stdout, the command attempts to stop that new run before returning the output error. Any cleanup error is retained. A pre-existing run is preserved when startup reports `already_running`.
 

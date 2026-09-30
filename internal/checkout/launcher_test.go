@@ -20,6 +20,9 @@ func fixture(t *testing.T) (*Launcher, *[][]string) {
 	}
 	calls := &[][]string{}
 	l := &Launcher{Root: root, Stdout: io.Discard, Stderr: io.Discard}
+	l.startWeb = func(context.Context, string) (string, string, func() error, error) {
+		return "http://127.0.0.1:5173", strings.Repeat("a", 64), func() error { return nil }, nil
+	}
 	l.execute = func(_ context.Context, name string, args []string, stdout, _ io.Writer) error {
 		*calls = append(*calls, append([]string{name}, args...))
 		if name == "docker" && len(args) > 0 && args[0] == "info" {
@@ -127,7 +130,7 @@ func TestDevelopmentKeepsOfficialBuildAndUsesLiveCheckout(t *testing.T) {
 		t.Fatal(err)
 	}
 	last := (*calls)[len(*calls)-1]
-	if !reflect.DeepEqual(last[1:], []string{"--repo", repo, "dev"}) {
+	if !reflect.DeepEqual(last[1:], []string{"--repo", repo, "dev", "--web", "http://127.0.0.1:5173", "--nonce", strings.Repeat("a", 64)}) {
 		t.Fatal(last)
 	}
 	after, _ := os.ReadFile(active)

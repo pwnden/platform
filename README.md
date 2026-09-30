@@ -53,11 +53,13 @@ For development, keep the local challenges checkout next to platform and run:
 ./pwnden dev
 ```
 
-This command builds current sources inside Docker, prepares the live local
-problems and starts the same Go web/API server. Open its printed full URL.
-Repeat the command after source changes; unchanged Docker layers use the build
-cache. Ctrl+C stops the server and closes its terminals. Local problem edits
-need no commit or package build. The official installation stays separate.
+This command builds the Go development executable and starts Vite inside Docker,
+with the live local problems exposed through Go. Open its printed full URL.
+Vue, TypeScript and CSS edits update through HMR. Restart after Go or dependency
+changes; unchanged Docker layers use the build cache. Verification is a separate
+maintainer command. Problem images are prepared when used. Ctrl+C closes terminals
+and removes the Vite container and temporary dependency volumes. Local problem
+edits need no commit or package build. The official installation stays separate.
 Host Go, Node and pnpm are unnecessary. On native Windows, use `./pwnden.ps1`
 with the same commands; actual Windows and macOS execution checks are deferred.
 

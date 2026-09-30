@@ -6,11 +6,14 @@ After managed setup, start the server from the platform checkout:
 ./pwnden serve
 ```
 
-For source development, use `./pwnden dev`. It builds current platform and
-frontend sources through Docker, prepares the live sibling `challenges`
-checkout and starts this same server. Repeat after source changes to rebuild
-with Docker's cache. Local problem edits are read directly. Its source root and
-resource identities are separate from the managed installation. Native Windows
+For source development, use `./pwnden dev`. Docker builds the Go development
+executable and starts Vite with live frontend sources. This same Go server proxies
+Vite assets and HMR WebSockets while handling authenticated API and terminal
+requests itself. Open its printed full URL. Frontend edits update through HMR;
+restart after Go or dependency changes. Verification runs separately, and problem
+images are prepared when used. Local problem edits are read directly. Its source
+root and resource identities are separate from the managed installation. Ctrl+C
+removes the development frontend container and its dependency volumes. Native Windows
 uses `./pwnden.ps1 dev`; actual Windows and macOS checks are deferred.
 
 A native package uses `./pwnden serve` from its unpacked directory. `serve` accepts no repository, address, port, or positional arguments. It checks that the managed catalog can be loaded before opening a listener. Missing setup reports `setup_required`.

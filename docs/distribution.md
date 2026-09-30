@@ -80,13 +80,16 @@ Platform CI verifies the consumed problems, builds the native Linux package, run
 ## Development builds
 
 Keep `platform` and `challenges` next to each other, then run `./pwnden dev`.
-It builds current platform/frontend sources inside Docker and calls the native
-CLI with the live local challenges path. `Service.Prepare` applies the same
-contract and execution policy and prepares images without starting services.
-The same Go HTTP server serves the embedded frontend and local problem operations.
-Local problem edits need no commit. Platform/frontend changes take effect after
-stopping and rerunning `dev`; Docker caches unchanged inputs. Ctrl+C stops the
-server and its terminal sessions; completed problem services retain their state.
+It builds the Go executable with the `development` build tag and starts Vite in
+Docker. The tag provides source CLI commands without an embedded production web
+build. The native CLI reads the live challenges catalog; problem execution keeps
+its contract and mount-policy checks and prepares images when needed. The Go
+server proxies frontend assets and HMR WebSockets on the same loopback origin as
+the API and interactive terminal. Vue, TypeScript and CSS edits update through
+HMR. Restart after Go or dependency changes; Docker caches unchanged inputs.
+Verification runs separately. Ctrl+C stops the server and terminal sessions and
+removes the Vite container and anonymous volumes; completed problem services retain
+their state. Local problem edits need no commit.
 
 Development builds live in `dist/dev.*/payload/`; `dist/development` identifies
 the latest built executable. `dev` leaves the official `dist/active` reference
@@ -95,9 +98,15 @@ and managed installation unchanged. Source CLI checks use
 player commands prefer the official build. Missing or invalid referenced
 executables fail explicitly.
 
-The development build prepares the live checkout without host bind mounts or
-a Docker socket in the builder. The native runtime mounts only validated
-problem paths as usual. Native packages keep the separate fixed content
+The frontend tool image uses only workspace manifests and the frozen lockfile.
+The Vite container mounts `platform/web` read-only, with host dependency directories
+covered by anonymous Docker volumes. The launcher creates empty ignored
+`node_modules` directories when needed as volume mount points. Dependencies and
+Vite caches stay inside those disposable volumes. Polling detects changes across
+Docker file sharing environments. The container uses the checkout user's UID/GID
+where available, drops Linux capabilities and publishes only on loopback. Its
+builder and runtime have no Docker socket. The native challenge runtime mounts
+only validated problem paths as usual. Native packages keep the separate fixed content
 identity flow. [Execution verification](verification.md) describes author checks.
 
 ```sh
@@ -106,5 +115,7 @@ python3 -B tools/smoke_dev.py --checkout . --terminal-driver dist/smoke-terminal
 ```
 
 This maintainer check runs `dev` twice with host SDKs absent from the player's
-PATH. It checks cache reuse, local HTTP content and file bytes, real isolated
-terminal behavior and cleanup, independent official activation and server shutdown.
+PATH. It checks cache reuse, live Vue SFC HMR through Go's WebSocket proxy, local
+HTTP content and file bytes, real isolated terminal behavior and cleanup,
+independent official activation and server shutdown. It also confirms that dev
+performs neither full frontend verification nor eager problem-image preparation.

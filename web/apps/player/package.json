@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "scripts": { "typecheck": "vue-tsc -p tsconfig.json", "build": "vite build" },
+  "scripts": { "dev": "vite", "typecheck": "vue-tsc -p tsconfig.json", "build": "vite build" },
   "dependencies": {
     "@pwnden/api": "workspace:0.1.0",
     "@pwnden/catalog": "workspace:0.1.0",

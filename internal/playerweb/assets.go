@@ -1,3 +1,5 @@
+//go:build !development
+
 // Package playerweb contains the browser build embedded in the executable.
 // Build the assets with Dockerfile.web before compiling Go from source.
 package playerweb

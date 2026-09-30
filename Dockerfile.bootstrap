@@ -29,10 +29,14 @@ COPY --from=web /web/dist/player/ internal/playerweb/dist/
 COPY tools/package/ tools/package/
 COPY catalog.lock ./
 
-FROM source AS development-build
+FROM toolchain AS development-build
+COPY go.mod go.sum ./
+RUN go mod download
+COPY cmd/ cmd/
+COPY internal/ internal/
 ARG PWNDEN_TARGET
 RUN suffix=""; case "$PWNDEN_TARGET" in windows/*) suffix=".exe" ;; esac; \
-    CGO_ENABLED=0 GOOS="${PWNDEN_TARGET%/*}" GOARCH="${PWNDEN_TARGET#*/}" go build -trimpath -o "/output/pwnden${suffix}" ./cmd/pwnden
+    CGO_ENABLED=0 GOOS="${PWNDEN_TARGET%/*}" GOARCH="${PWNDEN_TARGET#*/}" go build -tags development -trimpath -o "/output/pwnden${suffix}" ./cmd/pwnden
 
 FROM scratch AS development-export
 COPY --from=development-build /output/ /

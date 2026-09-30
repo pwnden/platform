@@ -36,6 +36,7 @@ type handler struct {
 	locks           map[string]*problemLock
 	cleanupFailures error
 	terminals       map[string]*terminalConnection
+	frontend        *Frontend
 }
 
 func newHandler(base context.Context, backend Backend, host, token string, diagnostics io.Writer) *handler {
@@ -76,6 +77,10 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	site := r.Header.Get("Sec-Fetch-Site")
 	if site != "" && site != "none" && site != "same-origin" {
 		transportError(w, 403, "forbidden", "The request origin is not allowed.")
+		return
+	}
+	if h.frontend != nil && !strings.HasPrefix(r.URL.Path, "/api/") {
+		h.development(w, r)
 		return
 	}
 	if r.URL.RawQuery != "" || r.URL.ForceQuery || r.URL.RawPath != "" {
@@ -409,7 +414,7 @@ func (h *handler) asset(w http.ResponseWriter, r *http.Request) {
 		nonce := hex.EncodeToString(secret)
 		// Only generated terminal styles carry this per-page nonce. Scripts stay
 		// same-origin with WASM enabled; inline scripts and styles stay blocked.
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' ws://"+h.host+"; style-src 'self' 'nonce-"+nonce+"'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
+		w.Header().Set("Content-Security-Policy", pagePolicy(h.host, nonce))
 		content = []byte(strings.Replace(string(content), "<head>", "<head><meta name=\"pwnden-style-nonce\" content=\""+nonce+"\">", 1))
 	}
 	w.Header().Set("Content-Type", typeName)
