@@ -10,10 +10,10 @@ problem execution and answer checking. Node and pnpm are build tools.
 | `@pwnden/player` | `web/apps/player` | Session initialization and composition. |
 | `@pwnden/ui` | `web/packages/ui` | Own button/input API, Sectile wrappers and theme tokens. |
 | `@pwnden/api` | `web/packages/api` | Implement domain ports with the Go HTTP API. |
-| `@pwnden/catalog` | `web/domains/catalog` | Problem models and catalog port; pure TypeScript. |
-| `@pwnden/play` | `web/domains/play` | Run/submission models and player port; pure TypeScript. |
-| `@pwnden/catalog-feature` | `web/features/catalog` | Vue catalog presentation and loading state. |
-| `@pwnden/play-feature` | `web/features/play` | Vue execution controls and submission presentation. |
+| `@pwnden/catalog` | `web/domains/catalog` | Summary/detail/file models and read/download port; pure TypeScript. |
+| `@pwnden/play` | `web/domains/play` | Run/status/submission models and player port; pure TypeScript. |
+| `@pwnden/catalog-feature` | `web/features/catalog` | Vue catalog, description text and authenticated file downloads. |
+| `@pwnden/play-feature` | `web/features/play` | Vue observed execution state, controls and submissions. |
 
 The app injects API implementations into features. Features import their domain
 and the UI package. The API package imports domain ports and models. Domains
@@ -73,8 +73,11 @@ pnpm verify
 
 Verification checks boundaries, every package's types, negative dependency
 fixtures, HTTP request/response mapping, native button attributes, Sectile input
-label/value rendering and a production build. Build output is ignored under
-`web/dist/player`. CI builds and tests; it uploads no artifacts.
+label/value rendering, feature lifecycle/state recovery/file download and a
+production build. Feature tests compile real client Vue templates and use a
+custom renderer in Node; UI components are doubled there and tested separately.
+These checks do not replace browser interaction or layout validation. Build
+output is ignored under `web/dist/player`. CI builds and tests; it uploads no artifacts.
 
 To export verified static assets locally:
 
@@ -84,9 +87,17 @@ docker build --file Dockerfile.web --target assets --output type=local,dest=dist
 
 ## Integration status
 
-The Vue app composes catalog and play features for the four existing HTTP
-operations. The API client uses a fixed same-origin `/api/v1` base, keeps the
-fragment token in memory and uses a bearer header. It follows the server's
+The Vue app composes catalog and play features for the seven HTTP operations,
+including detail, declared file downloads and observed run status. Descriptions
+are displayed as text, with no HTML execution or active author links. Download
+ports return plain `Uint8Array`; the catalog feature creates the browser Blob URL
+and revokes it after initiating the download. The bearer token stays in the fetch
+header. Play loads status on selection, refreshes it after mutations and provides
+a manual refresh. Failed observation clears stale endpoints; an unavailable
+recorded service offers stop for cleanup. Service stop also remains available
+after failed observation; unknown state permits no new start or submission.
+The API client uses a fixed same-origin
+`/api/v1` base, keeps the fragment token in memory and uses a bearer header. It follows the server's
 snake_case DTOs and tolerates extra response fields. Flags are checked on Go;
 an incorrect answer is an ordinary rejected submission. Requests do not follow
 redirects or persist credentials. The app removes the initial token fragment
@@ -111,5 +122,6 @@ go test ./...
 The embed directives make a missing frontend build a compile error. The
 bootstrap context excludes host `node_modules` and generated frontend directories.
 A separate Vite server does not provide authenticated access to Go's API: the
-server allows its own local origin. Container terminal access, file downloads
-and persisted player status remain subsequent implementation stages.
+server allows its own local origin. Container terminal access and submission
+history remain subsequent implementation stages. Reopening a full server URL and
+selecting the problem recovers its current run from Go, without browser persistence.

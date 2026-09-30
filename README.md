@@ -15,7 +15,7 @@ cd platform
 
 Setup builds the Vue frontend and Go platform inside Docker, acquires the pinned official problems, and prepares their execution tools. Host Go, Node, pnpm, Python, and a separate problem checkout are unnecessary. The checked-in `pwnden` file is a launcher; generated executables stay under ignored `dist/` paths.
 
-The pinned problem commit in `catalog.lock` must be published in the official problem repository before a fresh clone can complete setup. Missing commits fail explicitly. Open the full URL printed by `serve` to use the [local Vue player](docs/local-server.md): choose a problem, run or stop it and submit a flag. Go serves the embedded frontend and [web API](docs/web-api.md) from the same local origin.
+The pinned problem commit in `catalog.lock` must be published in the official problem repository before a fresh clone can complete setup. Missing commits fail explicitly. Open the full URL printed by `serve` to use the [local Vue player](docs/local-server.md): choose a problem, read its description, download its files, check its execution state, run or stop a service and submit a flag. Go serves the embedded frontend and [web API](docs/web-api.md) from the same local origin.
 
 Note Vault is an introductory web problem: run it in the player, open its published HTTP endpoint, log in as `guest` / `guest` and find the administrator's recovery key, formatted as `pwnden{...}`. You can also use the CLI:
 

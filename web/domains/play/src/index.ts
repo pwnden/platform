@@ -16,7 +16,15 @@ export interface Submission {
 }
 
 export interface Player {
+  status(slug: string): Promise<RunStatus>;
   run(slug: string): Promise<Run>;
   stop(slug: string): Promise<void>;
   submit(slug: string, flag: string): Promise<Submission>;
+}
+
+export interface RunStatus {
+  readonly slug: string;
+  readonly kind: 'file' | 'service';
+  readonly state: 'ready' | 'stopped' | 'running' | 'unavailable';
+  readonly endpoints: readonly Endpoint[];
 }

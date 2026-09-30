@@ -4,6 +4,49 @@ import { APIError, createAPI } from '../packages/api/src/index';
 const token = 'a'.repeat(64);
 const response = (payload: unknown, status = 200) => new Response(JSON.stringify(payload), { status, headers: { 'Content-Type': 'application/json' } });
 
+it('maps details, binary downloads and restored run status without exposing internal fields', async () => {
+  const id = 'b'.repeat(64);
+  const calls: string[] = [];
+  const replies = [
+    response({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', description: '<script>text</script>', files: [{ id, name: 'files/data.bin', size: 3 }], private: 'hidden' }),
+    new Response(new Uint8Array([0, 1, 255]), { headers: { 'Content-Type': 'application/octet-stream' } }),
+    response({ slug: 'test', kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:8000' }], flag: 'hidden' }),
+  ];
+  const client = createAPI({ token, fetch: async (input, options) => {
+    calls.push(String(input));
+    expect(options?.headers).toHaveProperty('Authorization', `Bearer ${token}`);
+    expect(options?.redirect).toBe('error');
+    return replies.shift()!;
+  } });
+  expect(await client.catalog.detail('test')).toEqual({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', description: '<script>text</script>', files: [{ id, name: 'files/data.bin', size: 3 }] });
+  expect(await client.catalog.download('test', id)).toEqual(new Uint8Array([0, 1, 255]));
+  expect(await client.player.status('test')).toEqual({ slug: 'test', kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:8000' }] });
+  expect(calls).toEqual(['/api/v1/problems/test', `/api/v1/problems/test/files/${id}`, '/api/v1/problems/test/status']);
+});
+
+it('rejects undeclared path inputs and malformed detail/status/download responses', async () => {
+  let calls = 0;
+  const invalid = createAPI({ token, fetch: async () => { calls++; return response({}); } });
+  await expect(invalid.catalog.download('test', '../../solve.py')).rejects.toMatchObject({ code: 'invalid_argument' });
+  await expect(invalid.catalog.detail('../test')).rejects.toMatchObject({ code: 'invalid_argument' });
+  expect(calls).toBe(0);
+  for (const item of [
+    { slug: 'other', kind: 'service', state: 'running', endpoints: [] },
+    { slug: 'test', kind: 'file', state: 'running', endpoints: [] },
+    { slug: 'test', kind: 'service', state: 'ready', endpoints: [] },
+    { slug: 'test', kind: 'service', state: 'unknown', endpoints: [] },
+    { slug: 'test', kind: 'service', state: 'stopped', endpoints: [{ name: 'bad', url: 'http://127.0.0.1:8000' }] },
+  ]) {
+    const client = createAPI({ token, fetch: async () => response(item) });
+    await expect(client.player.status('test')).rejects.toMatchObject({ code: 'invalid_response' });
+  }
+  const badFile = createAPI({ token, fetch: async () => response({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', description: '', files: [{ id: 'bad', name: 'data', size: -1 }] }) });
+  await expect(badFile.catalog.detail('test')).rejects.toMatchObject({ code: 'invalid_response' });
+  await expect(invalid.catalog.download('test', 'a'.repeat(64))).rejects.toMatchObject({ code: 'invalid_response' });
+  const missing = createAPI({ token, fetch: async () => response({ error: { code: 'not_found' } }, 404) });
+  await expect(missing.catalog.download('test', 'a'.repeat(64))).rejects.toMatchObject({ code: 'not_found', status: 404 });
+});
+
 describe('Go player adapter', () => {
   it('maps all four operations, keeps extra response fields private and sends only the submission body', async () => {
     const requests: { url: string; options: RequestInit }[] = [];

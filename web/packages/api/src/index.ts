@@ -1,5 +1,5 @@
-import type { Catalog, Problem } from '@pwnden/catalog';
-import type { Player, Run, Submission } from '@pwnden/play';
+import type { Catalog, Problem, ProblemDetail } from '@pwnden/catalog';
+import type { Endpoint, Player, Run, RunStatus, Submission } from '@pwnden/play';
 
 export class APIError extends Error {
   constructor(readonly code: string, readonly status: number) {
@@ -47,12 +47,33 @@ function route(slug: string): string {
   return `/problems/${slug}`;
 }
 
+function size(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
+    throw new APIError('invalid_response', 0);
+  }
+  return value;
+}
+
+function endpoints(value: unknown): readonly Endpoint[] {
+  return array(value).map(value => {
+    const endpoint = object(value);
+    const url = string(endpoint.url);
+    if (!/^(http|tcp):\/\//.test(url)) throw new APIError('invalid_response', 0);
+    return { name: string(endpoint.name), url };
+  });
+}
+
+function fileID(id: string): string {
+  if (!/^[a-f0-9]{64}$/.test(id)) throw new APIError('invalid_argument', 0);
+  return id;
+}
+
 // The fixed relative base keeps bearer credentials on the server's own origin.
 export function createAPI(options: APIOptions): APIClient {
   if (!/^[a-f0-9]{64}$/.test(options.token)) throw new APIError('unauthorized', 0);
   const requestFetch = options.fetch ?? globalThis.fetch.bind(globalThis);
 
-  async function request(path: string, method = 'GET', body?: string): Promise<Record<string, unknown>> {
+  async function fetchResponse(path: string, method = 'GET', body?: string): Promise<Response> {
     let response: Response;
     try {
       response = await requestFetch(`/api/v1${path}`, {
@@ -69,17 +90,23 @@ export function createAPI(options: APIOptions): APIClient {
     } catch {
       throw new APIError('network_error', 0);
     }
-    let payload: Record<string, unknown>;
-    try {
-      payload = object(await response.json());
-    } catch {
-      throw new APIError('invalid_response', response.status);
-    }
     if (!response.ok) {
+      let payload: Record<string, unknown>;
+      try { payload = object(await response.json()); }
+      catch { throw new APIError('invalid_response', response.status); }
       const error = object(payload.error);
       throw new APIError(string(error.code), response.status);
     }
-    return payload;
+    return response;
+  }
+
+  async function request(path: string, method = 'GET', body?: string): Promise<Record<string, unknown>> {
+    const response = await fetchResponse(path, method, body);
+    try {
+      return object(await response.json());
+    } catch {
+      throw new APIError('invalid_response', response.status);
+    }
   }
 
   return {
@@ -91,8 +118,41 @@ export function createAPI(options: APIOptions): APIClient {
           return { slug: string(item.slug), title: string(item.title), category: string(item.category), kind: kind(item.kind) };
         });
       },
+      async detail(slug): Promise<ProblemDetail> {
+        const item = await request(route(slug));
+        if (item.slug !== slug) throw new APIError('invalid_response', 0);
+        return {
+          slug, title: string(item.title), category: string(item.category), kind: kind(item.kind),
+          description: string(item.description),
+          files: array(item.files).map(value => {
+            const file = object(value);
+            const id = string(file.id);
+            if (!/^[a-f0-9]{64}$/.test(id)) throw new APIError('invalid_response', 0);
+            return { id, name: string(file.name), size: size(file.size) };
+          }),
+        };
+      },
+      async download(slug, id): Promise<Uint8Array> {
+        const response = await fetchResponse(`${route(slug)}/files/${fileID(id)}`);
+        if (response.headers.get('Content-Type') !== 'application/octet-stream') {
+          throw new APIError('invalid_response', response.status);
+        }
+        try { return new Uint8Array(await response.arrayBuffer()); }
+        catch { throw new APIError('network_error', 0); }
+      },
     },
     player: {
+      async status(slug): Promise<RunStatus> {
+        const item = await request(`${route(slug)}/status`);
+        const problemKind = kind(item.kind);
+        if (item.slug !== slug || !['ready', 'stopped', 'running', 'unavailable'].includes(string(item.state)) ||
+          (problemKind === 'file') !== (item.state === 'ready')) {
+          throw new APIError('invalid_response', 0);
+        }
+        const addresses = endpoints(item.endpoints);
+        if (item.state !== 'running' && addresses.length !== 0) throw new APIError('invalid_response', 0);
+        return { slug, kind: problemKind, state: item.state as RunStatus['state'], endpoints: addresses };
+      },
       async run(slug): Promise<Run> {
         const item = await request(`${route(slug)}/run`, 'POST');
         if (!Number.isSafeInteger(item.file_count) || (item.file_count as number) < 0 || item.slug !== slug) {
@@ -100,12 +160,7 @@ export function createAPI(options: APIOptions): APIClient {
         }
         return {
           slug, kind: kind(item.kind), fileCount: item.file_count as number,
-          endpoints: array(item.endpoints).map(value => {
-            const endpoint = object(value);
-            const url = string(endpoint.url);
-            if (!/^(http|tcp):\/\//.test(url)) throw new APIError('invalid_response', 0);
-            return { name: string(endpoint.name), url };
-          }),
+          endpoints: endpoints(item.endpoints),
         };
       },
       async stop(slug): Promise<void> {
