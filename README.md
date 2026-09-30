@@ -18,3 +18,11 @@ The challenges checkout owns the complete specification in `docs/contract.md` an
 For endpoints with Compose port mappings, `run` prints the actual host address reported by Docker. Challenges can bind `127.0.0.1::8000` to let Docker choose a free local port. Endpoints without published ports are marked `container network` and are accessible through their Compose service names from the solution container.
 
 The runner checks resolved bind mount sources before `up`. Only paths inside the supplied challenges repository are accepted. It also confines build contexts, Dockerfiles, local build cache paths, file-backed configs, and secrets to that repository. Named volumes and bridge networks are project-scoped. Compose services cannot use automatic Docker API socket access, and the toolbox does not mount a Docker socket. Compose files are authored by the challenge owner.
+
+Run every problem's execution, solution, patch, and cleanup check from this repository:
+
+```sh
+python3 tools/verify.py --challenges ../challenges
+```
+
+See [execution verification and CI](docs/verification.md) for prerequisites and workflow behavior.

@@ -1,0 +1,47 @@
+name: Verify platform and challenges
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 18 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out platform
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: platform
+          persist-credentials: false
+      - name: Check out challenges
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: pwnden/challenges
+          ref: main
+          path: challenges
+          persist-credentials: false
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: platform/go.mod
+          cache-dependency-path: platform/go.sum
+      - name: Test platform
+        working-directory: platform
+        run: |
+          go test ./...
+          go vet ./...
+      - name: Check runtime tools
+        run: |
+          docker version
+          docker compose version
+          python3 --version
+      - name: Verify every challenge
+        run: python3 platform/tools/verify.py --challenges challenges
