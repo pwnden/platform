@@ -23,9 +23,9 @@ type Verifier interface {
 }
 ```
 
-`Service` implements all three, plus `Catalog.List(ctx)` and `Player.Execute(ctx, slug, command)` / `Player.Submit(ctx, slug, flag)`. `SetupService` implements the separate `Bootstrapper.Setup(ctx)` capability. Operations return Go data rather than console output, HTTP status codes, or Docker configuration objects. Command parsing and transport serialization belong to adapters. New capabilities can have their own interfaces and result types; existing consumers keep their current dependencies.
+`Service` implements all three, plus `Catalog.List(ctx)`, `Details.Detail(ctx, slug)`, `Files.Download(ctx, slug, id)`, `Observer.Status(ctx, slug)` and `Player.Execute(ctx, slug, command)` / `Player.Submit(ctx, slug, flag)`. `SetupService` implements the separate `Bootstrapper.Setup(ctx)` capability. Operations return Go data rather than console output, HTTP status codes, or Docker configuration objects. Command parsing and transport serialization belong to adapters. New capabilities have their own interfaces and result types; existing consumers keep their current dependencies.
 
-The initial player HTTP capability set, JSON DTOs, handlers, and local server are implemented in `internal/httpapi`, with the versioned [HTTP contract](web-api.md) and [OpenAPI document](openapi.json). Its backend consumes `Catalog`, `Runner`, and `Submit` directly. Browser response mapping includes only published endpoints and uses public messages for typed errors. The adapter serializes mutations by slug and owns cleanup for starts whose responses cannot be delivered. [Local server](local-server.md) documents its lifecycle.
+The player HTTP capability set, JSON DTOs, handlers, and local server are implemented in `internal/httpapi`, with the versioned [HTTP contract](web-api.md) and [OpenAPI document](openapi.json). Its backend consumes catalog, detail, file, observation, execution and submission capabilities directly. Browser response mapping includes only published endpoints and uses public messages for typed errors. The adapter serializes mutations and status reads by slug and owns cleanup for starts whose responses cannot be delivered. [Local server](local-server.md) documents its lifecycle.
 
 ## Inputs and results
 
@@ -38,6 +38,9 @@ Problem operations take a slug; `Execute` also takes an argument array and `Subm
 | `Stop` | `Slug` | The problem's service and patch resources and saved state were removed. File problems require no service cleanup. |
 | `Verify` | `Slug`, `Flag`, `Patched` | The declared automatic solution passed, along with patch attack, functional check, and patch cleanup when present. |
 | `List` | Slice of `Problem`: `Slug`, `Title`, `Category`, `Kind` | Available declarations loaded; display metadata uses strings with the slug as a missing title fallback. Author metadata validation remains with the problem owner. |
+| `Detail` | `Problem`, `Description`, `Files` | Optional problem README text and declared regular distribution files loaded. Each file has opaque `ID`, display `Name` and byte `Size`. |
+| `Download` | `Name`, `Size`, `Content` | A current declared file is opened for reading. `Content` is an `io.ReadSeekCloser`; the caller closes it. |
+| `Status` | `Slug`, `Kind`, `State`, `Endpoints` | Stored run state and Docker containers observed; no resources started, stopped or erased. |
 | `Execute` | `Stdout`, `Stderr`, `ExitCode` | The requested toolbox command completed with exit code 0–124; runtime failures return an error. |
 | `Submit` | `Slug`, `Accepted` | The candidate flag was compared with the file hash or recorded service flag. Incorrect flags are ordinary results. |
 | `Setup` | `ProblemCount`, `ContractVersion` | Docker and Compose are available; the bundled snapshot passed integrity, compatibility, and execution checks; images were prepared and the managed snapshot activated. |
@@ -50,7 +53,7 @@ Any error returns the zero result; failed verification exposes no partial flag. 
 
 ## Errors
 
-Use `errors.As(err, &applicationError)` with `var applicationError *application.Error`. Its fields are `Code`, `Operation`, `Slug`, and `Cause`. `Operation` identifies `configure`, `setup`, `list`, `validate`, `run`, `stop`, `verify`, `exec`, or `submit`. `Unwrap` preserves underlying filesystem, contract, process, cancellation, and joined cleanup errors for `errors.Is` and `errors.As`.
+Use `errors.As(err, &applicationError)` with `var applicationError *application.Error`. Its fields are `Code`, `Operation`, `Slug`, and `Cause`. `Operation` identifies `configure`, `setup`, `list`, `detail`, `download`, `status`, `validate`, `run`, `stop`, `verify`, `exec`, or `submit`. `Unwrap` preserves underlying filesystem, contract, process, cancellation, and joined cleanup errors for `errors.Is` and `errors.As`.
 
 | Code | Meaning |
 | --- | --- |
@@ -76,7 +79,15 @@ The caller chooses the operation deadline. The application service adds no globa
 
 Explicit `Stop` completes cleanup with an independent context even when its caller is canceled. It reports success only after cleanup and state removal complete. Failed teardown retains saved state for another attempt. File preparation and cleanup create no Docker resources.
 
-The service does not coordinate simultaneous callers. Adapters serialize mutating operations for a given repository and slug; concurrent `Run`, `Stop`, and `Verify` calls for the same problem are outside this interface's supported usage. Adding a concurrent HTTP adapter requires enforcing that ownership before exposing these operations.
+The service does not coordinate simultaneous callers. Adapters serialize mutating operations and `Status` for a given repository and slug; concurrent `Run`, `Stop`, and `Verify` calls for the same problem are outside this interface's supported usage. The HTTP adapter enforces that ownership. Detail and download readers use repository-confined filesystem access; editing declarations during execution remains unsupported.
+
+## Details, files and observation
+
+The platform presents the existing problem `README.md` as optional UTF-8 text, up to 1 MiB. A missing README produces an empty description. The browser displays it as text. This is a platform presentation convention; the challenges-owned version 1 execution contract remains intact.
+
+`Detail` expands each declared `files` entry into regular files, including nested directories and repository-contained symlink targets. Directory cycles, special files and outside targets fail. IDs are SHA-256 identifiers of normalized repository-relative logical paths, stable across process restarts and content edits at the same path. They are lookup identifiers, not content checksums or access tokens. Downloads re-enumerate current declarations, select only a matching ID and open the target through `os.Root`. Names and sizes describe distribution files; solution and configuration files appear only if authors explicitly distribute them. Shared files inside the problem repository remain supported.
+
+File status is `ready`: it needs no service run. A service with no recorded run is `stopped`. For a recorded run, `Status` checks the current execution policy and reads Compose containers. It reports `running` only when every declared service has running containers and every reported health check is healthy; missing, exited or unhealthy containers produce `unavailable`. This observation does not check application behavior or reconcile resources. Docker and corrupt-state errors return typed failures, retaining saved state. Endpoints are resolved only while running. A recorded unavailable run must be explicitly stopped before a new start.
 
 ## Managed setup and player commands
 

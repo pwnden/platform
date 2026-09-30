@@ -1,0 +1,115 @@
+package application
+
+import (
+	"context"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func TestDetailAndDeclaredDownload(t *testing.T) {
+	s, c := fixture(t, false)
+	ctx := context.Background()
+	os.WriteFile(filepath.Join(c.Dir, "README.md"), []byte("# Example\n<script>private()</script>\n"), 0600)
+	os.WriteFile(filepath.Join(c.Dir, "solve.txt"), []byte("private solution"), 0600)
+	result, err := s.Detail(ctx, c.Slug)
+	if err != nil || result.Title != c.Slug || result.Description != "# Example\n<script>private()</script>\n" || len(result.Files) != 1 {
+		t.Fatalf("detail: %+v %v", result, err)
+	}
+	file := result.Files[0]
+	if file.Name != "file.txt" || file.Size != 12 || len(file.ID) != 64 {
+		t.Fatal(file)
+	}
+	download, err := s.Download(ctx, c.Slug, file.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	content, err := io.ReadAll(download.Content)
+	download.Content.Close()
+	if err != nil || string(content) != "distribution" || download.Name != "file.txt" || download.Size != 12 {
+		t.Fatalf("download: %+v %q %v", download, content, err)
+	}
+	_, err = s.Download(ctx, c.Slug, strings.Repeat("0", 64))
+	requireCode(t, err, NotFound)
+	_, err = s.Download(ctx, c.Slug, "../../solve.txt")
+	requireCode(t, err, InvalidArgument)
+	_, err = s.Download(ctx, "../example", file.ID)
+	requireCode(t, err, InvalidArgument)
+	os.Remove(filepath.Join(c.Dir, "README.md"))
+	result, err = s.Detail(ctx, c.Slug)
+	if err != nil || result.Description != "" {
+		t.Fatalf("optional description: %+v %v", result, err)
+	}
+}
+
+func TestDistributionDirectoriesAndRepositoryBoundaries(t *testing.T) {
+	s, c := fixture(t, false)
+	dir := filepath.Join(c.Dir, "bundle")
+	os.MkdirAll(filepath.Join(dir, "nested"), 0700)
+	os.WriteFile(filepath.Join(dir, "nested", "one.bin"), []byte{0, 1, 255}, 0600)
+	manifest := filepath.Join(c.Dir, "challenge.toml")
+	content, _ := os.ReadFile(manifest)
+	os.WriteFile(manifest, []byte(strings.Replace(string(content), "files=['file.txt']", "files=['bundle','../shared.txt']", 1)), 0600)
+	os.WriteFile(filepath.Join(c.Dir, "..", "shared.txt"), []byte("shared"), 0600)
+	ctx := context.Background()
+	detail, err := s.Detail(ctx, c.Slug)
+	if err != nil || len(detail.Files) != 2 || detail.Files[1].Name != "bundle/nested/one.bin" {
+		t.Fatalf("directory/shared files: %+v %v", detail, err)
+	}
+	for _, file := range detail.Files {
+		download, err := s.Download(ctx, c.Slug, file.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		download.Content.Close()
+	}
+	// Author-declared directories may contain repository-contained links.
+	if err := os.Symlink(filepath.Join(c.Dir, "..", "shared.txt"), filepath.Join(dir, "linked.txt")); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	linked, err := s.Detail(ctx, c.Slug)
+	if err != nil || len(linked.Files) != 3 {
+		t.Fatalf("contained absolute symlink: %+v %v", linked, err)
+	}
+	outside := filepath.Join(t.TempDir(), "secret")
+	os.WriteFile(outside, []byte("private"), 0600)
+	if err := os.Symlink(outside, filepath.Join(dir, "escape")); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	_, err = s.Detail(ctx, c.Slug)
+	requireCode(t, err, InvalidArgument)
+	_, err = s.Download(ctx, c.Slug, detail.Files[1].ID)
+	requireCode(t, err, InvalidArgument)
+	os.Remove(filepath.Join(dir, "escape"))
+	if err := os.Symlink(".", filepath.Join(dir, "cycle")); err != nil {
+		t.Fatal(err)
+	}
+	_, err = s.Detail(ctx, c.Slug)
+	requireCode(t, err, InvalidArgument)
+}
+
+func TestDescriptionAndCatalogCancellation(t *testing.T) {
+	s, c := fixture(t, false)
+	path := filepath.Join(c.Dir, "README.md")
+	for _, content := range [][]byte{{255}, []byte(strings.Repeat("x", (1<<20)+1))} {
+		os.WriteFile(path, content, 0600)
+		_, err := s.Detail(context.Background(), c.Slug)
+		requireCode(t, err, InvalidArgument)
+	}
+	os.Remove(path)
+	if err := os.Symlink(filepath.Join(t.TempDir(), "missing"), path); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	_, err := s.Detail(context.Background(), c.Slug)
+	if err == nil {
+		t.Fatal("outside description was accepted")
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err = s.Detail(ctx, c.Slug)
+	requireCode(t, err, Canceled)
+	_, err = s.Download(ctx, c.Slug, strings.Repeat("a", 64))
+	requireCode(t, err, Canceled)
+}

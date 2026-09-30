@@ -47,12 +47,7 @@ func (s *Service) List(ctx context.Context) ([]Problem, error) {
 	}
 	results := make([]Problem, 0, len(challenges))
 	for _, c := range challenges {
-		title, _ := c.Title.(string)
-		category, _ := c.Category.(string)
-		if title == "" {
-			title = c.Slug
-		}
-		results = append(results, Problem{Slug: c.Slug, Title: title, Category: category, Kind: kind(c)})
+		results = append(results, problem(c))
 	}
 	return results, nil
 }

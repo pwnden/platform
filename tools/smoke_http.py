@@ -11,6 +11,7 @@ import shutil
 import signal
 import subprocess
 import tempfile
+import tarfile
 import threading
 from urllib.error import HTTPError
 from urllib.parse import urlsplit
@@ -105,6 +106,21 @@ def check_assets(origin, token):
             assert "localStorage" not in content and "sessionStorage" not in content
 
 
+def download(origin, token, slug, file):
+    headers = {"Authorization": f"Bearer {token}", "Origin": origin,
+               "Sec-Fetch-Site": "same-origin"}
+    client = build_opener(ProxyHandler({}))
+    with client.open(Request(f"{origin}/api/v1/problems/{slug}/files/{file['id']}", headers=headers), timeout=30) as response:
+        content = response.read()
+        assert response.headers.get("Content-Type") == "application/octet-stream"
+        assert response.headers.get_content_disposition() == "attachment"
+        assert response.headers.get_filename() == "checker.py"
+        assert response.headers.get("Cache-Control") == "no-store"
+        assert response.headers.get("X-Content-Type-Options") == "nosniff"
+        assert len(content) == file["size"]
+        return content
+
+
 def interrupted(_signum, _frame):
     raise KeyboardInterrupt
 
@@ -140,6 +156,19 @@ def main():
         problems = api(origin, token, "GET", "/problems")["problems"]
         assert {p["slug"] for p in problems} == {"note-vault", "rotor-lock"}
         assert api(origin, "incorrect", "GET", "/problems", expected=401)["error"]["code"] == "unauthorized"
+        detail = api(origin, token, "GET", "/problems/rotor-lock")
+        assert "Rotor Lock" in detail["description"] and len(detail["files"]) == 1
+        file = detail["files"][0]
+        assert file["name"] == "files/checker.py" and len(file["id"]) == 64
+        with tarfile.open(binary.with_name("catalog.tar.gz"), "r:gz") as archive:
+            name = next(name for name in archive.getnames() if name.endswith("rotor-lock/files/checker.py"))
+            with archive.extractfile(name) as source:
+                assert download(origin, token, "rotor-lock", file) == source.read()
+        assert api(origin, "incorrect", "GET", f"/problems/rotor-lock/files/{file['id']}", expected=401)["error"]["code"] == "unauthorized"
+        assert api(origin, token, "GET", "/problems/rotor-lock/files/" + "0" * 64, expected=404)["error"]["code"] == "not_found"
+        assert api(origin, token, "GET", "/problems/rotor-lock/status") == {"slug": "rotor-lock", "kind": "file", "state": "ready", "endpoints": []}
+        assert api(origin, token, "GET", "/problems/note-vault")["files"] == []
+        assert api(origin, token, "GET", "/problems/note-vault/status")["state"] == "stopped"
         assert api(origin, token, "POST", "/problems/rotor-lock/run")["endpoints"] == []
         assert not api(origin, token, "POST", "/problems/rotor-lock/submissions", {"flag": "wrong"})["accepted"]
         assert api(origin, token, "POST", "/problems/rotor-lock/submissions", {"flag": file_flag})["accepted"]
@@ -147,6 +176,8 @@ def main():
         run = api(origin, token, "POST", "/problems/note-vault/run")
         assert "project" not in run and len(run["endpoints"]) == 1
         endpoint = run["endpoints"][0]["url"].rstrip("/")
+        observed = api(origin, token, "GET", "/problems/note-vault/status")
+        assert observed["state"] == "running" and observed["endpoints"] == run["endpoints"]
         flag = solve_web(endpoint)
         assert api(origin, token, "POST", "/problems/note-vault/run", expected=409)["error"]["code"] == "already_running"
         assert not api(origin, token, "POST", "/problems/note-vault/submissions", {"flag": "wrong"})["accepted"]
@@ -157,10 +188,27 @@ def main():
         server, origin, next_token = start(binary, environment)
         assert next_token != token
         assert api(origin, token, "GET", "/problems", expected=401)["error"]["code"] == "unauthorized"
+        assert api(origin, next_token, "GET", "/problems/note-vault/status") == observed
+        assert api(origin, next_token, "GET", "/problems/rotor-lock")["files"] == detail["files"]
         assert api(origin, next_token, "POST", "/problems/note-vault/submissions", {"flag": flag})["accepted"]
+        # Stop only this smoke run's service outside the platform, then observe
+        # the actual container state without erasing its recorded ownership.
+        receipts = list((work / "cache" / "pwnden" / "runs").glob("*.json"))
+        assert len(receipts) == 1
+        project = json.loads(receipts[0].read_text())["project"]
+        assert re.fullmatch(r"pwnden-note-vault-[a-f0-9]{8}", project)
+        containers = subprocess.run([docker, "ps", "--filter", f"label=com.docker.compose.project={project}",
+                                     "--format", "{{.ID}}"], check=True, capture_output=True, text=True, timeout=30).stdout.split()
+        assert len(containers) == 1
+        subprocess.run([docker, "stop", containers[0]], check=True, capture_output=True, timeout=30)
+        unavailable = api(origin, next_token, "GET", "/problems/note-vault/status")
+        assert unavailable["state"] == "unavailable" and unavailable["endpoints"] == []
+        assert receipts[0].exists()
+        assert api(origin, next_token, "POST", "/problems/note-vault/run", expected=409)["error"]["code"] == "already_running"
         for _ in range(2):
             assert api(origin, next_token, "DELETE", "/problems/note-vault/run") == {"slug": "note-vault"}
         owned_run = False
+        assert api(origin, next_token, "GET", "/problems/note-vault/status")["state"] == "stopped"
         assert api(origin, next_token, "POST", "/problems/note-vault/submissions", {"flag": flag}, expected=409)["error"]["code"] == "not_running"
         print("HTTP player smoke check passed with Docker and no host SDKs.", flush=True)
     finally:

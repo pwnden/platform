@@ -9,17 +9,24 @@ The API version is independent of the challenges-owned problem contract. Version
 | Method and path | Application capability | Success |
 | --- | --- | --- |
 | `GET /api/v1/problems` | `Catalog.List` | `200`, problem summaries sorted by slug. |
+| `GET /api/v1/problems/{slug}` | `Details.Detail` | `200`, summary, description text and declared file metadata. |
+| `GET /api/v1/problems/{slug}/files/{id}` | `Files.Download` | `200`, binary attachment for a current declared file ID. |
+| `GET /api/v1/problems/{slug}/status` | `Observer.Status` | `200`, observed run status and current published endpoints. |
 | `POST /api/v1/problems/{slug}/run` | `Runner.Run` | `200`, problem kind, file count and published endpoints. |
 | `DELETE /api/v1/problems/{slug}/run` | `Runner.Stop` | `200`, stopped slug after cleanup. |
 | `POST /api/v1/problems/{slug}/submissions` | `Submit` | `200`, slug and `accepted` boolean. |
 
 Problem summaries contain `slug`, `title`, `category`, and `kind`. Missing display titles use the slug. Kind is `file` or `service`. Arrays are JSON arrays, including empty arrays; they never serialize as `null`.
 
+Details add `description` and `files`. Description is optional problem README text (UTF-8, at most 1 MiB); missing text is empty. Each file has `id`, `name` and byte `size`. Only declared distribution files and regular descendants of declared directories are listed. Repository-contained links and shared files are supported; outside paths, cycles and special files fail. IDs are stable path identifiers, not flag or content hashes. Download rechecks the current declared distribution, requires bearer authentication, streams `application/octet-stream`, and sets attachment `Content-Disposition` to the file basename. No host path or arbitrary relative path is accepted. The UI fetches the bytes with its bearer client and creates a local download; tokens never appear in download links.
+
+Status contains `slug`, `kind`, `state` and `endpoints`. A file problem is `ready`; an unrecorded service is `stopped`. A recorded service is `running` when every declared service has running containers with healthy or absent health checks; otherwise it is `unavailable` and requires explicit stop before another start. Endpoints appear only while running. Status survives server and page recreation through saved state and actual Docker observation. Failed Docker reads return an error; they do not erase state or clean up a run. The response contains no stored flag or project identifier.
+
 Start and stop accept no body. File starts create no service resources and return an empty endpoint array. A service start preserves an already recorded run and returns a conflict. Endpoints contain `name` and `url` for published entry points, preserving the problem's `http://` or `tcp://` scheme. HTTP URLs are browser links; TCP URLs identify addresses for terminal tools. Private network endpoints and Compose project identifiers stay inside the application layer. Stop is repeatable and reports success only after resource and state cleanup.
 
 Submission accepts exactly one JSON object with a nonempty string `flag`, up to 4096 body bytes. Unknown request fields, trailing JSON values, malformed JSON, query parameters, and unexpected bodies are rejected. The media type must be `application/json` with an optional charset. Leading and trailing whitespace is trimmed by the application. An incorrect answer is `200 {"slug":"...","accepted":false}`. Service submissions require a recorded run. Submission history is a later feature.
 
-The initial API exposes the player operations above. Author solution verification remains a CLI operation. Interactive terminal streaming is added after its application session contract is implemented. Description/file access and persisted player status are subsequent capabilities with their own response contracts.
+The API exposes the player operations above. Author solution verification remains a CLI operation. Interactive terminal streaming and submission history are subsequent capabilities with their own application contracts.
 
 ## Errors
 
@@ -54,6 +61,6 @@ The server binds to `127.0.0.1`, chooses an available port, and prints its actua
 
 The HTTP adapter opens the managed installation itself. Requests select problem slugs; they cannot select a repository, host mount, image or Docker options. The backend capability set is `httpapi.Backend`, implemented by the existing application service. Handlers call it directly.
 
-The server coordinates mutating calls in a single process. Calls for the same problem are serialized, including waiting cancellation; independent problems can proceed independently. Queued requests are checked for cancellation before backend execution. Setup and CLI mutations are invoked outside an active server session. Cross-process coordination is a separate implementation feature.
+The server coordinates mutating calls and status reads in a single process. Calls for the same problem are serialized, including waiting cancellation; independent problems can proceed independently. Detail and file reads do not acquire the mutation lock. Queued requests are checked for cancellation before backend execution. Setup and CLI mutations are invoked outside an active server session. Cross-process coordination is a separate implementation feature.
 
 Each API request has a fifteen-minute operation deadline; the server itself runs until interrupted. A successful start whose response write or flush fails stops the run it just created, preserving cleanup errors. A canceled start that finishes successfully at the cancellation boundary also stops its new run before returning an error. A successful TCP flush cannot confirm that the browser processed the response. A pre-existing run remains owned by its existing session. Server shutdown stops accepting requests, cancels active work and waits for required cleanup, including handlers whose clients already disconnected. Completed service runs remain available until explicit stop; startup failures and interrupted operations retain the application's existing cleanup ownership.

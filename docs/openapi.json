@@ -2,8 +2,8 @@
   "openapi": "3.1.2",
   "info": {
     "title": "pwnden local player API",
-    "version": "1.0.0",
-    "description": "Initial local player API implemented by the Go server and serve command."
+    "version": "1.1.0",
+    "description": "Local player API implemented by the Go server and serve command."
   },
   "servers": [{"url": "/api/v1"}],
   "security": [{"LocalSession": []}],
@@ -17,6 +17,46 @@
             "description": "Available problem summaries",
             "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ProblemList"}}}
           },
+          "default": {"$ref": "#/components/responses/Failure"}
+        }
+      }
+    },
+    "/problems/{slug}": {
+      "parameters": [{"$ref": "#/components/parameters/Slug"}],
+      "get": {
+        "operationId": "getProblem",
+        "summary": "Read problem metadata, description text and downloadable files",
+        "description": "Optional README.md is UTF-8 text up to 1 MiB; missing descriptions are empty. Only declared distribution files and regular descendants of declared directories are listed. File IDs are opaque and stable for repository-relative paths.",
+        "responses": {
+          "200": {"description": "Problem details", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ProblemDetail"}}}},
+          "default": {"$ref": "#/components/responses/Failure"}
+        }
+      }
+    },
+    "/problems/{slug}/files/{id}": {
+      "parameters": [{"$ref": "#/components/parameters/Slug"}, {"name": "id", "in": "path", "required": true, "schema": {"$ref": "#/components/schemas/FileID"}}],
+      "get": {
+        "operationId": "downloadProblemFile",
+        "summary": "Download one declared distribution file",
+        "description": "Bearer-authenticated download; no arbitrary file paths. A current distribution ID is required. The body is streamed as an attachment with the original basename.",
+        "responses": {
+          "200": {
+            "description": "Binary attachment",
+            "headers": {"Content-Disposition": {"schema": {"type": "string"}}, "Content-Length": {"schema": {"type": "string"}}},
+            "content": {"application/octet-stream": {"schema": {"type": "string", "format": "binary"}}}
+          },
+          "default": {"$ref": "#/components/responses/Failure"}
+        }
+      }
+    },
+    "/problems/{slug}/status": {
+      "parameters": [{"$ref": "#/components/parameters/Slug"}],
+      "get": {
+        "operationId": "getProblemStatus",
+        "summary": "Observe recorded run state and actual problem containers",
+        "description": "File problems are ready without services. Services without a recorded run are stopped. Recorded services are running when every declared service has running containers with healthy or absent health checks; otherwise unavailable. Published endpoints appear only while running. Reads share the mutation lock and never start, stop or erase resources.",
+        "responses": {
+          "200": {"description": "Observed run status", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Status"}}}},
           "default": {"$ref": "#/components/responses/Failure"}
         }
       }
@@ -93,6 +133,28 @@
     "schemas": {
       "Slug": {"type": "string", "minLength": 1, "maxLength": 40, "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
       "Kind": {"type": "string", "enum": ["file", "service"]},
+      "FileID": {"type": "string", "pattern": "^[a-f0-9]{64}$", "minLength": 64, "maxLength": 64},
+      "ProblemFile": {
+        "type": "object", "additionalProperties": false, "required": ["id", "name", "size"],
+        "properties": {"id": {"$ref": "#/components/schemas/FileID"}, "name": {"type": "string"}, "size": {"type": "integer", "minimum": 0}}
+      },
+      "ProblemDetail": {
+        "type": "object", "additionalProperties": false,
+        "required": ["slug", "title", "category", "kind", "description", "files"],
+        "properties": {
+          "slug": {"$ref": "#/components/schemas/Slug"}, "title": {"type": "string", "minLength": 1}, "category": {"type": "string"},
+          "kind": {"$ref": "#/components/schemas/Kind"}, "description": {"type": "string"},
+          "files": {"type": "array", "items": {"$ref": "#/components/schemas/ProblemFile"}}
+        }
+      },
+      "Status": {
+        "type": "object", "additionalProperties": false, "required": ["slug", "kind", "state", "endpoints"],
+        "properties": {
+          "slug": {"$ref": "#/components/schemas/Slug"}, "kind": {"$ref": "#/components/schemas/Kind"},
+          "state": {"type": "string", "enum": ["ready", "stopped", "running", "unavailable"]},
+          "endpoints": {"type": "array", "items": {"$ref": "#/components/schemas/Endpoint"}}
+        }
+      },
       "Problem": {
         "type": "object",
         "additionalProperties": false,

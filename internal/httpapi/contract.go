@@ -14,6 +14,9 @@ const BasePath = "/api/v1"
 // Backend is the capability set needed by the initial player HTTP API.
 type Backend interface {
 	application.Catalog
+	application.Details
+	application.Files
+	application.Observer
 	application.Runner
 	Submit(context.Context, string, string) (application.Submission, error)
 }
@@ -27,6 +30,25 @@ type Problem struct {
 
 type ProblemList struct {
 	Problems []Problem `json:"problems"`
+}
+
+type ProblemFile struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Size int64  `json:"size"`
+}
+
+type ProblemDetail struct {
+	Problem
+	Description string        `json:"description"`
+	Files       []ProblemFile `json:"files"`
+}
+
+type Status struct {
+	Slug      string           `json:"slug"`
+	Kind      application.Kind `json:"kind"`
+	State     string           `json:"state"`
+	Endpoints []Endpoint       `json:"endpoints"`
 }
 
 type Endpoint struct {
@@ -71,6 +93,19 @@ func ProblemsFrom(result []application.Problem) ProblemList {
 		response.Problems = append(response.Problems, Problem{p.Slug, p.Title, p.Category, p.Kind})
 	}
 	return response
+}
+
+func DetailFrom(result application.ProblemDetail) ProblemDetail {
+	response := ProblemDetail{Problem: Problem{result.Slug, result.Title, result.Category, result.Kind}, Description: result.Description, Files: make([]ProblemFile, 0, len(result.Files))}
+	for _, file := range result.Files {
+		response.Files = append(response.Files, ProblemFile{file.ID, file.Name, file.Size})
+	}
+	return response
+}
+
+func StatusFrom(result application.RunStatus) Status {
+	run := RunFrom(application.RunInfo{Endpoints: result.Endpoints})
+	return Status{Slug: result.Slug, Kind: result.Kind, State: result.State, Endpoints: run.Endpoints}
 }
 
 func RunFrom(result application.RunInfo) Run {

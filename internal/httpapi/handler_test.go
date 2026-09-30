@@ -17,13 +17,25 @@ import (
 )
 
 type fakeBackend struct {
-	list   func(context.Context) ([]application.Problem, error)
-	run    func(context.Context, string) (application.RunInfo, error)
-	stop   func(context.Context, string) (application.StopInfo, error)
-	submit func(context.Context, string, string) (application.Submission, error)
+	list     func(context.Context) ([]application.Problem, error)
+	detail   func(context.Context, string) (application.ProblemDetail, error)
+	download func(context.Context, string, string) (application.Download, error)
+	status   func(context.Context, string) (application.RunStatus, error)
+	run      func(context.Context, string) (application.RunInfo, error)
+	stop     func(context.Context, string) (application.StopInfo, error)
+	submit   func(context.Context, string, string) (application.Submission, error)
 }
 
 func (b fakeBackend) List(ctx context.Context) ([]application.Problem, error) { return b.list(ctx) }
+func (b fakeBackend) Detail(ctx context.Context, slug string) (application.ProblemDetail, error) {
+	return b.detail(ctx, slug)
+}
+func (b fakeBackend) Download(ctx context.Context, slug, id string) (application.Download, error) {
+	return b.download(ctx, slug, id)
+}
+func (b fakeBackend) Status(ctx context.Context, slug string) (application.RunStatus, error) {
+	return b.status(ctx, slug)
+}
 func (b fakeBackend) Run(ctx context.Context, slug string) (application.RunInfo, error) {
 	return b.run(ctx, slug)
 }

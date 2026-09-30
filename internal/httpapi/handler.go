@@ -108,7 +108,16 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	parts := strings.Split(strings.TrimPrefix(r.URL.Path, BasePath+"/problems/"), "/")
-	if !strings.HasPrefix(r.URL.Path, BasePath+"/problems/") || len(parts) != 2 || (parts[1] != "run" && parts[1] != "submissions") {
+	action := ""
+	switch {
+	case len(parts) == 1:
+		action = "detail"
+	case len(parts) == 2 && (parts[1] == "run" || parts[1] == "submissions" || parts[1] == "status"):
+		action = parts[1]
+	case len(parts) == 3 && parts[1] == "files" && fileID.MatchString(parts[2]):
+		action = "download"
+	}
+	if !strings.HasPrefix(r.URL.Path, BasePath+"/problems/") || action == "" {
 		transportError(w, 404, "not_found", "The API route was not found.")
 		return
 	}
@@ -117,8 +126,38 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		transportError(w, 400, "invalid_argument", "The problem slug is invalid.")
 		return
 	}
+	if action == "detail" || action == "download" {
+		if !method(w, r, "GET") || !emptyBody(w, r) {
+			return
+		}
+		if action == "detail" {
+			result, err := h.backend.Detail(ctx, slug)
+			if err != nil {
+				applicationError(w, err)
+				return
+			}
+			writeJSON(w, 200, DetailFrom(result))
+		} else {
+			result, err := h.backend.Download(ctx, slug, parts[2])
+			if err != nil {
+				applicationError(w, err)
+				return
+			}
+			defer result.Content.Close()
+			w.Header().Set("Content-Type", "application/octet-stream")
+			w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": result.Name}))
+			w.Header().Set("Content-Length", fmt.Sprint(result.Size))
+			w.WriteHeader(200)
+			io.CopyN(w, result.Content, result.Size)
+		}
+		return
+	}
 	var flag string
-	if parts[1] == "run" {
+	if action == "status" {
+		if !method(w, r, "GET") || !emptyBody(w, r) {
+			return
+		}
+	} else if action == "run" {
 		if !method(w, r, "POST", "DELETE") || !emptyBody(w, r) {
 			return
 		}
@@ -139,7 +178,14 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer release()
 	switch {
-	case parts[1] == "submissions":
+	case action == "status":
+		result, err := h.backend.Status(ctx, slug)
+		if err != nil {
+			applicationError(w, err)
+			return
+		}
+		writeJSON(w, 200, StatusFrom(result))
+	case action == "submissions":
 		result, err := h.backend.Submit(ctx, slug, flag)
 		if err != nil {
 			applicationError(w, err)
@@ -188,6 +234,7 @@ func (h *handler) stopUndelivered(ctx context.Context, slug string) error {
 }
 
 var apiSlug = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
+var fileID = regexp.MustCompile(`^[a-f0-9]{64}$`)
 
 func contextError(err error) error {
 	code := application.Canceled
