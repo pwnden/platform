@@ -26,3 +26,5 @@ python3 tools/verify.py --challenges ../challenges
 ```
 
 See [execution verification and CI](docs/verification.md) for prerequisites and workflow behavior.
+
+The [application interface](docs/application-interface.md) defines shared callable operations, typed results, error codes, and cancellation and cleanup rules for command and HTTP adapters.

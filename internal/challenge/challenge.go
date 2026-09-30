@@ -15,6 +15,21 @@ var slugPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 
 const SupportedContractVersion = 1
 
+var ErrInvalidSlug = errors.New("invalid challenge slug")
+
+// VersionError reports a contract the platform cannot consume.
+type VersionError struct {
+	Version    int
+	Repository int
+}
+
+func (e *VersionError) Error() string {
+	if e.Repository != 0 {
+		return fmt.Sprintf("unsupported challenge contract version %d; repository uses %d and platform supports %d", e.Version, e.Repository, SupportedContractVersion)
+	}
+	return fmt.Sprintf("unsupported repository contract version %d; platform supports %d", e.Version, SupportedContractVersion)
+}
+
 // Contract contains the machine-readable values of the owner-published contract.
 type Contract struct {
 	Version             int    `toml:"version"`
@@ -78,7 +93,7 @@ func LoadForStop(repo, slug string) (*Loaded, error) {
 
 func load(repo, slug string, cleanup bool) (*Loaded, error) {
 	if !slugPattern.MatchString(slug) || len(slug) > 40 {
-		return nil, fmt.Errorf("invalid challenge slug %q", slug)
+		return nil, fmt.Errorf("%w %q", ErrInvalidSlug, slug)
 	}
 	root, err := filepath.Abs(repo)
 	if err != nil {
@@ -111,7 +126,7 @@ func load(repo, slug string, cleanup bool) (*Loaded, error) {
 		return nil, fmt.Errorf("challenge.toml: %w", err)
 	}
 	if header.Schema != definition.Version {
-		return nil, fmt.Errorf("unsupported challenge contract version %d; repository uses %d and platform supports %d", header.Schema, definition.Version, SupportedContractVersion)
+		return nil, &VersionError{Version: header.Schema, Repository: definition.Version}
 	}
 	var c Challenge
 	if err := toml.Unmarshal(data, &c); err != nil {
@@ -166,7 +181,7 @@ func loadContract(root string) (Contract, error) {
 		return definition, fmt.Errorf("contract.toml: %w", err)
 	}
 	if header.Version != SupportedContractVersion {
-		return definition, fmt.Errorf("unsupported repository contract version %d; platform supports %d", header.Version, SupportedContractVersion)
+		return definition, &VersionError{Version: header.Version}
 	}
 	if err := toml.Unmarshal(data, &definition); err != nil {
 		return definition, fmt.Errorf("contract.toml: %w", err)

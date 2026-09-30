@@ -89,6 +89,12 @@ type State struct {
 	Flag    string `json:"flag"`
 }
 
+var (
+	ErrAlreadyRunning = errors.New("challenge is already running; stop it first")
+	ErrNotRunning     = errors.New("challenge is not running")
+	ErrCleanupFailed  = errors.New("resource cleanup failed")
+)
+
 func Project(c *challenge.Loaded) string {
 	sum := sha256.Sum256([]byte(c.RepoRoot + "\x00" + c.Slug))
 	return "pwnden-" + c.Slug + "-" + hex.EncodeToString(sum[:4])
@@ -323,7 +329,7 @@ func Run(ctx context.Context, c *challenge.Loaded) error {
 		return nil
 	}
 	if _, err := ReadState(c); err == nil {
-		return errors.New("challenge is already running; stop it first")
+		return ErrAlreadyRunning
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
@@ -345,7 +351,12 @@ func Run(ctx context.Context, c *challenge.Loaded) error {
 	return nil
 }
 
-func Stop(ctx context.Context, c *challenge.Loaded) error {
+func Stop(ctx context.Context, c *challenge.Loaded) (err error) {
+	defer func() {
+		if err != nil && !errors.Is(err, ErrCleanupFailed) {
+			err = errors.Join(ErrCleanupFailed, err)
+		}
+	}()
 	if c.Compose == "" {
 		return nil
 	}
@@ -378,7 +389,12 @@ func Stop(ctx context.Context, c *challenge.Loaded) error {
 	return nil
 }
 
-func Down(ctx context.Context, c *challenge.Loaded, project, flag string, patched bool) error {
+func Down(ctx context.Context, c *challenge.Loaded, project, flag string, patched bool) (err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Join(ErrCleanupFailed, err)
+		}
+	}()
 	expected := Project(c)
 	if patched {
 		expected += "-patched"
@@ -484,7 +500,7 @@ func removeTool(ctx context.Context, c *challenge.Loaded, container string) erro
 	if lookupErr == nil && strings.TrimSpace(out) == "" {
 		return nil
 	}
-	return fmt.Errorf("remove toolbox %s: %w: %s", container, errors.Join(err, lookupErr), stderr)
+	return fmt.Errorf("remove toolbox %s: %w: %s", container, errors.Join(ErrCleanupFailed, err, lookupErr), stderr)
 }
 
 func toolboxMount(source string, writable bool) string {
@@ -556,6 +572,9 @@ func ReadState(c *challenge.Loaded) (State, error) {
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			err = errors.Join(ErrNotRunning, err)
+		}
 		return state, err
 	}
 	if err := json.Unmarshal(data, &state); err != nil {
