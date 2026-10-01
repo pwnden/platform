@@ -84,6 +84,7 @@ func (s *terminal) editing() error {
 		{"UTF-8 erase", "printf '\\137\\137UTF8__:%s\\n' '가나\x7f\x7fok'\r", "__UTF8__:ok\r\n"},
 		{"erase at prompt", "한글" + strings.Repeat("\x7f", 20) + "printf '\\137\\137BOUNDARY__:ok\\n'\r", "__BOUNDARY__:ok\r\n"},
 		{"path completion", "printf '\\137\\137COMPLETE__:%s\\n' /challenge/sol\t\r", "__COMPLETE__:/challenge/solve/\r\n"},
+		{"filename completion ignoring case", "printf '\\137\\137FILENAME__:%s\\n' readme\t\r", "__FILENAME__:README.md\r\n"},
 		{"history seed", "printf '\\137\\137HISTORY__:ok\\n'\r", "__HISTORY__:ok\r\n"},
 		{"previous command", "\x1b[A\r", "__HISTORY__:ok\r\n"},
 		{"next command", "\x1b[A\x1b[Bprintf '\\137\\137NEXT__:ok\\n'\r", "__NEXT__:ok\r\n"},

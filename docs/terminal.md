@@ -42,6 +42,10 @@ Ctrl+U/K/W/Y/R/L, Ctrl+C/Z and `fg` keep their normal shell behavior. Ctrl+D
 deletes at the cursor or exits on an empty line. Bracketed paste waits for
 confirmation. Browser and operating system reserved shortcuts follow their own rules.
 
+Filename completion ignores case: `cat readme` followed by Tab completes to
+`cat README.md` when that filename is the unique match. The filesystem still
+uses the actual filename; ambiguous matches retain normal Readline behavior.
+
 Clipboard shortcuts follow the browser's operating system, independently of the
 server or container host:
 
@@ -61,9 +65,18 @@ are unavailable, the terminal shows a context-menu copy instruction.
 
 The declared solution image supplies Bash, `stty` and `C.UTF-8`. Startup enables
 TTY `iutf8`, uses `LANG=LC_ALL=C.UTF-8`, `--noprofile --norc` and
-`INPUTRC=/dev/null`. History remains in the retained shell with
+the platform's container-local `INPUTRC=/tmp/pwnden.inputrc`, containing
+`set completion-ignore-case on`. Startup creates this file with private
+permissions in the toolbox, preserving the repository mount policy.
+History remains in the retained shell with
 `HISTFILE=/dev/null`. The Docker Engine owns the PTY; the Docker CLI helper
 preserves context, TLS and endpoint selection.
+
+For a disposable Docker completion regression check, run
+`PWNDEN_TEST_CHALLENGES=/absolute/path/to/challenges go test ./internal/runtime -run '^TestTerminalFilenameCompletionDocker$' -count=1 -v`.
+It creates its own toolbox, checks relative and absolute case-insensitive
+completion, directory completion, UTF-8 deletion and command history, then
+removes that toolbox. Existing player environments remain available.
 
 The toolbox mounts only the declared repository-contained problem directory,
 honors its writable setting, drops all capabilities and uses
