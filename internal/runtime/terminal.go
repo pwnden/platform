@@ -90,9 +90,12 @@ func OpenTerminal(ctx context.Context, c *challenge.Loaded, project string, cols
 		engine.Close()
 	}()
 	config := &dockerContainer.Config{
-		Image: c.Solve.Image, Entrypoint: []string{"/bin/sh"}, Cmd: []string{"-i"},
+		// Readline owns editing, completion and history. UTF-8 applies to both
+		// Readline's character widths and the daemon TTY's canonical erase mode.
+		Image: c.Solve.Image, Entrypoint: []string{"/bin/bash"},
+		Cmd: []string{"--noprofile", "--norc", "-c", "stty iutf8 || exit; exec /bin/bash --noprofile --norc -i"},
 		Tty: true, OpenStdin: true, StdinOnce: true, AttachStdin: true, AttachStdout: true, AttachStderr: true,
-		WorkingDir: "/challenge", Env: []string{"TERM=xterm-256color"},
+		WorkingDir: "/challenge", Env: []string{"TERM=xterm-256color", "LANG=C.UTF-8", "LC_ALL=C.UTF-8", "INPUTRC=/dev/null", "HISTFILE=/dev/null"},
 		Labels: map[string]string{"pwnden.kind": "terminal", "pwnden.problem": c.Slug, "pwnden.project": Project(c)},
 	}
 	if c.Solve.Writable && os.Geteuid() >= 0 && os.Getegid() >= 0 {

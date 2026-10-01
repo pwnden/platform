@@ -52,8 +52,10 @@ func (s *terminal) input(command string) error {
 }
 func (s *terminal) until(marker string) error {
 	s.output.Reset()
+	ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
+	defer cancel()
 	for !strings.Contains(s.output.String(), marker) {
-		typ, data, err := s.conn.Read(s.ctx)
+		typ, data, err := s.conn.Read(ctx)
 		if err != nil {
 			return errors.New("terminal output ended early")
 		}
@@ -69,6 +71,62 @@ func (s *terminal) until(marker string) error {
 		}
 	}
 	return nil
+}
+
+// Send the same UTF-8 bytes and control sequences as xterm. Assertions match
+// command results rather than input echo, so a shell without Readline fails.
+func (s *terminal) editing() error {
+	cases := []struct{ name, input, result string }{
+		{"UTF-8 erase", "printf '\\137\\137UTF8__:%s\\n' '가나\x7f\x7fok'\r", "__UTF8__:ok\r\n"},
+		{"erase at prompt", "한글" + strings.Repeat("\x7f", 20) + "printf '\\137\\137BOUNDARY__:ok\\n'\r", "__BOUNDARY__:ok\r\n"},
+		{"path completion", "printf '\\137\\137COMPLETE__:%s\\n' /challenge/sol\t\r", "__COMPLETE__:/challenge/solve/\r\n"},
+		{"history seed", "printf '\\137\\137HISTORY__:ok\\n'\r", "__HISTORY__:ok\r\n"},
+		{"previous command", "\x1b[A\r", "__HISTORY__:ok\r\n"},
+		{"next command", "\x1b[A\x1b[Bprintf '\\137\\137NEXT__:ok\\n'\r", "__NEXT__:ok\r\n"},
+		{"left/right and Delete", "printf '\\137\\137CURSOR__:%s\\n' 'axc'\x1b[D\x1b[D\x1b[D\x1b[D\x1b[C\x1b[3~b\r", "__CURSOR__:abc\r\n"},
+		{"Home / End", "rintf '\\137\\137HOME__:%s\\n' 'ok'\x1b[Hp\x1b[F\r", "__HOME__:ok\r\n"},
+		{"Ctrl+A / Ctrl+E", "rintf '\\137\\137ENDS__:%s\\n' 'ok'\x01p\x05\r", "__ENDS__:ok\r\n"},
+		{"Ctrl+D forward erase", "printf '\\137\\137DELETE__:%s\\n' 'axc'\x1b[D\x1b[D\x1b[D\x04b\r", "__DELETE__:abc\r\n"},
+		{"Ctrl+L", "\x0cprintf '\\137\\137CLEAR__:ok\\n'\r", "__CLEAR__:ok\r\n"},
+		{"Ctrl+U", "discard this\x15printf '\\137\\137KILL__:ok\\n'\r", "__KILL__:ok\r\n"},
+		{"Ctrl+W", "printf '\\137\\137WORD__:%s\\n' wrong\x17ok\r", "__WORD__:ok\r\n"},
+		{"Ctrl+K / Ctrl+Y", "printf '\\137\\137YANK__:%s\\n' 'ok'\x01\x0b\x19\r", "__YANK__:ok\r\n"},
+		{"Ctrl+R", "\x12YANK__\r", "__YANK__:ok\r\n"},
+		{"bracketed paste", "\x1b[200~printf '\\137\\137PASTE__:%s\\n' '가나다'\x1b[201~\r", "__PASTE__:가나다\r\n"},
+	}
+	for _, check := range cases {
+		if err := s.input(check.input); err != nil {
+			return err
+		}
+		if err := s.until(check.result); err != nil {
+			return fmt.Errorf("%s failed: %w", check.name, err)
+		}
+	}
+	return nil
+}
+
+func (s *terminal) jobControl() error {
+	if err := s.input("sleep 30\r"); err != nil {
+		return err
+	}
+	time.Sleep(200 * time.Millisecond)
+	if err := s.input("\x1ajobs; printf '\\137\\137JOBS_END__\\n'\r"); err != nil {
+		return err
+	}
+	if err := s.until("__JOBS_END__\r\n"); err != nil {
+		return err
+	}
+	if !strings.Contains(s.output.String(), "Stopped") || !strings.Contains(s.output.String(), "sleep 30") {
+		return errors.New("Ctrl+Z did not suspend the foreground job")
+	}
+	if err := s.input("fg\r"); err != nil {
+		return err
+	}
+	time.Sleep(200 * time.Millisecond)
+	if err := s.input("\x03printf '\\137\\137RESUMED_END__\\n'\r"); err != nil {
+		return err
+	}
+	return s.until("__RESUMED_END__\r\n")
 }
 func docker(ctx context.Context, args ...string) ([]byte, error) {
 	data, err := exec.CommandContext(ctx, "docker", args...).Output()
@@ -103,6 +161,12 @@ func run(c config) error {
 		return err
 	}
 	if err := s.until("__ECHO_OFF__\r\n"); err != nil {
+		return err
+	}
+	if err := s.editing(); err != nil {
+		return err
+	}
+	if err := s.jobControl(); err != nil {
 		return err
 	}
 	if err := s.input("printf '__ID__'; cat /etc/hostname; printf '__ID_END__\\n'\n"); err != nil {

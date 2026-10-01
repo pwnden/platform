@@ -7,10 +7,32 @@ connects. An already-running service connects directly. Failed or canceled
 preparation keeps the shell closed. Connection errors provide recovery guidance,
 and input receives focus only after the shell is ready. Both desktop column
 boundaries support resizing; the existing connection receives new dimensions.
-The terminal opens `/bin/sh -i`
-inside the declared solution image at `/challenge`; that image must provide
-`/bin/sh`. The Docker Engine allocates the TTY. The official Docker CLI connection
+The terminal opens interactive Bash with Readline inside the declared solution
+image at `/challenge`. The image must provide `/bin/bash`, `stty` and the
+`C.UTF-8` locale. Startup enables the TTY's `iutf8` mode and sets `LANG` and
+`LC_ALL` to `C.UTF-8` so line editing and terminal erase use UTF-8 characters.
+Bash starts with `--noprofile --norc` and `INPUTRC=/dev/null` for consistent
+default Readline bindings. The Docker Engine allocates the TTY. The official Docker CLI connection
 helper preserves the same context, TLS and endpoint selection as Compose.
+
+## Input and editing
+
+xterm translates keyboard and IME input into terminal bytes; the transport
+preserves those bytes. Bash/Readline owns completion, editing and command
+history. Tabs complete commands and paths at the shell prompt. Arrow keys browse
+history and move within a line. Home/End, Delete, Ctrl+A/E, Ctrl+U/K/W/Y,
+Ctrl+R and Ctrl+L use the standard Readline bindings. Ctrl+C interrupts the
+foreground process; Ctrl+Z and `fg` use Bash job control. Ctrl+D deletes at the
+cursor or closes the shell on an empty line. UTF-8 Backspace erases the input
+character and stops at the beginning of the editable line.
+
+Bracketed paste keeps pasted input literal until the player confirms it. Programs
+running in the terminal own their own key bindings, including literal Tab where
+appropriate. Browser and operating system reserved shortcuts remain subject to
+their normal restrictions. Clipboard and IME handling use xterm's native paths.
+
+Command history lives within the connection; `HISTFILE=/dev/null` keeps it out of
+the problem mount. Reconnecting starts a fresh shell and history.
 
 The toolbox mounts only the allowed problem directory with its declared
 read-only/writable setting, drops all capabilities and uses `no-new-privileges`.
@@ -46,8 +68,9 @@ the first text frame within five seconds authenticates the session:
 {"type":"authenticate","token":"PROCESS_SESSION_TOKEN","cols":80,"rows":24}
 ```
 
-Authentication precedes container creation. Tokens stay in memory, outside URLs,
-storage, diagnostics and terminal output. Columns are integers 2–500 and rows
+Authentication precedes container creation. The initial page fragment and
+same-tab credential lifetime are described in [local-server.md](local-server.md).
+Tokens stay outside WebSocket URLs, diagnostics and terminal output. Columns are integers 2–500 and rows
 1–200. Unknown fields, duplicate keys and invalid messages fail. Incoming messages
 are limited to 16 KiB. The existing fifteen-minute HTTP deadline limits sessions.
 
@@ -99,6 +122,7 @@ python3 -B tools/smoke_http.py --package dist/pwnden-linux-amd64.tar.gz --termin
 ```
 
 It inspects mount/privilege/network policies, runs the file solver, accesses the
-service internally, checks size/Ctrl+C/exit codes, and verifies cleanup on exit,
+service internally, checks UTF-8 erase, path completion, history, cursor editing,
+Readline shortcuts, bracketed paste, size/Ctrl+C/exit codes, and verifies cleanup on exit,
 disconnect and problem stop. Browser interaction and Windows/macOS execution
 are separate validation scopes.
