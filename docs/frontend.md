@@ -182,6 +182,9 @@ the exact parent origin and window. The player validates the wrapper origin,
 window and session channel; displayed URLs remain within the selected problem.
 No problem-side bridge or document injection is required. Common browsing is
 platform-owned, so authors use existing HTTP declarations and exercise resources.
+The API client requires the wrapper and target to share the same canonical
+problem loopback origin, separate from the player origin. It also checks the
+requested slug, endpoint name and wrapper path before preparing a frame.
 The proxy reaches the isolated service through a fixed-destination Docker exec
 stream with a platform-owned connector; problem containers have no published
 ports or external network. See [network isolation](network-isolation.md).

@@ -4,7 +4,7 @@ import { expect, it, vi } from 'vitest';
 import { browserState } from '../packages/ui/src/browser-channel';
 import { createAPI } from '../packages/api/src/index';
 
-const target = 'http://127.0.0.1:8000';
+const target = 'http://127.0.0.1:9000';
 const src = 'http://127.0.0.1:9000/__pwnden_browser/' + 'a'.repeat(64);
 const channel = new URL(src).pathname;
 
@@ -23,10 +23,19 @@ it('prepares only declared names through the authenticated relative API', async 
   expect(fetch).toHaveBeenCalledWith('/api/v1/problems/example/browser', expect.objectContaining({ method: 'POST', body: '{"name":"web"}', redirect: 'error', credentials: 'omit' }));
   await expect(client.player.browser('example', '')).rejects.toMatchObject({ code: 'invalid_argument' });
   await expect(client.player.browser('../example', 'web')).rejects.toMatchObject({ code: 'invalid_argument' });
-  for (const patch of [{ url: 'http://evil.test/' }, { target: 'http://evil.test/' }, { url: target + channel }, { target: 'http://127.0.0.1:65536' }, { name: 'other' }, { slug: 'other' }]) {
+  for (const patch of [{ url: 'http://evil.test/' }, { target: 'http://evil.test/' }, { url: src.replace(':9000/', ':9001/') }, { url: target + '/wrong-wrapper' }, { target: 'http://127.0.0.1:65536' }, { url: src.replace(':9000/', ':09000/'), target: 'http://127.0.0.1:09000' }, { name: 'other' }, { slug: 'other' }]) {
     fetch.mockImplementationOnce(async () => new Response(JSON.stringify({ slug: 'example', name: 'web', url: src, target, ...patch })));
     await expect(client.player.browser('example', 'web')).rejects.toMatchObject({ code: 'invalid_response' });
   }
+});
+
+it('keeps the shared problem origin separate from the player origin', async () => {
+  vi.stubGlobal('location', new URL(target));
+  try {
+    const fetch = vi.fn(async () => new Response(JSON.stringify({ slug: 'example', name: 'web', url: src, target })));
+    const client = createAPI({ token: 'f'.repeat(64), fetch });
+    await expect(client.player.browser('example', 'web')).rejects.toMatchObject({ code: 'invalid_response' });
+  } finally { vi.unstubAllGlobals(); }
 });
 
 function controller() {
