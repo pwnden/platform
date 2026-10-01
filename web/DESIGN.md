@@ -31,9 +31,9 @@ typography:
     lineHeight: 1.65
   headline:
     fontFamily: "'Pretendard', system-ui, sans-serif"
-    fontSize: "1.5rem"
+    fontSize: "1rem"
     fontWeight: 600
-    lineHeight: 1.65
+    lineHeight: 1.4
   title:
     fontFamily: "'Pretendard', system-ui, sans-serif"
     fontSize: "1rem"
@@ -198,9 +198,21 @@ Problem descriptions render Markdown, wrap at word boundaries, use a reading mea
 
 The player occupies (100dvh) beneath a compact brand header. Two nested `UISplit` controls divide the catalog, reading and terminal columns. The catalog starts at (20%) of the workspace and adjusts between (14%) and (36%). Reading starts at (50%) of the remaining width and adjusts between (30%) and (70%). Both boundaries support pointer dragging and keyboard arrows through Sectile separator semantics. The catalog header, search and category controls stay outside the scrolling results. The selected problem title and category stay outside the independently scrolling body. Column changes preserve the selected problem and terminal session.
 
-At (48rem), panes stack in reading order and the resize handles are hidden. The catalog occupies (30rem), with its results scrolling between filters and pagination. The terminal has a minimum height of (32rem), and the page uses document scrolling. The selected problem header stays sticky at the top of its content. Panel padding changes from `ui-space-3` to `ui-space-2`. The flag field and submit button stack when their own panel is narrower than (30rem). The document supports widths from (320px).
+At (48rem), panes stack in reading order and the resize handles are hidden. The catalog occupies (30rem), with its results scrolling between filters and pagination. The terminal has a minimum height of (32rem), and the page uses document scrolling. The selected problem header stays sticky at the top of its content. Reading panel padding changes from `ui-space-3` to `ui-space-2`. The execution panel uses `ui-space-2` at all widths. The flag field and submit button stack at full width when their own panel is narrower than (24rem). The document supports widths from (320px).
 
-Each container uses the same inset on all four sides. Panel headings and bodies share `--ui-panel-inset`: reading and execution sections use `ui-space-3` on desktop and `ui-space-2` on narrow screens; catalog and terminal sections use `ui-space-2`. Catalog filters, results and pagination use the same inset. The embedded terminal receives its inset once from the panel body. Control groups use `ui-space-1` as gap. Panel headings wrap actions as whole units. Navigation labels ellipsize within narrow panes and retain full titles; URLs and file paths can wrap while prose preserves words.
+Each container uses the same inset on all four sides. Panel headings and bodies share `--ui-panel-inset`: reading sections use `ui-space-3` on desktop and `ui-space-2` on narrow screens; execution, catalog and terminal sections use `ui-space-2`. Catalog filters, results and pagination use the same inset. The embedded terminal receives its inset once from the panel body. Control groups use `ui-space-1` as gap. Panel headings wrap actions as whole units. Navigation labels ellipsize within narrow panes and retain full titles; URLs and file paths can wrap while prose preserves words.
+
+The selected problem title and its category badge share one header row. The
+title uses the shared section scale; a long title ellipsizes and retains its
+full-title tooltip. `--ui-workspace-header-size` derives the minimum height from
+the compact control, two equal workspace insets and a divider. Category badges
+use the control radius and equal padding, with accessible category context.
+
+The execution section groups service entry points and its available start or stop
+action. Entry links use the shared control recipe through `UILink`. New-tab
+navigation has an external-link icon and accessible description. A divider
+separates the flag form; its field and submit button share the default height.
+Status and an icon-only refresh action remain together in the section header.
 
 **The Equal Inset Rule.** Top, right, bottom and left padding use one value. Control padding derives from border-box height, content line height and border thickness. Sibling rhythm uses gap. Responsive layouts replace the entire inset. `pnpm check:spacing` validates owned CSS and Vue style declarations through the existing CSS parser and runs as part of `pnpm verify`.
 

@@ -6,7 +6,7 @@ import { ProblemDetail, ProblemList, categoryLabel } from '@pwnden/catalog-featu
 import { PlayPanel } from '@pwnden/play-feature';
 import type { PlayPanelHandle } from '@pwnden/play-feature';
 import { TerminalPanel } from '@pwnden/terminal-feature';
-import { UISplit, UIStatus } from '@pwnden/ui';
+import { UIBadge, UISplit, UIStatus } from '@pwnden/ui';
 
 defineProps<{ client?: APIClient | undefined; sessionRejected?: boolean }>();
 const selected = ref<Problem>();
@@ -38,8 +38,8 @@ function select(problem: Problem) {
         <UISplit v-if="selected" :key="selected.slug" v-model="briefingWidth" class="selected-problem" label="설명과 터미널 너비" :min="30" :max="70">
           <template #before><div class="briefing">
             <header class="problem-header">
-              <h2 id="problem-heading">{{ selected.title }}</h2>
-              <p>분야: {{ categoryLabel(selected.category) }}</p>
+              <h2 id="problem-heading" :title="selected.title">{{ selected.title }}</h2>
+              <UIBadge :title="`분야: ${categoryLabel(selected.category)}`"><span class="ui-sr-only">분야: </span>{{ categoryLabel(selected.category) }}</UIBadge>
             </header>
             <div class="briefing-scroll" tabindex="0" role="region" aria-labelledby="problem-heading">
               <ProblemDetail :catalog="client.catalog" :slug="selected.slug">
@@ -70,9 +70,8 @@ h1 { font-family: var(--ui-font-mono); font-size: 1.2rem; font-weight: 500; colo
 .catalog { height: 100%; min-width: 0; min-height: 0; overflow: hidden; background: var(--ui-surface); }
 .selected-problem { min-width: 0; min-height: 0; }
 .briefing { height: 100%; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
-.problem-header { flex: none; display: grid; gap: var(--ui-space-1); padding: var(--ui-space-3); border-bottom: 1px solid var(--ui-border-active); background: var(--ui-surface); }
-.problem-header h2 { font-size: 1.5rem; line-height: 1.35; overflow-wrap: anywhere; text-wrap: pretty; }
-.problem-header p { color: var(--ui-muted); font-size: 0.85rem; }
+.problem-header { flex: none; display: flex; align-items: center; justify-content: space-between; min-height: var(--ui-workspace-header-size); gap: var(--ui-space-1); padding: var(--ui-space-2); border-bottom: 1px solid var(--ui-border); background: var(--ui-surface); }
+.problem-header h2 { min-width: 0; font-size: 1rem; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .briefing-scroll { flex: 1; min-height: 0; min-width: 0; overflow: auto; }
 .terminal-pane { min-height: 0; }
 .workspace-empty { height: 100%; min-width: 0; display: grid; align-items: center; justify-items: center; padding: var(--ui-space-4); }

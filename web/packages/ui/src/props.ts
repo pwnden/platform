@@ -6,6 +6,13 @@ export interface UIButtonProps {
   readonly size?: 'default' | 'compact';
 }
 
+export interface UILinkProps {
+  readonly href: string;
+  readonly newTab?: boolean;
+  readonly variant?: 'secondary' | 'primary' | 'ghost';
+  readonly size?: 'default' | 'compact';
+}
+
 export interface UIPanelProps {
   readonly title: string;
   readonly headingID: string;

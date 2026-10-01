@@ -1,4 +1,6 @@
 export { default as UIButton } from './UIButton.vue';
+export { default as UIBadge } from './UIBadge.vue';
+export { default as UILink } from './UILink.vue';
 export { default as UITextField } from './UITextField.vue';
 export { default as UISelect } from './UISelect.vue';
 export { default as UISwitch } from './UISwitch.vue';
@@ -12,4 +14,4 @@ export { default as UIFile } from './UIFile.vue';
 export { default as UICode } from './UICode.vue';
 export { default as UIConnectionStatus } from './UIConnectionStatus.vue';
 export { default as UITerminalControls } from './UITerminalControls.vue';
-export type { UIButtonProps, UITextFieldProps, UISelectProps, UISwitchProps, UITerminalProps, UITerminalHandle, UIPanelProps, UIStatusProps, UIMarkdownProps, UISplitProps, UIRevealProps, UIFileProps, UICodeProps, UIConnectionStatusProps, UITerminalControlsProps } from './props';
+export type { UIButtonProps, UILinkProps, UITextFieldProps, UISelectProps, UISwitchProps, UITerminalProps, UITerminalHandle, UIPanelProps, UIStatusProps, UIMarkdownProps, UISplitProps, UIRevealProps, UIFileProps, UICodeProps, UIConnectionStatusProps, UITerminalControlsProps } from './props';

@@ -16,6 +16,8 @@ vi.mock('../packages/ui/src/index.ts', async () => {
   return {
     UIPanel: (await import('../packages/ui/src/UIPanel.vue')).default,
     UIStatus: (await import('../packages/ui/src/UIStatus.vue')).default,
+    UIBadge: (await import('../packages/ui/src/UIBadge.vue')).default,
+    UILink: (await import('../packages/ui/src/UILink.vue')).default,
     UITerminalControls: (await import('../packages/ui/src/UITerminalControls.vue')).default,
     UIFile: (await import('../packages/ui/src/UIFile.vue')).default,
     UISplit: defineComponent({ setup: (_, { attrs, slots }) => () => h('split', attrs, [slots.before?.(), slots.after?.()]) }),
@@ -77,6 +79,10 @@ it('automatically enters Note Vault and preserves its attachment across column r
   expect(client.terminals.connect).toHaveBeenCalledOnce();
   expect(client.player.run).not.toHaveBeenCalled();
   expect(text(root)).toContain('연결됨');
+  const heading = flatten(root).find(item => item.props.class === 'problem-header')!;
+  expect(text(heading)).toBe('Note Vault분야: 웹');
+  expect(flatten(heading).find(item => item.props.class === 'ui-badge')?.props.title).toBe('분야: 웹');
+  expect(text(flatten(heading).find(item => item.props.class === 'ui-sr-only')!)).toBe('분야: ');
   for (const split of flatten(root).filter(item => item.type === 'split')) {
     (split.props['onUpdate:modelValue'] as (value: number) => void)(30);
   }
@@ -363,7 +369,12 @@ it('restores an existing service on mount and refreshes endpoints after stop/sta
   await settle();
   expect(text(root)).toContain('실행 중');
   expect(flatten(root).find(item => item.type === 'a')?.props.href).toBe('http://127.0.0.1:8000');
-  expect(button(root, '문제 실행').props.disabled).toBe(true);
+  const entry = flatten(root).find(item => item.type === 'a')!;
+  expect(entry.parent).toBe(button(root, '문제 중지').parent);
+  expect(entry.props.target).toBe('_blank');
+  expect(entry.props.rel).toBe('noopener noreferrer');
+  expect(entry.props['aria-label']).toBe('문제 열기 (새 탭)');
+  expect(button(root, '문제 실행')).toBeUndefined();
   await click(button(root, '문제 중지')); await settle();
   expect(text(root)).toContain('문제를 실행하면');
   expect(flatten(root).some(item => item.type === 'a')).toBe(false);
@@ -387,7 +398,7 @@ it('recovers a recorded service after a start conflict and marks unavailable res
   expect(flatten(root).find(item => item.type === 'a')?.props.href).toBe('http://127.0.0.1:8000');
   await click(button(root, '실행 상태 새로고침')); await settle();
   expect(text(root)).toContain('중지해 정리한 뒤 다시 실행하세요.');
-  expect(button(root, '문제 실행').props.disabled).toBe(true);
+  expect(button(root, '문제 실행')).toBeUndefined();
   expect(button(root, '문제 중지').props.disabled).toBe(false);
   renderer.render(null, root);
 });
@@ -424,7 +435,7 @@ it('clears stale endpoints on failed refresh and ignores a response after unmoun
   expect(text(root)).toContain('실행 상태를 확인하지 못했습니다.');
   expect(flatten(root).some(item => item.type === 'a')).toBe(false);
   expect(button(root, '문제 중지').props.disabled).toBe(false);
-  expect(button(root, '문제 실행').props.disabled).toBe(true);
+  expect(button(root, '문제 실행')).toBeUndefined();
   const pending = click(button(root, '실행 상태 새로고침'));
   renderer.render(null, root);
   resolve({ slug: 'test', kind: 'service', state: 'running', endpoints: [] });

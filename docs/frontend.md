@@ -104,9 +104,19 @@ so locally overridden values remain effective. The switch uses this relation
 for its track and thumb. File lists derive their first and last inner corners
 from the containing surface while keeping intervening rows flush.
 
-The execution panel groups status and its refresh action in the panel header.
-Refresh queries the current server state. Service controls occupy the body only
-for service problems; a ready file problem proceeds directly to flag submission.
+The selected problem header uses the same compact title scale and control-based
+height as its neighboring workspace headers. Its title stays on one line with a
+full-title tooltip; the category appears in a right-aligned `UIBadge`, with a
+screen-reader category prefix. The body scrolls independently below it.
+
+The execution panel groups status and an icon-only refresh action in the header.
+Refresh queries the current server state. Service entry points and the current
+start or stop action share one wrapping row. `UILink` preserves native navigation
+and shares button heights, padding, corners and interaction states. New-tab links
+show an external-link icon and expose their behavior in the accessible name.
+The flag field and confirmation form are a separate group below a divider.
+File problems proceed directly to submission. Both form controls share the
+default height; narrow containers stack them at full width.
 
 Shared interaction styles live in `packages/ui/src/theme.css`. Buttons, fields,
 links, disclosures, code scroll regions and split handles share focus tokens and
