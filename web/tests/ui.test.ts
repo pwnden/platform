@@ -6,6 +6,7 @@ import UITextField from '../packages/ui/src/UITextField.vue';
 import UISelect from '../packages/ui/src/UISelect.vue';
 import UIStatus from '../packages/ui/src/UIStatus.vue';
 import UIReveal from '../packages/ui/src/UIReveal.vue';
+import UIFile from '../packages/ui/src/UIFile.vue';
 import UICode from '../packages/ui/src/UICode.vue';
 import { terminalDocument } from '../packages/ui/src/terminal-document';
 import UITerminalControls from '../packages/ui/src/UITerminalControls.vue';
@@ -47,6 +48,34 @@ it('groups the accessible visual connection state and connection controls togeth
   }
   const disabled = await renderToString(createSSRApp({ render: () => h(UITerminalControls, { state: 'disconnected', busy: true }) }));
   expect(disabled.match(/ disabled/g)).toHaveLength(2);
+});
+
+it('keeps disclosure and download as separate named buttons with stable preview relationships', async () => {
+  const name = `files/${'nested/'.repeat(15)}checker.py`;
+  const render = (open: boolean, size = 883, busy = false) => renderToString(createSSRApp({
+    render: () => h(UIFile, { name, size, modelValue: open, busy }, () => 'private source'),
+  }));
+  const closed = await render(false);
+  expect(closed).toContain(`aria-label="${name} 미리보기 열기"`);
+  expect(closed).toContain(`aria-label="${name} 다운로드"`);
+  expect(closed.match(/<button /g)).toHaveLength(2);
+  expect(closed).not.toMatch(/<summary/);
+  expect(closed).not.toContain('private source');
+  const previewID = closed.match(/aria-controls="([^"]+)"/)![1];
+  expect(closed).toContain(`id="${previewID}"`);
+  expect(closed).toContain('hidden');
+  expect(closed).toMatch(/title="883 바이트"[^>]*>883 B/);
+  expect(closed).toContain('title="' + name + '"');
+  const open = await render(true);
+  expect(open).toContain('aria-expanded="true"');
+  expect(open).toContain('private source');
+  expect(open).not.toContain(' hidden');
+  expect(open.indexOf('다운로드</span>')).toBeLessThan(open.indexOf('private source'));
+  const busy = await render(false, 1024, true);
+  expect(busy).toContain('1 KiB');
+  expect(busy).toContain('aria-busy="true"');
+  expect(busy.match(/ disabled/g)).toHaveLength(1);
+  expect(await render(false, 0)).toContain('0 B');
 });
 
 it('uses a native non-submit button and disables it while busy', async () => {

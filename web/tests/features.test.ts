@@ -17,6 +17,7 @@ vi.mock('../packages/ui/src/index.ts', async () => {
     UIPanel: (await import('../packages/ui/src/UIPanel.vue')).default,
     UIStatus: (await import('../packages/ui/src/UIStatus.vue')).default,
     UITerminalControls: (await import('../packages/ui/src/UITerminalControls.vue')).default,
+    UIFile: (await import('../packages/ui/src/UIFile.vue')).default,
     UISplit: defineComponent({ setup: (_, { attrs, slots }) => () => h('split', attrs, [slots.before?.(), slots.after?.()]) }),
     UIMarkdown: defineComponent({ props: ['source'], setup: props => () => h('markdown', props.source) }),
     UICode: defineComponent({ props: ['source'], setup: props => () => h('code', props.source) }),
@@ -315,10 +316,15 @@ it('loads material and spoiler documents on demand, retries failures and caches 
   await reveal('해설 보기 · 정답 포함');
   expect(catalog.guidance).toHaveBeenLastCalledWith('test', 'walkthrough');
   expect(text(root)).toContain('full answer');
-  await reveal('자료 열기 · checker.py');
+  await click(button(root, 'checker.py 미리보기 열기')); await settle();
   expect(catalog.download).toHaveBeenCalledWith('test', id, 1 << 20);
   expect(text(root)).toContain('<script>plain source</script>');
   expect(flatten(root).some(item => item.type === 'script')).toBe(false);
+  await click(button(root, 'checker.py 미리보기 닫기')); await settle();
+  expect(text(root)).not.toContain('<script>plain source</script>');
+  await click(button(root, 'checker.py 미리보기 열기')); await settle();
+  expect(catalog.download).toHaveBeenCalledOnce();
+  expect(text(root)).toContain('<script>plain source</script>');
   renderer.render(null, root);
 });
 
@@ -332,10 +338,8 @@ it('routes binary and large materials to the prepared terminal without fetching 
   const root = node('root');
   renderer.render(h(ProblemDetail, { catalog, slug: 'test', title: 'Test' }), root);
   await settle();
-  for (const label of ['자료 열기 · binary', '자료 열기 · large']) {
-    const item = flatten(root).find(item => item.type === 'reveal' && item.props.label === label)!;
-    await (item.props['onUpdate:modelValue'] as (open: boolean) => unknown)(true);
-    await settle();
+  for (const name of ['binary', 'large']) {
+    await click(button(root, `${name} 미리보기 열기`)); await settle();
   }
   expect(text(root)).toContain('텍스트로 표시할 수 없는 자료');
   expect(text(root)).toContain('큰 자료는 오른쪽 터미널');
@@ -439,5 +443,40 @@ it('loads a description as text and downloads only the selected declared file', 
   expect(link.download).toBe('data.bin');
   expect(link.click).toHaveBeenCalledOnce();
   expect(new Uint8Array(await create.mock.calls[0]![0].arrayBuffer())).toEqual(new Uint8Array([0, 1, 255]));
+  expect(button(root, 'files/data.bin 미리보기 열기').props['aria-expanded']).toBe(false);
+  expect(catalog.download).toHaveBeenCalledOnce();
+  renderer.render(null, root);
+});
+
+it('keeps file actions in the header while preview loading fails, retries and completes', async () => {
+  const id = 'e'.repeat(64);
+  let resolve: (bytes: Uint8Array) => void = () => {};
+  const catalog: Catalog = {
+    list: vi.fn(), guidance: vi.fn(),
+    detail: vi.fn(async () => ({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', description: '', files: [{ id, name: 'files/checker.py', size: 883 }], hintCount: 0, walkthrough: false })),
+    download: vi.fn().mockRejectedValueOnce(new Error('offline')).mockImplementationOnce(() => new Promise<Uint8Array>(done => { resolve = done; })),
+  };
+  const root = node('root');
+  renderer.render(h(ProblemDetail, { catalog, slug: 'test' }), root);
+  await settle();
+  const action = button(root, 'files/checker.py 다운로드');
+  const header = action.parent!;
+  expect(text(header)).toContain('checker.py');
+  expect(text(header)).toContain('883 B');
+  await click(button(root, 'files/checker.py 미리보기 열기')); await settle();
+  expect(text(root)).toContain('자료를 불러오지 못했습니다.');
+  const preview = flatten(root).find(item => item.props.id === button(root, 'files/checker.py 미리보기 닫기').props['aria-controls'])!;
+  expect(preview.parent).toBe(header.parent);
+  expect(preview.props.hidden).toBe(false);
+  void click(button(root, '자료 다시 불러오기')); await settle();
+  expect(text(root)).toContain('자료를 불러오는 중');
+  expect(button(root, 'files/checker.py 다운로드').parent).toBe(header);
+  await click(button(root, 'files/checker.py 미리보기 닫기')); await settle();
+  resolve(new TextEncoder().encode('print("ready")')); await settle();
+  expect(text(root)).not.toContain('print("ready")');
+  await click(button(root, 'files/checker.py 미리보기 열기')); await settle();
+  expect(text(root)).toContain('print("ready")');
+  expect(button(root, 'files/checker.py 다운로드').parent).toBe(header);
+  expect(catalog.download).toHaveBeenCalledTimes(2);
   renderer.render(null, root);
 });

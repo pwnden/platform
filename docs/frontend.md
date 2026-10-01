@@ -78,6 +78,13 @@ focus outlines the label and chevron. Hover is gated by the device's hover
 capability. Pressed, selected, expanded, disabled and invalid states have their
 own semantic styles. Reduced-motion and forced-color preferences are supported.
 
+`UIFile` provides a compact material header with a filename, formatted byte size,
+preview disclosure and independent download action. Its source preview follows
+directly below the header. Container queries adapt metadata and the download
+label to the reading pane's actual width. The catalog feature owns fetching,
+preview limits, retry and cached source; the UI component owns presentation and
+emits preview and download intent through its public API.
+
 The wide layout places the problem list, reading/execution controls and terminal
 in adjacent columns. At 76rem the terminal follows the reading column; at 48rem
 the list moves above the content and the full-width document scrolls vertically.

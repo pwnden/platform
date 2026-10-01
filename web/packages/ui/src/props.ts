@@ -29,6 +29,14 @@ export interface UIRevealProps {
   readonly modelValue: boolean;
 }
 
+export interface UIFileProps {
+  readonly name: string;
+  readonly size: number;
+  readonly modelValue: boolean;
+  readonly busy?: boolean;
+  readonly disabled?: boolean;
+}
+
 export interface UICodeProps {
   readonly source: string;
   readonly label: string;
