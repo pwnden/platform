@@ -43,6 +43,9 @@ func TestDevelopmentAssetProxyKeepsAPIBoundaries(t *testing.T) {
 	if w.Code != 200 || calls != 1 || w.Header().Get("Content-Type") != "text/javascript" || !strings.Contains(w.Header().Get("Content-Security-Policy"), "'nonce-"+frontend.nonce+"'") || w.Header().Get("Access-Control-Allow-Origin") != "" || w.Header().Get("Set-Cookie") != "" {
 		t.Fatal("invalid development asset response", w.Code, w.Header())
 	}
+	if !strings.Contains(w.Header().Get("Content-Security-Policy"), "frame-src http://127.0.0.1:*;") {
+		t.Fatal("development must permit only local problem frames")
+	}
 	for _, test := range []struct {
 		path string
 		code int

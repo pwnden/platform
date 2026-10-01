@@ -26,6 +26,17 @@ export interface UISplitProps {
   readonly max?: number;
 }
 
+export interface UITabsProps {
+  readonly label: string;
+  readonly modelValue: string;
+  readonly items: readonly { value: string; label: string }[];
+}
+
+export interface UIWebFrameProps {
+  readonly src: string;
+  readonly title: string;
+}
+
 export interface UIMarkdownProps {
   readonly source: string;
   readonly headingOffset?: 1 | 2 | 3;

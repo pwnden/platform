@@ -205,6 +205,9 @@ importers:
       '@pwnden/catalog-feature':
         specifier: workspace:0.1.0
         version: link:../../features/catalog
+      '@pwnden/play':
+        specifier: workspace:0.1.0
+        version: link:../../domains/play
       '@pwnden/play-feature':
         specifier: workspace:0.1.0
         version: link:../../features/play

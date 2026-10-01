@@ -12,7 +12,7 @@ Players solve locally installed security challenges in their browser. Authors de
 
 ## Product Purpose
 
-Provide a local browser workspace where players understand a challenge's objective and context, inspect materials, use target services and a prepared terminal, submit flags, and learn through progressive hints and complete explanations. Every solving and learning step is available from the website; downloads are optional.
+Provide a local browser workspace where players understand a challenge's objective and context, inspect materials, use target services and a prepared terminal, submit flags, and learn through progressive hints and complete explanations. Every solving and learning step is available from the website; downloads are optional. The right-side tool pane groups Terminal, Files and local problem Web documents, with available tools determined by the selected problem. Tool switches preserve ongoing work.
 
 ## Operating Context
 

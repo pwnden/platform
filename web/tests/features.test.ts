@@ -3,14 +3,16 @@ import { createRenderer, h, nextTick } from 'vue';
 import type { Catalog } from '../domains/catalog/src/index';
 import type { Player, RunStatus } from '../domains/play/src/index';
 import ProblemDetail from '../features/catalog/src/ProblemDetail.vue';
+import ProblemFiles from '../features/catalog/src/ProblemFiles.vue';
 import ProblemList from '../features/catalog/src/ProblemList.vue';
 import PlayPanel from '../features/play/src/PlayPanel.vue';
+import ProblemWeb from '../features/play/src/ProblemWeb.vue';
 import TerminalPanel from '../features/terminal/src/TerminalPanel.vue';
 import App from '../apps/player/src/App.vue';
 import UICode from '../packages/ui/src/UICode.vue';
 import * as syntax from '../packages/ui/src/syntax';
 
-// Exercise feature lifecycle and async handlers; UI/Sectile have their own tests.
+// Exercise feature lifecycle and real tool tabs on a small host renderer.
 vi.mock('../packages/ui/src/index.ts', async () => {
   const { defineComponent, h } = await import('vue');
   return {
@@ -20,6 +22,8 @@ vi.mock('../packages/ui/src/index.ts', async () => {
     UILink: (await import('../packages/ui/src/UILink.vue')).default,
     UITerminalControls: (await import('../packages/ui/src/UITerminalControls.vue')).default,
     UIFile: (await import('../packages/ui/src/UIFile.vue')).default,
+    UITabs: (await import('../packages/ui/src/UITabs.vue')).default,
+    UIWebFrame: (await import('../packages/ui/src/UIWebFrame.vue')).default,
     UISplit: defineComponent({ setup: (_, { attrs, slots }) => () => h('split', attrs, [slots.before?.(), slots.after?.()]) }),
     UIMarkdown: defineComponent({ props: ['source'], setup: props => () => h('markdown', props.source) }),
     UICode: defineComponent({ props: ['source'], setup: props => () => h('code', props.source) }),
@@ -107,6 +111,119 @@ it('automatically enters Note Vault and preserves its attachment across column r
   await click(button(root, '터미널 연결')); await settle();
   expect(client.terminals.connect).toHaveBeenCalledTimes(2);
   expect(terminal.props.enabled).toBe(true);
+  renderer.render(null, root);
+});
+
+it('keeps terminal, source and web state across tool tabs and resets tools on problem change', async () => {
+  const id = 'f'.repeat(64);
+  const problems = [
+    { slug: 'note-vault', title: 'Note Vault', category: 'web', kind: 'service' as const },
+    { slug: 'rotor-lock', title: 'Rotor Lock', category: 'rev', kind: 'file' as const },
+  ];
+  const close = vi.fn();
+  const session = { input: vi.fn(), resize: vi.fn(), close: vi.fn() };
+  let state: RunStatus = { slug: 'note-vault', kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:43123' }] };
+  const client = {
+    catalog: {
+      list: vi.fn(async () => problems),
+      detail: vi.fn(async (slug: string) => ({ ...problems.find(problem => problem.slug === slug)!, description: '설명', files: [{ id, name: 'checker.py', size: 30 }], hintCount: 0, walkthrough: false })),
+      download: vi.fn(async () => new TextEncoder().encode('<script>plain source</script>')), guidance: vi.fn(),
+    },
+    player: { status: vi.fn(async (slug: string) => slug === 'note-vault' ? state : { slug, kind: 'file', state: 'ready', endpoints: [] }), run: vi.fn(), stop: vi.fn(), submit: vi.fn() },
+    terminals: {
+      connect: vi.fn(() => ({ ready: Promise.resolve(session), close })), list: vi.fn(),
+      stop: vi.fn(async () => { state = { ...state, state: 'stopped', endpoints: [] }; }),
+    },
+  };
+  const root = node('root');
+  renderer.render(h(App, { client }), root); await settle();
+  await click(flatten(root).find(item => item.type === 'button' && text(item).includes('Note Vault'))!); await settle();
+  const terminal = flatten(root).find(item => item.type === 'terminal')!;
+  expect(client.catalog.detail).toHaveBeenCalledOnce();
+  expect(flatten(root).filter(item => item.props.role === 'tab').map(text)).toEqual(['터미널', '파일', '웹']);
+  expect(flatten(root).filter(item => item.type === 'iframe')).toHaveLength(0);
+  const list = flatten(root).find(item => item.props.role === 'tablist')!;
+  const key = new Event('keydown', { cancelable: true });
+  Object.defineProperties(key, { key: { value: 'ArrowRight' }, currentTarget: { value: list } });
+  (list.props.onKeydown as (event: Event) => void)(key); await settle();
+  expect(button(root, '파일').props['aria-selected']).toBe('true');
+  await click(button(root, 'checker.py 미리보기 열기')); await settle();
+  expect(client.catalog.download).toHaveBeenCalledWith('note-vault', id, 1 << 20);
+  expect(text(root)).toContain('<script>plain source</script>');
+  expect(flatten(root).some(item => item.type === 'script')).toBe(false);
+  await click(button(root, '웹')); await settle();
+  const frame = flatten(root).find(item => item.type === 'iframe')!;
+  expect(frame.props.src).toBe('http://127.0.0.1:43123');
+  expect(flatten(root).find(item => item.type === 'a')?.props.rel).toBe('noopener noreferrer');
+  await click(button(root, '터미널')); await settle();
+  expect(flatten(root).find(item => item.type === 'terminal')).toBe(terminal);
+  expect(client.terminals.connect).toHaveBeenCalledOnce();
+  expect(close).not.toHaveBeenCalled();
+  await click(button(root, '파일')); await settle();
+  expect(button(root, 'checker.py 미리보기 닫기').props['aria-expanded']).toBe(true);
+  expect(client.catalog.download).toHaveBeenCalledOnce();
+  await click(button(root, '웹')); await settle();
+  expect(flatten(root).find(item => item.type === 'iframe')).toBe(frame);
+  await click(button(root, '실행 상태 새로고침')); await settle();
+  expect(flatten(root).find(item => item.type === 'iframe')).toBe(frame);
+  await click(button(root, '터미널')); await settle();
+  await click(button(root, '문제 환경 종료')); await settle();
+  expect(flatten(root).some(item => item.type === 'iframe')).toBe(false);
+  expect(button(root, '웹')).toBeDefined();
+  state = { ...state, state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:43124' }] };
+  await click(button(root, '터미널 연결')); await settle();
+  await click(button(root, '웹')); await settle();
+  expect(flatten(root).find(item => item.type === 'iframe')?.props.src).toBe('http://127.0.0.1:43124');
+  await click(flatten(root).find(item => item.type === 'button' && text(item).includes('Rotor Lock'))!); await settle();
+  expect(flatten(root).filter(item => item.props.role === 'tab').map(text)).toEqual(['터미널', '파일']);
+  expect(button(root, '터미널').props['aria-selected']).toBe('true');
+  expect(flatten(root).some(item => item.type === 'iframe')).toBe(false);
+  expect(button(root, 'checker.py 미리보기 열기').props['aria-expanded']).toBe(false);
+  renderer.render(null, root);
+});
+
+it('retains multiple web documents and reloads only the explicitly selected one', async () => {
+  const endpoints = [{ name: 'first', url: 'http://127.0.0.1:43123' }, { name: 'second', url: 'http://127.0.0.1:43124' }];
+  const state: RunStatus = { slug: 'test', kind: 'service', state: 'running', endpoints };
+  const root = node('root');
+  renderer.render(h(ProblemWeb, { status: state, active: true }), root); await settle();
+  const first = flatten(root).find(item => item.type === 'iframe')!;
+  const selector = flatten(root).find(item => item.type === 'select')!;
+  const choose = selector.props['onUpdate:modelValue'] as (url: string) => void;
+  choose(endpoints[1]!.url); await settle();
+  const second = flatten(root).find(item => item.type === 'iframe' && item.props.src === endpoints[1]!.url)!;
+  expect(first.props.hidden).toBe(true);
+  expect(second.props.hidden).toBe(false);
+  choose(endpoints[0]!.url); await settle();
+  expect(flatten(root).find(item => item.type === 'iframe')).toBe(first);
+  await click(button(root, '문제 웹 새로고침')); await settle();
+  expect(flatten(root).find(item => item.type === 'iframe')).not.toBe(first);
+  expect(flatten(root).find(item => item.type === 'iframe' && item.props.src === endpoints[1]!.url)).toBe(second);
+  renderer.render(h(ProblemWeb, { status: undefined, active: true }), root); await settle();
+  expect(flatten(root).some(item => item.type === 'iframe' || item.type === 'a')).toBe(false);
+  renderer.render(null, root);
+});
+
+it('observes a newly prepared web service after the initial status request finishes', async () => {
+  const problem = { slug: 'note-vault', title: 'Note Vault', category: 'web', kind: 'service' as const };
+  let resolve: (status: RunStatus) => void = () => {};
+  const status = vi.fn().mockImplementationOnce(() => new Promise<RunStatus>(done => { resolve = done; }))
+    .mockResolvedValue({ slug: problem.slug, kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:43123' }] });
+  const session = { input: vi.fn(), resize: vi.fn(), close: vi.fn() };
+  const client = {
+    catalog: { list: vi.fn(async () => [problem]), detail: vi.fn(async () => ({ ...problem, description: '', files: [], hintCount: 0, walkthrough: false })), download: vi.fn(), guidance: vi.fn() },
+    player: { status, run: vi.fn(), stop: vi.fn(), submit: vi.fn() },
+    terminals: { connect: vi.fn(() => ({ ready: Promise.resolve(session), close: vi.fn() })), list: vi.fn(), stop: vi.fn() },
+  };
+  const root = node('root');
+  renderer.render(h(App, { client }), root); await settle();
+  await click(flatten(root).find(item => item.type === 'button' && text(item).includes('Note Vault'))!); await settle();
+  expect(status).toHaveBeenCalledOnce();
+  resolve({ slug: problem.slug, kind: 'service', state: 'stopped', endpoints: [] }); await settle();
+  expect(status).toHaveBeenCalledTimes(2);
+  expect(button(root, '웹')).toBeDefined();
+  await click(button(root, '웹')); await settle();
+  expect(flatten(root).find(item => item.type === 'iframe')?.props.src).toBe('http://127.0.0.1:43123');
   renderer.render(null, root);
 });
 
@@ -242,8 +359,18 @@ interface Node {
   props: Record<string, unknown>;
   children: Node[];
   parent: Node | null;
+  readonly dataset: { tabsId?: unknown };
+  closest(selector: string): Node | null;
+  querySelectorAll(selector: string): Node[];
+  focus(): void;
 }
-const node = (type: string, text = ''): Node => ({ type, text, props: {}, children: [], parent: null });
+const node = (type: string, text = ''): Node => ({
+  type, text, props: {}, children: [], parent: null,
+  get dataset() { return { tabsId: this.props['data-tabs-id'] }; },
+  closest() { let current: Node | null = this; while (current && current.props.role !== 'tablist') current = current.parent; return current; },
+  querySelectorAll() { return flatten(this).filter(item => item.props['data-tabs-id'] !== undefined); },
+  focus() {},
+});
 const renderer = createRenderer<Node, Node>({
   createElement: type => node(type), createText: text => node('text', text), createComment: text => node('comment', text),
   setText: (item, text) => { item.text = text; }, setElementText: (item, text) => { item.text = text; item.children = []; },
@@ -261,7 +388,11 @@ const renderer = createRenderer<Node, Node>({
 const text = (item: Node): string => (item.type === 'comment' ? '' : item.text) + item.children.map(text).join('');
 const flatten = (item: Node): Node[] => [item, ...item.children.flatMap(flatten)];
 const button = (root: Node, label: string) => flatten(root).find(item => item.type === 'button' && (text(item) === label || item.props['aria-label'] === label))!;
-const click = (item: Node) => (item.props.onClick as (event: Event) => unknown)(new Event('click'));
+const click = (item: Node) => {
+  const event = new Event('click');
+  Object.defineProperty(event, 'currentTarget', { value: item });
+  return (item.props.onClick as (event: Event) => unknown)(event);
+};
 async function settle() { for (let i = 0; i < 8; i++) { await Promise.resolve(); await nextTick(); } }
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
@@ -300,7 +431,7 @@ it('browses a large catalog by category, search and bounded pages without repeat
   renderer.render(null, root);
 });
 
-it('loads material and spoiler documents on demand, retries failures and caches reopened hints', async () => {
+it('loads spoiler documents on demand, retries failures and caches reopened hints', async () => {
   const id = 'd'.repeat(64);
   const catalog: Catalog = {
     list: vi.fn(),
@@ -330,15 +461,8 @@ it('loads material and spoiler documents on demand, retries failures and caches 
   await reveal('해설 보기 · 정답 포함');
   expect(catalog.guidance).toHaveBeenLastCalledWith('test', 'walkthrough');
   expect(text(root)).toContain('full answer');
-  await click(button(root, 'checker.py 미리보기 열기')); await settle();
-  expect(catalog.download).toHaveBeenCalledWith('test', id, 1 << 20);
-  expect(text(root)).toContain('<script>plain source</script>');
-  expect(flatten(root).some(item => item.type === 'script')).toBe(false);
-  await click(button(root, 'checker.py 미리보기 닫기')); await settle();
-  expect(text(root)).not.toContain('<script>plain source</script>');
-  await click(button(root, 'checker.py 미리보기 열기')); await settle();
-  expect(catalog.download).toHaveBeenCalledOnce();
-  expect(text(root)).toContain('<script>plain source</script>');
+  expect(button(root, 'checker.py 미리보기 열기')).toBeUndefined();
+  expect(catalog.download).not.toHaveBeenCalled();
   renderer.render(null, root);
 });
 
@@ -350,13 +474,13 @@ it('routes binary and large materials to the prepared terminal without fetching 
     download: vi.fn(async () => new Uint8Array([0, 255])), guidance: vi.fn(),
   };
   const root = node('root');
-  renderer.render(h(ProblemDetail, { catalog, slug: 'test', title: 'Test' }), root);
+  renderer.render(h(ProblemFiles, { catalog, slug: 'test', files: [{ id: small, name: 'binary', size: 2 }, { id: large, name: 'large', size: (1 << 20) + 1 }] }), root);
   await settle();
   for (const name of ['binary', 'large']) {
     await click(button(root, `${name} 미리보기 열기`)); await settle();
   }
   expect(text(root)).toContain('텍스트로 표시할 수 없는 자료');
-  expect(text(root)).toContain('큰 자료는 오른쪽 터미널');
+  expect(text(root)).toContain('큰 자료는 터미널 탭');
   expect(catalog.download).toHaveBeenCalledOnce();
   renderer.render(null, root);
 });
@@ -372,12 +496,7 @@ it('observes service endpoints without duplicating terminal environment controls
   renderer.render(h(PlayPanel, { player, slug: 'test', kind: 'service' }), root);
   await settle();
   expect(text(root)).toContain('실행 중');
-  expect(flatten(root).find(item => item.type === 'a')?.props.href).toBe('http://127.0.0.1:8000');
-  const entry = flatten(root).find(item => item.type === 'a')!;
-  expect(entry.parent?.props.class).toBe('actions');
-  expect(entry.props.target).toBe('_blank');
-  expect(entry.props.rel).toBe('noopener noreferrer');
-  expect(entry.props['aria-label']).toBe('문제 열기 (새 탭)');
+  expect(flatten(root).some(item => item.type === 'a')).toBe(false);
   expect(button(root, '문제 실행')).toBeUndefined();
   expect(button(root, '문제 중지')).toBeUndefined();
   state = { ...state, state: 'stopped', endpoints: [] };
@@ -387,7 +506,7 @@ it('observes service endpoints without duplicating terminal environment controls
   expect(flatten(root).some(item => item.props.class === 'actions')).toBe(false);
   state = { ...state, state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:9000' }] };
   await click(button(root, '실행 상태 새로고침')); await settle();
-  expect(flatten(root).find(item => item.type === 'a')?.props.href).toBe('http://127.0.0.1:9000');
+  expect(text(root)).toContain('실행 중');
   expect(player.status).toHaveBeenCalledTimes(3);
   expect(player.run).not.toHaveBeenCalled();
   expect(player.stop).not.toHaveBeenCalled();
@@ -405,7 +524,7 @@ it('directs unavailable service recovery to the terminal environment controls', 
   renderer.render(h(PlayPanel, { player, slug: 'test', kind: 'service' }), root);
   await settle();
   await click(button(root, '실행 상태 새로고침')); await settle();
-  expect(flatten(root).find(item => item.type === 'a')?.props.href).toBe('http://127.0.0.1:8000');
+  expect(text(root)).toContain('실행 중');
   await click(button(root, '실행 상태 새로고침')); await settle();
   expect(text(root)).toContain('오른쪽 전원 버튼으로 환경을 종료한 뒤 터미널을 다시 연결하세요.');
   expect(button(root, '문제 실행')).toBeUndefined();
@@ -498,7 +617,7 @@ it.each(['file', 'service'] as const)('keeps the %s submission and body stable d
   renderer.render(null, root);
 });
 
-it('loads a description as text and downloads only the selected declared file', async () => {
+it('downloads only the selected declared file from the materials panel', async () => {
   const id = 'a'.repeat(64);
   const catalog: Catalog = {
     list: vi.fn(), detail: vi.fn(async () => ({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', description: '<script>alert(1)</script>', files: [{ id, name: 'files/data.bin', size: 3 }], hintCount: 0, walkthrough: false })),
@@ -510,9 +629,8 @@ it('loads a description as text and downloads only the selected declared file', 
   const create = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:local');
   vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
   const root = node('root');
-  renderer.render(h(ProblemDetail, { catalog, slug: 'test', title: 'Test' }), root);
+  renderer.render(h(ProblemFiles, { catalog, slug: 'test', files: [{ id, name: 'files/data.bin', size: 3 }] }), root);
   await settle();
-  expect(text(root)).toContain('<script>alert(1)</script>');
   expect(flatten(root).some(item => item.type === 'script')).toBe(false);
   await click(button(root, '다운로드')); await settle();
   expect(catalog.download).toHaveBeenCalledWith('test', id);
@@ -533,7 +651,7 @@ it('keeps file actions in the header while preview loading fails, retries and co
     download: vi.fn().mockRejectedValueOnce(new Error('offline')).mockImplementationOnce(() => new Promise<Uint8Array>(done => { resolve = done; })),
   };
   const root = node('root');
-  renderer.render(h(ProblemDetail, { catalog, slug: 'test' }), root);
+  renderer.render(h(ProblemFiles, { catalog, slug: 'test', files: [{ id, name: 'files/checker.py', size: 883 }] }), root);
   await settle();
   const action = button(root, 'files/checker.py 다운로드');
   const header = action.parent!;

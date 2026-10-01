@@ -4,7 +4,7 @@ import type { TerminalConnection, TerminalSession, TerminalSize, Terminals, Reta
 import { UIButton, UITerminal, UIPanel, UITerminalControls } from '@pwnden/ui';
 import type { UITerminalHandle } from '@pwnden/ui';
 
-const props = defineProps<{ terminals: Terminals; slug: string; paused?: boolean }>();
+const props = defineProps<{ terminals: Terminals; slug: string; paused?: boolean; foreground?: boolean }>();
 const emit = defineEmits<{ ready: []; stopped: [] }>();
 const screen = ref<UITerminalHandle>();
 const state = ref<'closed' | 'connecting' | 'ready'>('closed');
@@ -67,7 +67,7 @@ async function connect() {
     message.value = '';
     emit('ready');
     await nextTick();
-    if (active && current === generation) screen.value?.focus();
+    if (active && current === generation && props.foreground !== false) screen.value?.focus();
   } catch {
     if (active && current === generation) {
       state.value = 'closed'; failed.value = true;

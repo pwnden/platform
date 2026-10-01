@@ -6,6 +6,10 @@ working directory, environment variables, history, temporary files and backgroun
 jobs remain available. A hidden tab, problem switch, refresh or lost connection
 detaches the browser. Returning cancels expiry; leaving starts another ten minutes.
 Visible attachments stay active even without keyboard input.
+Switching between the Terminal, Files and Web tools within the selected problem
+keeps the terminal mounted and attached. Its dimensions remain available while
+hidden, and it is measured again when shown. Tool switches preserve the existing
+inactivity policy for the selected problem.
 
 The header groups a compact rectangular connection switch and a power-icon
 **환경 종료** button. The visible track border and button border share the exact

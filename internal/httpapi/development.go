@@ -90,5 +90,5 @@ func (h *handler) development(w http.ResponseWriter, r *http.Request) {
 }
 
 func pagePolicy(host, nonce string) string {
-	return "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' ws://" + host + "; style-src 'self' 'nonce-" + nonce + "'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+	return "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' ws://" + host + "; style-src 'self' 'nonce-" + nonce + "'; frame-src http://127.0.0.1:*; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
 }

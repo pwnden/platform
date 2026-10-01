@@ -10,6 +10,36 @@ import UIFile from '../packages/ui/src/UIFile.vue';
 import UICode from '../packages/ui/src/UICode.vue';
 import { terminalDocument } from '../packages/ui/src/terminal-document';
 import UITerminalControls from '../packages/ui/src/UITerminalControls.vue';
+import UITabs from '../packages/ui/src/UITabs.vue';
+import UIWebFrame from '../packages/ui/src/UIWebFrame.vue';
+
+it('keeps inactive tool panels mounted and inaccessible with linked Sectile tabs', async () => {
+  const html = await renderToString(createSSRApp({ render: () => h(UITabs, {
+    label: '풀이 도구', modelValue: 'terminal', items: [{ value: 'terminal', label: '터미널' }, { value: 'web', label: '웹' }],
+  }, { terminal: () => 'shell state', web: () => 'web state' }) }));
+  expect(html).toContain('role="tablist"');
+  expect(html).toContain('aria-label="풀이 도구"');
+  expect(html.match(/role="tab"/g)).toHaveLength(2);
+  expect(html.match(/role="tabpanel"/g)).toHaveLength(2);
+  expect(html).toContain('aria-selected="true"');
+  expect(html).toContain('aria-selected="false"');
+  expect(html).toContain('shell state');
+  expect(html).toContain('web state');
+  expect(html).toContain('inert');
+  expect(html).toContain('aria-hidden="true"');
+  for (const id of html.matchAll(/aria-controls="([^"]+)"/g)) expect(html).toContain(`id="${id[1]}"`);
+});
+
+it('frames problem documents separately with named, bounded browser capabilities', async () => {
+  const html = await renderToString(createSSRApp({ render: () => h(UIWebFrame, { src: 'http://127.0.0.1:43123', title: 'web 문제 사이트' }) }));
+  expect(html).toContain('<iframe');
+  expect(html).toContain('src="http://127.0.0.1:43123"');
+  expect(html).toContain('title="web 문제 사이트"');
+  expect(html).toContain('referrerpolicy="no-referrer"');
+  expect(html).toContain('allow-scripts allow-same-origin allow-forms');
+  expect(html).not.toContain('allow-top-navigation');
+  expect(html).not.toContain('srcdoc');
+});
 
 it('renders labeled native category choices and a plain status without decorative markers', async () => {
   const html = await renderToString(createSSRApp({ render: () => h(UISelect, { id: 'category', label: '분야', modelValue: 'web', options: [{ value: '', label: '전체 분야' }, { value: 'web', label: '웹' }] }) }));

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
 import type { Player, RunStatus } from '@pwnden/play';
-import { UIButton, UILink, UITextField, UIPanel, UIStatus } from '@pwnden/ui';
+import { UIButton, UITextField, UIPanel, UIStatus } from '@pwnden/ui';
 import type { PlayPanelHandle } from './props';
 
 const props = defineProps<{ player: Player; slug: string; kind: RunStatus['kind'] }>();
@@ -12,10 +12,17 @@ const flag = ref('');
 const message = ref('');
 const failed = ref(false);
 let active = true;
+let inFlight: Promise<RunStatus | undefined> | undefined;
 onUnmounted(() => { active = false; });
 
-async function perform(operation: 'submit' | 'status') {
-  if (pending.value) return;
+function perform(operation: 'submit' | 'status') {
+  if (inFlight) return inFlight;
+  const request = execute(operation);
+  inFlight = request;
+  void request.finally(() => { if (inFlight === request) inFlight = undefined; });
+  return request;
+}
+async function execute(operation: 'submit' | 'status') {
   pending.value = operation;
   emit('busy', true);
   if (operation === 'submit') { message.value = ''; failed.value = false; }
@@ -45,7 +52,10 @@ async function perform(operation: 'submit' | 'status') {
 }
 onMounted(() => perform('status'));
 const handle: PlayPanelHandle = {
-  async refresh() { await perform('status'); },
+  async refresh() {
+    if (inFlight) await inFlight;
+    if (active) await perform('status');
+  },
 };
 defineExpose(handle);
 </script>
@@ -61,10 +71,9 @@ defineExpose(handle);
     <p v-if="!status && failed">실행 상태를 확인하지 못했습니다.</p>
     <p v-else-if="status?.state === 'stopped'">오른쪽 터미널을 연결하면 풀이 환경이 준비됩니다.</p>
     <p v-else-if="status?.state === 'unavailable'" role="alert">오른쪽 전원 버튼으로 환경을 종료한 뒤 터미널을 다시 연결하세요.</p>
-    <div v-if="kind === 'service' && status?.endpoints.length" class="actions">
+    <div v-if="kind === 'service' && status?.endpoints.some(endpoint => endpoint.url.startsWith('tcp://'))" class="actions">
       <template v-for="endpoint in status?.endpoints" :key="endpoint.name">
-        <UILink v-if="endpoint.url.startsWith('http://')" :href="endpoint.url" new-tab variant="primary" :aria-label="`${status?.endpoints.length === 1 ? '문제 열기' : endpoint.name + ' 열기'} (새 탭)`" :title="endpoint.url">{{ status?.endpoints.length === 1 ? '문제 열기' : endpoint.name }}</UILink>
-        <code v-else class="endpoint-address">{{ endpoint.url }}</code>
+        <code v-if="endpoint.url.startsWith('tcp://')" class="endpoint-address">{{ endpoint.url }}</code>
       </template>
     </div>
     <p v-if="message" :role="failed ? 'alert' : 'status'">{{ message }}</p>

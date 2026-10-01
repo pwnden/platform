@@ -16,7 +16,7 @@ export const policy = {
   '@pwnden/terminal-feature': { directory: 'features/terminal', dependencies: ['vue', '@pwnden/terminal', '@pwnden/ui'] },
   '@pwnden/player': {
     directory: 'apps/player',
-    dependencies: ['vue', '@pwnden/api', '@pwnden/catalog', '@pwnden/catalog-feature', '@pwnden/play-feature', '@pwnden/terminal-feature', '@pwnden/ui'],
+    dependencies: ['vue', '@pwnden/api', '@pwnden/catalog', '@pwnden/play', '@pwnden/catalog-feature', '@pwnden/play-feature', '@pwnden/terminal-feature', '@pwnden/ui'],
     development: ['vite', '@vitejs/plugin-vue'],
   },
 };

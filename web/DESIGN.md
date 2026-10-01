@@ -196,9 +196,9 @@ Problem descriptions render Markdown, wrap at word boundaries, use a reading mea
 
 ## Layout
 
-The player occupies (100dvh) beneath a compact brand header. Two nested `UISplit` controls divide the catalog, reading and terminal columns. The catalog starts at (20%) of the workspace and adjusts between (14%) and (36%). Reading starts at (50%) of the remaining width and adjusts between (30%) and (70%). Both boundaries support pointer dragging and keyboard arrows through Sectile separator semantics. The catalog header, search and category controls stay outside the scrolling results. The selected problem title and category stay outside the independently scrolling body. Column changes preserve the selected problem and terminal session.
+The player occupies (100dvh) beneath a compact brand header. Two nested `UISplit` controls divide the catalog, reading and tool columns. The catalog starts at (20%) of the workspace and adjusts between (14%) and (36%). Reading starts at (50%) of the remaining width and adjusts between (30%) and (70%). Both boundaries support pointer dragging and keyboard arrows through Sectile separator semantics. The catalog header, search and category controls stay outside the scrolling results. The selected problem title and category stay outside the independently scrolling body. Column changes preserve the selected problem, terminal session and web document.
 
-At (48rem), panes stack in reading order and the resize handles are hidden. The catalog occupies (30rem), with its results scrolling between filters and pagination. The terminal has a minimum height of (32rem), and the page uses document scrolling. The selected problem header stays sticky at the top of its content. Reading panel padding changes from `ui-space-3` to `ui-space-2`. The execution panel uses `ui-space-2` at all widths. The flag field and submit button stack at full width when their own panel is narrower than (24rem). The document supports widths from (320px).
+At (48rem), panes stack in reading order and the resize handles are hidden. The catalog occupies (30rem), with its results scrolling between filters and pagination. The tool pane occupies (36rem), and the page uses document scrolling. The selected problem header stays sticky at the top of its content. Reading panel padding changes from `ui-space-3` to `ui-space-2`. The execution panel uses `ui-space-2` at all widths. The flag field and submit button stack at full width when their own panel is narrower than (24rem). The document supports widths from (320px).
 
 Each container uses the same inset on all four sides. Panel headings and bodies share `--ui-panel-inset`: reading sections use `ui-space-3` on desktop and `ui-space-2` on narrow screens; execution, catalog and terminal sections use `ui-space-2`. Catalog filters, results and pagination use the same inset. The embedded terminal receives its inset once from the panel body. Control groups use `ui-space-1` as gap. Panel headings wrap actions as whole units. Navigation labels ellipsize within narrow panes and retain full titles; URLs and file paths can wrap while prose preserves words.
 
@@ -208,17 +208,33 @@ full-title tooltip. `--ui-workspace-header-size` derives the minimum height from
 the compact control, two equal workspace insets and a divider. Category badges
 use the control radius and equal padding, with accessible category context.
 
-The execution section shows service entry points and the flag form. Connecting
-the terminal prepares the environment; its header owns connection and immediate
-environment termination. Entry links use the shared control recipe through
-`UILink`. New-tab navigation has an external-link icon and accessible description. A divider
-separates the flag form; its field and submit button share the default height.
+The execution section shows TCP addresses and the flag form. Connecting the
+terminal prepares the environment; its header owns connection and immediate
+environment termination. HTTP documents appear in the Web tool. A divider
+separates the flag form from preceding content; its field and submit button share the default height.
 Status and an icon-only refresh action remain together in the section header.
-Status refresh retains the body, entry links, editable flag input and submission
+Status refresh retains the body, editable flag input and submission
 result throughout observation. Progress appears in the existing header icon box
 and respects reduced-motion preferences. A completed state change or observation
 failure updates the content; unknown state disables submission and removes stale
 entry points.
+
+The right-side tools use `UITabs`, with compact control-height triggers in a
+workspace-height header. Terminal is the default. Files appears for declared
+materials; Web appears after a local HTTP endpoint is observed. The selected tab
+uses accent fill and stroke, with keyboard focus kept distinct. Sectile owns
+arrow-key navigation and linked tab/panel semantics. Inactive panels are inert,
+hidden from assistive technology and visually excluded while their components
+remain mounted.
+
+Files owns distribution preview and download in an independently scrolling
+panel. Web provides a bounded iframe viewport beneath a fixed toolbar, with
+compact reload and new-tab actions of equal dimensions and symmetric insets.
+Multiple HTTP services have a labeled selector. The viewport uses the surface
+radius with inner radius reduced by its border. Source, shell and opened web
+document state persist across tool switches. Browser-page visibility and problem
+switches retain the existing environment lifecycle. Frames load on first use;
+stopping the environment removes old frames and reconnecting uses the new address.
 
 **The Equal Inset Rule.** Top, right, bottom and left padding use one value. Control padding derives from border-box height, content line height and border thickness. Sibling rhythm uses gap. Responsive layouts replace the entire inset. `pnpm check:spacing` validates owned CSS and Vue style declarations through the existing CSS parser and runs as part of `pnpm verify`.
 
@@ -263,7 +279,7 @@ Source: [UITextField.vue](packages/ui/src/UITextField.vue).
 
 Each panel is a semantic section with a labelled heading and optional actions. A lower heading border separates the content; the header has a minimum height of (3.5rem). `headingLevel` places catalog and terminal headings at level 2 and reading section headings at level 3 beneath the selected problem title. Brief, materials, execution and submission, hints and walkthrough share raised heading bands. Execution and submission precede the learning sections. Panels flex to fill available space while permitting their contents to shrink. The terminal panel uses the terminal background.
 
-The execution panel groups its current state and refresh action in the header. Refresh queries server state. Service actions occupy the body for service problems, while ready file problems begin directly with the submission form. The form receives a divider only when body content precedes it.
+The execution panel groups its current state and refresh action in the header. Refresh queries server state. TCP addresses occupy the body when present, while ready file problems begin directly with the submission form. The form receives a divider only when body content precedes it. Files and Web use their own tool panels with bounded scrolling content and fixed headers.
 
 Source: [UIPanel.vue](packages/ui/src/UIPanel.vue), [PlayPanel.vue](features/play/src/PlayPanel.vue).
 

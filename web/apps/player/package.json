@@ -7,6 +7,7 @@
   "dependencies": {
     "@pwnden/api": "workspace:0.1.0",
     "@pwnden/catalog": "workspace:0.1.0",
+    "@pwnden/play": "workspace:0.1.0",
     "@pwnden/catalog-feature": "workspace:0.1.0",
     "@pwnden/play-feature": "workspace:0.1.0",
     "@pwnden/terminal-feature": "workspace:0.1.0",

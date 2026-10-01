@@ -34,6 +34,9 @@ func TestEmbeddedPlayerAssets(t *testing.T) {
 	if policy := page.Header().Get("Content-Security-Policy"); !strings.Contains(policy, "script-src 'self' 'wasm-unsafe-eval';") || strings.Contains(policy, "'unsafe-eval'") {
 		t.Fatal("markdown WASM policy is missing or permits JavaScript eval")
 	}
+	if policy := page.Header().Get("Content-Security-Policy"); !strings.Contains(policy, "frame-src http://127.0.0.1:*;") || !strings.Contains(policy, "frame-ancestors 'none';") {
+		t.Fatal("problem frames must be confined to loopback while the platform stays unframed")
+	}
 	if next := get("GET", "/"); strings.Contains(next.Body.String(), nonce[1]) {
 		t.Fatal("style nonce reused")
 	}

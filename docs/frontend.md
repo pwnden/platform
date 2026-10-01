@@ -8,12 +8,12 @@ problem execution and answer checking. Node and pnpm are build tools.
 | Package | Location | Responsibility |
 | --- | --- | --- |
 | `@pwnden/player` | `web/apps/player` | Session initialization and composition. |
-| `@pwnden/ui` | `web/packages/ui` | Own button/input/panel/status/terminal/Markdown/reveal/code API, Sectile and xterm wrappers, theme tokens and bundled fonts. |
+| `@pwnden/ui` | `web/packages/ui` | Own controls, panels, tabs, terminal, Markdown, code and iframe API; Sectile and xterm wrappers, theme tokens and bundled fonts. |
 | `@pwnden/api` | `web/packages/api` | Implement domain ports with the Go HTTP API and WebSocket. |
 | `@pwnden/catalog` | `web/domains/catalog` | Summary/detail/file models and read/download/guidance port; pure TypeScript. |
 | `@pwnden/play` | `web/domains/play` | Run/status/submission models and player port; pure TypeScript. |
 | `@pwnden/catalog-feature` | `web/features/catalog` | Player brief, bounded source preview, optional authenticated downloads, progressive hints and walkthrough. |
-| `@pwnden/play-feature` | `web/features/play` | Vue observed execution state, controls and submissions. |
+| `@pwnden/play-feature` | `web/features/play` | Observed execution state, submissions and local problem web documents. |
 | `@pwnden/terminal` | `web/domains/terminal` | Connection/session/dimensions/byte-event ports; pure TypeScript. |
 | `@pwnden/terminal-feature` | `web/features/terminal` | Connection controls, input/output flow and session lifetime. |
 
@@ -110,16 +110,14 @@ full-title tooltip; the category appears in a right-aligned `UIBadge`, with a
 screen-reader category prefix. The body scrolls independently below it.
 
 The execution panel groups status and an icon-only refresh action in the header.
-Refresh queries the current server state. The panel observes service entry
-points and environment state; the terminal header owns connection and
-environment termination. Connecting prepares the environment automatically.
-Service entry points share one wrapping row. `UILink` preserves native navigation
-and shares button heights, padding, corners and interaction states. New-tab links
-show an external-link icon and expose their behavior in the accessible name.
+Refresh queries the current server state. The panel shows TCP addresses and the
+flag form; the terminal header owns connection and environment termination.
+Connecting prepares the environment automatically. HTTP entry points appear
+in the right-side web tool.
 The flag field and confirmation form are a separate group below a divider.
 File problems proceed directly to submission. Both form controls share the
 default height; narrow containers stack them at full width.
-Refresh retains the existing body, entry links, flag input and submission result
+Refresh retains the existing body, flag input and submission result
 while the header icon rotates inside its fixed box. The flag field remains
 editable; submitting and duplicate refresh requests wait for the observation.
 Reduced-motion preferences keep the refresh icon static. Failed observation
@@ -146,10 +144,41 @@ a progress indicator inside the same icon box, retaining the file row and
 button dimensions. The control remains named and busy, and repeated download
 requests remain disabled. Reduced-motion preferences use a static indicator.
 
-The wide layout places the problem list, reading/execution controls and terminal
-in adjacent columns. At 76rem the terminal follows the reading column; at 48rem
+The wide layout places the problem list, reading/execution controls and tool pane
+in adjacent columns. At 76rem the tool pane follows the reading column; at 48rem
 the list moves above the content and the full-width document scrolls vertically.
 The terminal frame constrains xterm independently of its measured row height.
+
+The tool pane defaults to Terminal. Files appears for declared distribution
+materials; Web appears once a published local HTTP entry point is observed and
+remains available for recovery after environment termination. `UITabs` owns
+Sectile keyboard navigation, linked tab/panel semantics, selected styling and
+inactive-panel exclusion. Panels stay mounted. Switching tools preserves the
+terminal attachment, source previews and each opened web document. It does not
+start the environment inactivity timer. Hidden browser pages and problem changes
+follow the existing terminal lifecycle.
+
+`ProblemDetail` loads metadata once and emits the detail to the app. The app
+passes declared files to `ProblemFiles` and observed run status to `ProblemWeb`;
+features remain independent. Terminal preparation and termination refresh status
+after an existing request finishes, so an early observation cannot hide a newly
+prepared web service. Hidden terminals keep their dimensions and do not take focus
+when an attachment finishes preparing.
+
+`ProblemWeb` selects runtime-published `http://127.0.0.1:<port>` endpoints.
+Documents load on first use, retain state when switching tools or endpoints, and
+reload only on an explicit web refresh. Environment termination or unknown state
+removes old frames. A restarted endpoint loads its new address. Multiple HTTP
+services have a labeled selector. The web header offers an icon-only reload and
+native new-tab link for browser developer tools. Neither action changes service
+state. `UILink` keeps `noopener noreferrer` on the new-tab link.
+
+The iframe loads the problem origin directly, with a title, no referrer and
+sandbox capabilities for scripts, origin-based storage, forms, dialogs, popups
+and downloads. Top-level navigation stays outside those capabilities. Platform
+credentials stay on the platform origin. Production and development share a
+`frame-src http://127.0.0.1:*` policy; the UI accepts only observed local entry
+points, and the platform retains `frame-ancestors 'none'`.
 
 JetBrains Mono and D2Coding WOFF2 files are bundled in the UI package, served
 from the same origin and embedded into the Go executable. Font sources and

@@ -20,7 +20,26 @@ A native package uses `./pwnden serve` from its unpacked directory. `serve` acce
 
 The server prints one private session URL such as `http://127.0.0.1:49152/#<token>`. Open the entire URL. The listener uses an available IPv4 loopback port. Its bearer token is regenerated for each process and must be kept private. The Vue entry point removes the fragment from the current history entry before rendering, retains the credential in origin-scoped tab `sessionStorage`, and injects it into the API client. Reloads and development HMR in the same tab keep the connection. A fresh full URL replaces the saved credential. An HTTP 401 or terminal authentication rejection clears that credential and presents connection recovery. An uninitialized tab also displays recovery; it does not claim the session has expired. When tab storage is disabled, the full URL works for that page and must be reopened after a reload. Credentials are never sent to a separate frontend origin or stored in cookies or `localStorage`.
 
-The root page serves the Vue player. Choose a problem, read its README description and download its declared distribution files. Service controls display observed run status: start a stopped service, open a published HTTP endpoint, submit a flag and stop it. File problems need no service startup. The [interactive terminal](terminal.md) automatically prepares the selected problem and connects its toolbox shell. Problem switching, refresh and hidden tabs retain the same shell and service state for ten inactive minutes. Returning cancels expiry. Up to ten problem environments are retained; the player explicitly ends one when capacity is reached. Shell exit removes the toolbox while a visible problem retains its services. Environment stop and normal server shutdown remove both. TCP endpoints are displayed as addresses for terminal tools. Answer checking remains in Go through the implemented [API](web-api.md). Progress history is a subsequent capability. HTML, JavaScript and CSS are embedded in the executable; serving them requires neither a separate asset directory nor Node. See [frontend](frontend.md) for build preparation.
+The root page serves the Vue player. Choose a problem and read its description,
+hints and walkthrough in the reading pane. Submit the discovered flag there.
+The right-side tool pane provides Terminal, Files for declared materials, and Web
+for published local HTTP services. Files supports source preview and optional
+download. Web shows the problem in an iframe and offers a new-tab link for browser
+developer tools. Switching tools retains the terminal, source and web state.
+
+The [interactive terminal](terminal.md) automatically prepares the selected
+problem and connects its toolbox shell. Its connection switch controls attachment;
+the power button immediately terminates the whole problem environment. Problem
+switching, page refresh and hidden browser tabs retain the same shell and service
+state for ten inactive minutes. Returning cancels expiry. Up to ten problem
+environments are retained; the player explicitly ends one when capacity is reached.
+Shell exit removes the toolbox while a visible problem retains its services.
+Environment stop and normal server shutdown remove both. TCP endpoints are
+displayed as addresses for terminal tools. Answer checking remains in Go through
+the implemented [API](web-api.md). Progress history is a subsequent capability.
+HTML, JavaScript and CSS are embedded in the executable; serving them requires
+neither a separate asset directory nor Node. See [frontend](frontend.md) for build
+preparation.
 
 API calls require `Authorization: Bearer <token>`. Their Host must match the printed authority. When present, Origin must exactly match the printed HTTP origin; browser fetch-site values allow `same-origin` or top-level `none`. Reads are authenticated too. The server provides no CORS access. Requests cannot choose a problem root, image, mount, or Docker option.
 
