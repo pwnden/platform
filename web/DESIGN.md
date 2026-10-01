@@ -211,7 +211,7 @@ Control color, border and shadow transitions take (140ms) with ease-out timing. 
 
 ## Shapes
 
-Controls have small, nearly square corners using `rounded.control`. Panels meet through straight borders. General status is text with semantic color; terminal connection status uses a meaningful plug symbol with an accessible state label. Section headings use a raised navy surface and a dividing stroke.
+Controls have small, nearly square corners using `rounded.control`. Panels meet through straight borders. General status is text with semantic color; terminal connection uses a rectangular switch with a square thumb and an accessible state label. Section headings use a raised navy surface and a dividing stroke.
 
 ## Components
 
@@ -231,7 +231,9 @@ Source: [UITextField.vue](packages/ui/src/UITextField.vue).
 
 Each panel is a semantic section with a labelled heading and optional actions. A lower heading border separates the content; the header has a minimum height of (3.5rem). `headingLevel` places catalog and terminal headings at level 2 and reading section headings at level 3 beneath the selected problem title. Brief, materials, execution and submission, hints and walkthrough share raised heading bands. Execution and submission precede the learning sections. Panels flex to fill available space while permitting their contents to shrink. The terminal panel uses the terminal background.
 
-Source: [UIPanel.vue](packages/ui/src/UIPanel.vue).
+The execution panel groups its current state and refresh action in the header. Refresh queries server state. Service actions occupy the body for service problems, while ready file problems begin directly with the submission form. The form receives a divider only when body content precedes it.
+
+Source: [UIPanel.vue](packages/ui/src/UIPanel.vue), [PlayPanel.vue](features/play/src/PlayPanel.vue).
 
 ### Navigation
 

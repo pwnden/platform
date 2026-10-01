@@ -73,6 +73,10 @@ callers use `disabled` when changes are unavailable. `UITerminalControls` uses i
 for terminal connection beside a visibly labeled environment-stop button.
 Features supply actual state and connection behavior.
 
+The execution panel groups status and its refresh action in the panel header.
+Refresh queries the current server state. Service controls occupy the body only
+for service problems; a ready file problem proceeds directly to flag submission.
+
 Shared interaction styles live in `packages/ui/src/theme.css`. Buttons, fields,
 links, disclosures, code scroll regions and split handles share focus tokens and
 140ms state transitions. Keyboard focus stays inside bounded controls; disclosure

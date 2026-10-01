@@ -60,14 +60,16 @@ defineExpose(handle);
 
 <template>
   <UIPanel title="실행 및 제출" headingID="play-heading" :heading-level="3" :aria-busy="pending" class="play-panel">
-    <template #actions><UIStatus :tone="status?.state === 'running' || status?.state === 'ready' ? 'info' : status?.state === 'unavailable' ? 'danger' : 'muted'">{{ status?.state === 'running' ? '실행 중' : status?.state === 'ready' ? '준비됨' : status?.state === 'stopped' ? '중지됨' : status?.state === 'unavailable' ? '확인 필요' : '상태 확인' }}</UIStatus></template>
+    <template #actions>
+      <UIStatus :tone="status?.state === 'running' || status?.state === 'ready' ? 'info' : status?.state === 'unavailable' ? 'danger' : 'muted'">{{ status?.state === 'running' ? '실행 중' : status?.state === 'ready' ? '준비됨' : status?.state === 'stopped' ? '중지됨' : status?.state === 'unavailable' ? '확인 필요' : '상태 확인' }}</UIStatus>
+      <UIButton variant="ghost" size="compact" :busy="pending" aria-label="실행 상태 새로고침" title="서버에서 현재 실행 상태 조회" @click="perform('status')">새로고침</UIButton>
+    </template>
     <p v-if="!status && !pending">실행 상태를 확인하지 못했습니다.</p>
     <p v-else-if="status?.state === 'stopped'">문제를 실행하면 접속할 수 있습니다.</p>
     <p v-else-if="status?.state === 'unavailable'" role="alert">서비스가 정상 실행 중이지 않습니다. 문제를 중지해 정리한 뒤 다시 실행하세요.</p>
-    <div class="actions">
-      <UIButton v-if="kind === 'service'" variant="primary" :disabled="pending || status?.state !== 'stopped'" @click="perform('run')">문제 실행</UIButton>
-      <UIButton v-if="kind === 'service'" variant="danger" :disabled="pending || status?.state === 'stopped'" @click="perform('stop')">문제 중지</UIButton>
-      <UIButton variant="ghost" size="compact" :disabled="pending" @click="perform('status')">실행 상태 새로고침</UIButton>
+    <div v-if="kind === 'service'" class="actions">
+      <UIButton variant="primary" :disabled="pending || status?.state !== 'stopped'" @click="perform('run')">문제 실행</UIButton>
+      <UIButton variant="danger" :disabled="pending || status?.state === 'stopped'" @click="perform('stop')">문제 중지</UIButton>
     </div>
     <p v-if="pending" role="status">요청을 처리하는 중…</p>
     <p v-if="message" :role="failed ? 'alert' : 'status'">{{ message }}</p>
@@ -90,7 +92,8 @@ defineExpose(handle);
 .play-panel :deep(.ui-panel-heading) { background: var(--ui-surface-raised); padding-inline: var(--ui-space-3); }
 p { color: var(--ui-muted); font-size: 0.9rem; margin-block: var(--ui-space-1); }
 p[role='alert'] { color: var(--ui-danger); }
-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: var(--ui-space-1); margin-top: var(--ui-space-3); padding-top: var(--ui-space-3); border-top: 1px solid var(--ui-border); }
+form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: var(--ui-space-1); }
+form:not(:first-child) { margin-top: var(--ui-space-3); padding-top: var(--ui-space-3); border-top: 1px solid var(--ui-border); }
 .ui-field { width: 100%; }
 .endpoints { padding-left: var(--ui-space-3); overflow-wrap: anywhere; }
 @container (max-width: 30rem) { form { grid-template-columns: minmax(0, 1fr); } form > .ui-button { justify-self: start; } }

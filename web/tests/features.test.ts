@@ -399,7 +399,14 @@ it('shows file problems without service controls', async () => {
   await settle();
   expect(text(root)).toContain('준비됨');
   expect(button(root, '문제 실행')).toBeUndefined();
+  const refresh = button(root, '실행 상태 새로고침');
+  expect(refresh.parent?.props.class).toBe('ui-panel-actions');
+  expect(text(refresh.parent!)).toContain('준비됨');
+  expect(flatten(root).some(item => item.props.class === 'actions')).toBe(false);
+  await click(refresh); await settle();
+  expect(player.status).toHaveBeenCalledTimes(2);
   expect(player.run).not.toHaveBeenCalled();
+  expect(player.stop).not.toHaveBeenCalled();
   renderer.render(null, root);
 });
 
