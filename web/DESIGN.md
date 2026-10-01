@@ -316,6 +316,8 @@ The Web tool groups back, forward and reload immediately to the left of its addr
 
 Source: [UIMarkdown.vue](packages/ui/src/UIMarkdown.vue), [markdown.ts](packages/ui/src/markdown.ts), [UICode.vue](packages/ui/src/UICode.vue), [syntax.ts](packages/ui/src/syntax.ts), [ProblemFiles.vue](features/catalog/src/ProblemFiles.vue), [ProblemWeb.vue](features/play/src/ProblemWeb.vue).
 
+The web address field shows the current path, query and fragment. Players enter paths directly; the platform supplies the problem origin. Unusable input restores the current path while preserving the displayed page.
+
 ## Do's and Don'ts
 
 ### Do:

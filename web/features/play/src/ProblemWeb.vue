@@ -39,14 +39,22 @@ async function prepare() {
   } finally { if (alive) delete pending[endpoint.url]; }
 }
 watch([() => props.active, selected, endpoints], () => { if (props.active) void prepare(); }, { immediate: true });
-watch(() => state.value?.url ?? current.value?.url ?? '', url => { address.value = url; }, { immediate: true });
+function pagePath(url: URL) { return url.pathname + url.search + url.hash; }
+watch(() => state.value?.url ?? current.value?.url ?? '', url => { address.value = url ? pagePath(new URL(url)) : ''; }, { immediate: true });
 function navigate() {
+  const page = state.value?.url ?? current.value?.url;
+  if (!page) return;
+  const previous = new URL(page);
+  const input = address.value.trim();
+  address.value = pagePath(previous);
+  if (!input) return;
   try {
-    const url = new URL(address.value, current.value?.url);
+    const url = new URL(input, previous);
     if (url.origin !== new URL(current.value?.url ?? '').origin || url.username || url.password) throw new Error('outside target');
     delete errors[selected.value];
+    address.value = pagePath(url);
     frames[selected.value]?.navigate(url.href);
-  } catch { errors[selected.value] = '현재 문제 사이트 안의 주소를 입력하세요.'; }
+  } catch { /* Keep the current page and restore its path when input cannot be used. */ }
 }
 function reload() {
   delete errors[selected.value];
@@ -73,7 +81,7 @@ defineExpose(handle);
         <UIIconButton label="앞으로 가기" icon="forward" :disabled="!handle.canForward || handle.busy" @click="handle.forward()" />
         <UIIconButton label="문제 웹 새로고침" icon="refresh" :busy="handle.busy" :disabled="!handle.canReload" @click="reload" />
       </div>
-      <UITextField id="web-address" label="문제 웹 주소" label-hidden size="compact" v-model="address" :disabled="!sessions[selected]" />
+      <UITextField id="web-address" label="문제 웹 경로" label-hidden size="compact" v-model="address" :disabled="!sessions[selected]" />
     </form>
     <p v-if="errors[selected] || state?.error" role="alert">{{ errors[selected] || state?.error }}</p>
     <div v-if="current" class="web-viewport" :aria-busy="!!pending[selected]">

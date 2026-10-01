@@ -19,3 +19,5 @@ Derive it from declared HTTP endpoints using the existing problem declarations.
 Keep current-page reload, browser history and address editing together in the
 shared web tool's address bar. Compose terminal refresh, file download and the
 web new-tab action in the common tab strip with shared controls.
+The web address field displays page paths and resolves input within the current
+problem origin. Unusable input restores the current page path without navigation.

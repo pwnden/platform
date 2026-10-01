@@ -237,6 +237,47 @@ it('retains multiple web documents and reloads only the explicitly selected one'
   renderer.render(null, root);
 });
 
+it('resolves web paths within the current problem and restores unusable input without navigation', async () => {
+  const origin = 'http://127.0.0.1:43123';
+  const status: RunStatus = { slug: 'test', kind: 'service', state: 'running', endpoints: [{ name: 'web', url: origin }] };
+  const player: Player = { browser: vi.fn(async () => browserSession(origin)), status: vi.fn(), run: vi.fn(), stop: vi.fn(), submit: vi.fn() };
+  const root = node('root');
+  renderer.render(h(ProblemWeb, { player, slug: 'test', status, active: true }), root); await settle();
+  const frame = flatten(root).find(item => item.type === 'iframe')!;
+  const field = () => flatten(root).find(item => item.props.id === 'web-address')!;
+  const form = flatten(root).find(item => item.type === 'form')!;
+  const submit = async (input: string) => {
+    (field().props['onUpdate:modelValue'] as (value: string) => void)(input);
+    (form.props.onSubmit as (event: { preventDefault(): void }) => void)({ preventDefault() {} });
+    await settle();
+  };
+  expect(field().props.modelValue).toBe('/');
+  (frame.props.onWebNavigation as (state: unknown) => void)({ url: origin + '/notes/view?id=2', canBack: true, canForward: false, busy: false, error: '' });
+  await settle();
+  expect(field().props.modelValue).toBe('/notes/view?id=2');
+  for (const [input, path] of [
+    [' /notes?id=3 ', '/notes?id=3'], ['?id=4', '/notes/view?id=4'],
+    ['#entry', '/notes/view?id=2#entry'], ['../login', '/login'],
+    [origin + '/notes?id=5', '/notes?id=5'],
+  ]) {
+    await submit(input!);
+    expect(frame.props.navigate).toHaveBeenLastCalledWith(origin + path);
+    expect(field().props.modelValue).toBe(path);
+  }
+  const navigation = frame.props.navigate as ReturnType<typeof vi.fn>;
+  navigation.mockClear();
+  for (const input of ['', ' ', 'https://example.com/notes', '//example.com/notes',
+    'http://127.0.0.1:43124/notes', 'javascript:alert(1)', 'http://[invalid',
+    'http://user:password@127.0.0.1:43123/notes']) {
+    await submit(input);
+    expect(navigation).not.toHaveBeenCalled();
+    expect(field().props.modelValue).toBe('/notes/view?id=2');
+    expect(flatten(root).some(item => item.props.role === 'alert')).toBe(false);
+  }
+  expect(flatten(root).find(item => item.type === 'iframe')).toBe(frame);
+  renderer.render(null, root);
+});
+
 it('prepares web lazily, retries once and ignores a response for a removed endpoint', async () => {
   const state: RunStatus = { slug: 'test', kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:43123' }] };
   let resolve: (value: { url: string; target: string }) => void = () => {};

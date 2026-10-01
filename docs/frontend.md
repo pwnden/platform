@@ -171,8 +171,11 @@ reload only on an explicit web refresh. Environment termination or unknown state
 removes old frames. A restarted endpoint loads its new address. Multiple HTTP
 services have a labeled selector. Back, forward and reload sit to the left of the
 accessible address field, in one row with equal compact control heights. The field
-shrinks to fit narrower panes and edits paths and query strings within the selected
-problem origin. The common tab strip offers a native new-tab link for browser
+shrinks to fit narrower panes and displays only the page path, query and fragment.
+Entered paths resolve against the current page; the platform supplies the problem
+origin. Same-origin full URLs are accepted and displayed as paths. Empty, invalid
+or other-origin input restores the current path and keeps the current page.
+The common tab strip offers a native new-tab link for browser
 developer tools.
 Reload refreshes the current page and retains its history. These actions preserve
 service state. `UILink` keeps `noopener noreferrer` on the new-tab link.
