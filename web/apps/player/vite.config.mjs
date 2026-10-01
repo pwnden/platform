@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig, searchForWorkspaceRoot } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import fontLicenses from '@pwnden/ui/licenses' with { type: 'json' };
 
@@ -16,6 +16,14 @@ export default defineConfig({
     forwardConsole: false,
   },
   plugins: [vue(), {
+    name: 'workspace-source-watch',
+    configureServer(server) {
+      // Type-only SFC dependencies do not enter Vite's runtime module graph.
+      // Watch their workspace directories so Vue can invalidate its type cache.
+      const workspaceRoot = searchForWorkspaceRoot(server.config.root);
+      server.watcher.add(['domains', 'features', 'packages'].map(name => `${workspaceRoot}/${name}`));
+    },
+  }, {
     name: 'player-style-nonce',
     'transformIndexHtml'() {
       return styleNonce ? [{ tag: 'meta', attrs: { name: 'pwnden-style-nonce', content: styleNonce }, injectTo: 'head' }] : [];
