@@ -2,7 +2,7 @@
 import { ref } from 'vue';
 import type { APIClient } from '@pwnden/api';
 import type { Problem } from '@pwnden/catalog';
-import { ProblemDetail, ProblemList } from '@pwnden/catalog-feature';
+import { ProblemDetail, ProblemList, categoryLabel } from '@pwnden/catalog-feature';
 import { PlayPanel } from '@pwnden/play-feature';
 import type { PlayPanelHandle } from '@pwnden/play-feature';
 import { TerminalPanel } from '@pwnden/terminal-feature';
@@ -27,8 +27,7 @@ function select(problem: Problem) {
 <template>
   <main class="player-shell">
     <header class="app-header">
-      <h1><span class="brand-prompt" aria-hidden="true">&gt;_</span> pwnden<span class="brand-cursor" aria-hidden="true" /></h1>
-      <span class="workspace-label">문제 풀이 작업 공간</span>
+      <h1>pwnden</h1>
       <UIStatus :tone="client ? 'info' : 'danger'">{{ client ? '로컬 세션' : '세션 없음' }}</UIStatus>
     </header>
     <div v-if="!client" class="session-error">
@@ -40,49 +39,58 @@ function select(problem: Problem) {
       <template #after>
         <UISplit v-if="selected" :key="selected.slug" v-model="briefingWidth" class="selected-problem" label="설명과 터미널 너비" :min="30" :max="70">
           <template #before><div class="briefing">
-            <ProblemDetail :catalog="client.catalog" :slug="selected.slug" :title="selected.title" />
-            <PlayPanel ref="play" :player="client.player" :slug="selected.slug" :kind="selected.kind" @busy="busy = $event" @status="terminalEnabled = $event?.state === 'ready' || $event?.state === 'running'; terminalStartAvailable = $event?.state === 'stopped'" />
+            <header class="problem-header">
+              <h2 id="problem-heading">{{ selected.title }}</h2>
+              <p>분야: {{ categoryLabel(selected.category) }}</p>
+            </header>
+            <div class="briefing-scroll" tabindex="0" role="region" aria-labelledby="problem-heading">
+              <ProblemDetail :catalog="client.catalog" :slug="selected.slug">
+                <template #play>
+                  <PlayPanel ref="play" :player="client.player" :slug="selected.slug" :kind="selected.kind" @busy="busy = $event" @status="terminalEnabled = $event?.state === 'ready' || $event?.state === 'running'; terminalStartAvailable = $event?.state === 'stopped'" />
+                </template>
+              </ProblemDetail>
+            </div>
           </div></template>
           <template #after><TerminalPanel class="terminal-pane" :terminals="client.terminals" :slug="selected.slug" :enabled="terminalEnabled" :busy="busy" :prepare="terminalStartAvailable ? prepareTerminal : undefined" /></template>
         </UISplit>
         <div v-else class="workspace-empty">
         <div class="empty-content">
-          <div class="empty-prompt" aria-hidden="true">pwnden<span>:~$</span><span class="empty-cursor" /></div>
-          <h2>어떤 문제부터 풀어볼까?</h2>
-          <p>문제 목록에서 문제를 선택하세요.<br />설명과 파일을 확인하고, 풀이 터미널에서 시작할 수 있습니다.</p>
-          <div class="empty-workflow" aria-label="문제 풀이 순서"><span>문제 선택</span><span aria-hidden="true">/</span><span>분석 · 실행</span><span aria-hidden="true">/</span><span>플래그 제출</span></div>
+          <h2>풀어볼 문제를 선택하세요.</h2>
+          <p>문제 이름을 검색하거나 분야별로 찾아볼 수 있습니다.</p>
         </div>
         </div>
       </template>
     </UISplit>
-    <footer class="app-footer"><span>{{ selected ? selected.slug : '문제 선택 대기' }}</span><span>{{ busy ? '요청 처리 중' : 'pwnden / local workspace' }}</span></footer>
   </main>
 </template>
 
 <style scoped>
-.player-shell { width: 100%; height: 100dvh; min-height: 38rem; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
-.app-header { min-height: 4rem; padding: 0.7rem var(--ui-space-3); display: flex; align-items: center; gap: var(--ui-space-4); border-bottom: 1px solid var(--ui-border); background: var(--ui-surface); }
-h1 { display: flex; align-items: center; gap: 0.65rem; font-size: 1.3rem; color: var(--ui-accent); }
-.brand-prompt { color: var(--ui-muted); font-size: 1rem; }
-.brand-cursor { width: 0.5rem; height: 1.25rem; background: var(--ui-accent); opacity: 0.7; box-shadow: var(--ui-glow); }
-.workspace-label { flex: 1; color: var(--ui-muted); font-size: 0.85rem; }
+.player-shell { width: 100%; height: 100dvh; display: grid; grid-template-rows: auto minmax(0, 1fr); }
+.app-header { min-height: 3.75rem; padding: 0.7rem var(--ui-space-3); display: flex; align-items: center; justify-content: space-between; gap: var(--ui-space-2); border-bottom: 1px solid var(--ui-border); background: var(--ui-surface); }
+h1 { font-family: var(--ui-font-mono); font-size: 1.2rem; font-weight: 500; color: var(--ui-accent); }
 .workspace { min-height: 0; }
-.catalog { height: 100%; min-width: 0; min-height: 0; overflow: auto; background: var(--ui-surface); }
+.catalog { height: 100%; min-width: 0; min-height: 0; overflow: hidden; background: var(--ui-surface); }
 .selected-problem { min-width: 0; min-height: 0; }
-.briefing { height: 100%; min-width: 0; min-height: 0; overflow: auto; }
+.briefing { height: 100%; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.problem-header { flex: none; padding: var(--ui-space-3); border-bottom: 1px solid var(--ui-border-active); background: var(--ui-surface); }
+.problem-header h2 { font-size: 1.5rem; line-height: 1.35; overflow-wrap: anywhere; text-wrap: pretty; }
+.problem-header p { margin-top: var(--ui-space-1); color: var(--ui-muted); font-size: 0.85rem; }
+.briefing-scroll { flex: 1; min-height: 0; min-width: 0; overflow: auto; }
 .terminal-pane { min-height: 0; }
 .workspace-empty { height: 100%; min-width: 0; display: grid; align-items: center; justify-items: center; padding: var(--ui-space-4); }
 .empty-content { width: min(100%, 42rem); }
-.empty-prompt { margin-bottom: 2.5rem; color: var(--ui-accent); font-size: clamp(1.8rem, 3vw, 3rem); }
-.empty-prompt > span:first-child { color: var(--ui-muted); }
-.empty-cursor { display: inline-block; width: 0.55em; height: 1em; margin-left: 0.5em; vertical-align: -0.15em; background: var(--ui-accent); box-shadow: var(--ui-glow); animation: cursor-pulse 1.6s ease-in-out infinite; }
 .workspace-empty h2 { margin-bottom: 0.8rem; font-size: 1.35rem; }
 .workspace-empty p { color: var(--ui-muted); line-height: 1.9; }
-.empty-workflow { margin-top: 2.5rem; display: flex; flex-wrap: wrap; gap: 0.8rem; color: var(--ui-muted); font-size: 0.85rem; }
-.empty-workflow > span:nth-child(even) { color: var(--ui-border-active); }
-.app-footer { min-width: 0; padding: 0.4rem var(--ui-space-3); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; border-top: 1px solid var(--ui-border); color: var(--ui-muted); background: var(--ui-surface); font-size: 0.75rem; overflow-wrap: anywhere; }
 .session-error { display: grid; align-content: center; justify-items: center; gap: 1rem; padding: var(--ui-space-3); }
 .session-error h2 { font-size: 1.25rem; }
-@keyframes cursor-pulse { 0%, 100% { opacity: 0.8; } 50% { opacity: 0.3; } }
-@media (max-width: 48rem) { .player-shell { height: auto; min-height: 100dvh; grid-template-rows: auto 1fr auto; } .app-header { padding-inline: var(--ui-space-2); gap: var(--ui-space-2); } .workspace-label { display: none; } .app-header :deep(.ui-status) { margin-left: auto; } .catalog { height: auto; border-bottom: 1px solid var(--ui-border); max-height: 18rem; } .briefing { height: auto; overflow: visible; border-bottom: 1px solid var(--ui-border); } .terminal-pane { min-height: 32rem; } .workspace-empty { min-height: 25rem; padding: var(--ui-space-3); } .app-footer { padding-inline: var(--ui-space-2); } }
+@media (max-width: 48rem) {
+  .player-shell { height: auto; min-height: 100dvh; grid-template-rows: auto 1fr; }
+  .app-header { padding-inline: var(--ui-space-2); }
+  .catalog { height: 30rem; border-bottom: 1px solid var(--ui-border); }
+  .briefing { height: auto; border-bottom: 1px solid var(--ui-border); }
+  .problem-header { position: sticky; top: 0; z-index: 2; padding: var(--ui-space-2); }
+  .briefing-scroll { overflow: visible; }
+  .terminal-pane { min-height: 32rem; }
+  .workspace-empty { min-height: 25rem; padding: var(--ui-space-3); }
+}
 </style>

@@ -3,7 +3,7 @@ import { onMounted, onUnmounted, ref } from 'vue';
 import type { Catalog, ProblemDetail, ProblemFile } from '@pwnden/catalog';
 import { UIButton, UIPanel, UIMarkdown, UIReveal, UICode } from '@pwnden/ui';
 
-const props = defineProps<{ catalog: Catalog; slug: string; title: string }>();
+const props = defineProps<{ catalog: Catalog; slug: string }>();
 const detail = ref<ProblemDetail>();
 const pending = ref(false);
 const failed = ref(false);
@@ -88,18 +88,19 @@ onMounted(load);
 </script>
 
 <template>
-  <UIPanel :title="title" headingID="detail-heading" :aria-busy="pending" class="detail-panel">
+  <div :aria-busy="pending" class="detail-panel">
     <p v-if="pending" role="status">문제 설명과 파일을 불러오는 중…</p>
     <div v-if="failed" role="alert">
       <p>문제 설명과 파일을 불러오지 못했습니다. 서버 연결을 확인하고 다시 시도하세요.</p>
       <UIButton :disabled="pending" @click="load">상세 다시 불러오기</UIButton>
     </div>
     <template v-else-if="detail">
-      <UIMarkdown v-if="detail.description" :source="detail.description" :heading-offset="1" />
-      <p v-else>등록된 문제 설명이 없습니다.</p>
-      <h3 v-if="detail.files.length">분석 자료</h3>
-      <p v-if="detail.files.length" class="reading-help">자료를 여기서 읽거나 오른쪽 터미널에서 분석하세요. 다운로드는 선택 사항입니다.</p>
-      <ul v-if="detail.files.length" class="files">
+      <UIPanel title="문제 설명" headingID="detail-heading" :heading-level="3" class="content-section">
+        <UIMarkdown v-if="detail.description" :source="detail.description" :heading-offset="2" />
+        <p v-else>등록된 문제 설명이 없습니다.</p>
+      </UIPanel>
+      <UIPanel v-if="detail.files.length" title="분석 자료" headingID="materials-heading" :heading-level="3" class="content-section">
+      <ul class="files">
         <li v-for="file in detail.files" :key="file.id">
           <div class="file-reading">
             <UIReveal :label="`자료 열기 · ${file.name}`" :model-value="reading(file.id).open" @update:model-value="open => reveal(file.id, open, file)">
@@ -119,9 +120,11 @@ onMounted(load);
         </li>
       </ul>
       <p v-if="downloadFailed" role="alert">파일을 다운로드하지 못했습니다. 서버 연결을 확인하고 다시 시도하세요.</p>
-      <section v-if="detail.hintCount" aria-labelledby="hints-heading">
-        <h3 id="hints-heading">막혔을 때</h3>
-        <p class="reading-help">앞쪽 힌트는 방향을, 뒤쪽 힌트는 더 구체적인 단서를 제공합니다. 필요한 만큼만 열어 보세요.</p>
+      </UIPanel>
+    </template>
+    <slot name="play" />
+    <template v-if="detail">
+      <UIPanel v-if="detail.hintCount" title="힌트" headingID="hints-heading" :heading-level="3" class="content-section">
         <UIReveal v-for="n in detail.hintCount" :key="n" :label="`힌트 ${n}`" :model-value="reading(`hint-${n}`).open" @update:model-value="open => reveal(`hint-${n}`, open)">
           <p v-if="reading(`hint-${n}`).pending" role="status">힌트를 불러오는 중…</p>
           <UIMarkdown v-if="reading(`hint-${n}`).content" :source="reading(`hint-${n}`).content!" :heading-offset="2" />
@@ -130,10 +133,8 @@ onMounted(load);
             <UIButton size="compact" @click="reveal(`hint-${n}`, true)">힌트 다시 불러오기</UIButton>
           </div>
         </UIReveal>
-      </section>
-      <section v-if="detail.walkthrough" aria-labelledby="walkthrough-heading">
-        <h3 id="walkthrough-heading">풀이 돌아보기</h3>
-        <p class="reading-help">해설에는 정답에 도달하는 과정과 핵심 원리가 포함됩니다.</p>
+      </UIPanel>
+      <UIPanel v-if="detail.walkthrough" title="해설" headingID="walkthrough-heading" :heading-level="3" class="content-section">
         <UIReveal label="해설 보기 · 정답 포함" :model-value="reading('walkthrough').open" @update:model-value="open => reveal('walkthrough', open)">
           <p v-if="reading('walkthrough').pending" role="status">해설을 불러오는 중…</p>
           <UIMarkdown v-if="reading('walkthrough').content" :source="reading('walkthrough').content!" :heading-offset="2" />
@@ -142,20 +143,21 @@ onMounted(load);
             <UIButton size="compact" @click="reveal('walkthrough', true)">해설 다시 불러오기</UIButton>
           </div>
         </UIReveal>
-      </section>
+      </UIPanel>
     </template>
-  </UIPanel>
+  </div>
 </template>
 
 <style scoped>
-.detail-panel { border-bottom: 1px solid var(--ui-border); }
-.detail-panel :deep(h2) { font-size: 1.2rem; color: var(--ui-foreground); }
-h3 { margin: var(--ui-space-3) 0 var(--ui-space-1); color: var(--ui-muted); font-size: 0.85rem; }
-h3:first-child { margin-top: 0; }
+.detail-panel { min-width: 0; }
+.detail-panel > p, .detail-panel > [role='alert'] { padding: var(--ui-space-3); }
+.content-section { border-bottom: 1px solid var(--ui-border); }
+.content-section :deep(.ui-panel-heading) { background: var(--ui-surface-raised); padding-inline: var(--ui-space-3); }
+.content-section :deep(.ui-reveal:first-child) { border-top: 0; }
 .files { list-style: none; padding: 0; margin: 0; }
 .files li { padding-block: var(--ui-space-1); }
 .file-reading { min-width: 0; margin-bottom: var(--ui-space-1); }
 .file-reading :deep(summary) { overflow-wrap: anywhere; }
-.reading-help { color: var(--ui-muted); font-size: 0.85rem; }
 small { color: var(--ui-muted); }
+@media (max-width: 48rem) { .content-section :deep(.ui-panel-heading) { padding-inline: var(--ui-space-2); } }
 </style>

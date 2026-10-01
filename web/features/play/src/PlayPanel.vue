@@ -62,12 +62,10 @@ defineExpose(handle);
 </script>
 
 <template>
-  <UIPanel title="플래그 제출" headingID="play-heading" :aria-busy="pending" class="play-panel">
+  <UIPanel title="실행 및 제출" headingID="play-heading" :heading-level="3" :aria-busy="pending" class="play-panel">
     <template #actions><UIStatus :tone="status?.state === 'running' || status?.state === 'ready' ? 'info' : status?.state === 'unavailable' ? 'danger' : 'muted'">{{ status?.state === 'running' ? '실행 중' : status?.state === 'ready' ? '준비됨' : status?.state === 'stopped' ? '중지됨' : status?.state === 'unavailable' ? '확인 필요' : '상태 확인' }}</UIStatus></template>
     <p v-if="!status && !pending">실행 상태를 확인하지 못했습니다.</p>
-    <p v-else-if="status?.state === 'ready'">자료를 읽고 필요하면 터미널을 연결하세요. 서비스 실행 없이 찾은 플래그를 제출할 수 있습니다.</p>
     <p v-else-if="status?.state === 'stopped'">문제를 실행하면 접속할 수 있습니다.</p>
-    <p v-else-if="status?.state === 'running'">아래에서 문제를 열고, 찾은 플래그를 여기에 제출하세요.</p>
     <p v-else-if="status?.state === 'unavailable'" role="alert">서비스가 정상 실행 중이지 않습니다. 문제를 중지해 정리한 뒤 다시 실행하세요.</p>
     <div class="actions">
       <UIButton v-if="kind === 'service'" variant="primary" :disabled="pending || status?.state !== 'stopped'" @click="perform('run')">문제 실행</UIButton>
@@ -83,7 +81,7 @@ defineExpose(handle);
       </li>
     </ul>
     <form @submit.prevent="perform('submit')">
-      <UITextField id="flag" v-model="flag" label="플래그" placeholder="찾은 플래그를 입력하세요" :disabled="pending" required />
+      <UITextField id="flag" v-model="flag" label="플래그 제출" placeholder="찾은 플래그를 입력하세요" :disabled="pending" required />
       <UIButton variant="primary" type="submit" :disabled="pending || !flag.trim() || !status || (status.state !== 'ready' && status.state !== 'running')">정답 확인</UIButton>
     </form>
   </UIPanel>
@@ -91,11 +89,13 @@ defineExpose(handle);
 
 <style scoped>
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-space-1); margin-block: var(--ui-space-2); }
-.play-panel { container-type: inline-size; }
+.play-panel { container-type: inline-size; border-bottom: 1px solid var(--ui-border); }
+.play-panel :deep(.ui-panel-heading) { background: var(--ui-surface-raised); padding-inline: var(--ui-space-3); }
 p { color: var(--ui-muted); font-size: 0.9rem; margin-block: var(--ui-space-1); }
 p[role='alert'] { color: var(--ui-danger); }
 form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: var(--ui-space-1); margin-top: var(--ui-space-3); padding-top: var(--ui-space-3); border-top: 1px solid var(--ui-border); }
 .ui-field { width: 100%; }
 .endpoints { padding-left: var(--ui-space-3); overflow-wrap: anywhere; }
 @container (max-width: 30rem) { form { grid-template-columns: minmax(0, 1fr); } form > .ui-button { justify-self: start; } }
+@media (max-width: 48rem) { .play-panel :deep(.ui-panel-heading) { padding-inline: var(--ui-space-2); } }
 </style>

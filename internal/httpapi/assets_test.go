@@ -56,8 +56,8 @@ func TestEmbeddedPlayerAssets(t *testing.T) {
 		}
 		if strings.HasSuffix(path, ".css") {
 			fonts := regexp.MustCompile(`url\((/assets/[^)]+\.woff2)\)`).FindAllStringSubmatch(content, -1)
-			if len(fonts) != 3 {
-				t.Fatal("the player must bundle its Latin and Korean monospace fonts")
+			if len(fonts) != 4 {
+				t.Fatal("the player must bundle its Pretendard body and Latin/Korean monospace fonts")
 			}
 			for _, font := range fonts {
 				w := get("GET", font[1])
@@ -71,7 +71,7 @@ func TestEmbeddedPlayerAssets(t *testing.T) {
 			t.Fatal("invalid HEAD response")
 		}
 	}
-	for _, name := range []string{"JetBrainsMono", "D2Coding"} {
+	for _, name := range []string{"JetBrainsMono", "D2Coding", "Pretendard"} {
 		w := get("GET", "/assets/licenses/"+name+"-OFL.txt")
 		if w.Code != 200 || !strings.Contains(w.Body.String(), "SIL OPEN FONT LICENSE") {
 			t.Fatalf("missing distributed font license: %s", name)

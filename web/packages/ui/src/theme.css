@@ -1,6 +1,13 @@
 @import '@xterm/xterm/css/xterm.css';
 
 @font-face {
+  font-family: 'Pretendard';
+  src: url('./fonts/PretendardVariable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
   font-family: 'JetBrains Mono';
   src: url('./fonts/JetBrainsMono-Regular.woff2') format('woff2');
   font-weight: 400;
@@ -36,14 +43,15 @@
   --ui-terminal-background: #050a12;
   --ui-terminal-selection: #234367;
   --ui-font-mono: 'JetBrains Mono', 'D2Coding', monospace;
+  --ui-font-body: 'Pretendard', system-ui, sans-serif;
   --ui-space-1: 0.5rem;
   --ui-space-2: 1rem;
   --ui-space-3: 1.5rem;
   --ui-space-4: 2rem;
   --ui-radius: 0.1875rem;
   --ui-glow: 0 0 18px #54b5ff1c;
-  font-family: var(--ui-font-mono);
-  font-size: 14px;
+  font-family: var(--ui-font-body);
+  font-size: 15px;
   font-variant-ligatures: none;
   font-variant-numeric: tabular-nums;
   color: var(--ui-foreground);
@@ -56,10 +64,10 @@
 
 * { box-sizing: border-box; scrollbar-width: thin; scrollbar-color: var(--ui-border-active) var(--ui-background); }
 html, body, #app { min-width: 320px; min-height: 100%; margin: 0; }
-button, input, pre, code { font: inherit; }
-button, input { letter-spacing: inherit; }
+button, input, select { font: inherit; letter-spacing: inherit; }
+pre, code { font-family: var(--ui-font-mono); font-size: 0.9em; }
 h1, h2, h3, p { margin: 0; }
-h1, h2, h3 { font-weight: 500; text-wrap: balance; }
+h1, h2, h3 { font-weight: 600; text-wrap: balance; }
 a { color: var(--ui-accent); text-underline-offset: 0.25em; overflow-wrap: anywhere; }
 ::selection { color: var(--ui-foreground); background: var(--ui-terminal-selection); }
 :focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 3px; }

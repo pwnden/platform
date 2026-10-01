@@ -22,28 +22,63 @@ colors:
   terminal-bright-white: "#f1f6ff"
 typography:
   display:
-    fontFamily: "'JetBrains Mono', 'D2Coding', monospace"
-    fontSize: "clamp(1.8rem, 3vw, 3rem)"
-    fontWeight: 400
+    fontFamily: "'Pretendard', system-ui, sans-serif"
+    fontSize: "1.35rem"
+    fontWeight: 600
     lineHeight: 1.65
   headline:
+    fontFamily: "'Pretendard', system-ui, sans-serif"
+    fontSize: "1.5rem"
+    fontWeight: 600
+    lineHeight: 1.65
+  title:
+    fontFamily: "'Pretendard', system-ui, sans-serif"
+    fontSize: "1rem"
+    fontWeight: 600
+    lineHeight: 1.65
+  body:
+    fontFamily: "'Pretendard', system-ui, sans-serif"
+    fontSize: "15px"
+    fontWeight: 400
+    lineHeight: 1.65
+  label:
+    fontFamily: "'Pretendard', system-ui, sans-serif"
+    fontSize: "0.85rem"
+    fontWeight: 400
+    lineHeight: 1.65
+  status:
+    fontFamily: "'Pretendard', system-ui, sans-serif"
+    fontSize: "0.8rem"
+    fontWeight: 400
+    lineHeight: 1.65
+  footnote:
+    fontFamily: "'Pretendard', system-ui, sans-serif"
+    fontSize: "0.75rem"
+    fontWeight: 400
+    lineHeight: 1.65
+  content-heading:
+    fontFamily: "'Pretendard', system-ui, sans-serif"
+    fontSize: "1.05rem"
+    fontWeight: 600
+    lineHeight: 1.5
+  brand:
     fontFamily: "'JetBrains Mono', 'D2Coding', monospace"
     fontSize: "1.2rem"
     fontWeight: 500
     lineHeight: 1.65
-  title:
+  recovery:
+    fontFamily: "'Pretendard', system-ui, sans-serif"
+    fontSize: "1.25rem"
+    fontWeight: 600
+    lineHeight: 1.65
+  code:
     fontFamily: "'JetBrains Mono', 'D2Coding', monospace"
     fontSize: "0.9rem"
-    fontWeight: 500
-    lineHeight: 1.65
-  body:
-    fontFamily: "'JetBrains Mono', 'D2Coding', monospace"
-    fontSize: "14px"
     fontWeight: 400
-    lineHeight: 1.65
-  label:
-    fontFamily: "'JetBrains Mono', 'D2Coding', monospace"
-    fontSize: "0.85rem"
+    lineHeight: 1.6
+  mobile-input:
+    fontFamily: "'Pretendard', system-ui, sans-serif"
+    fontSize: "16px"
     fontWeight: 400
     lineHeight: 1.65
 rounded:
@@ -107,12 +142,12 @@ components:
 
 **Creative North Star: "Hacker Terminal Workspace"**
 
-Blue-tinted black surfaces, restrained blue light and monospace text give the player a working terminal character. Dense controls and readable Korean labels support extended challenge sessions. The workspace fills the browser viewport, with reading and execution surfaces divided by thin borders.
+Blue-tinted black surfaces and restrained blue light give the player a working terminal character. Pretendard makes problem text and controls readable during extended challenge sessions. Code and terminal text retain monospace typography. The workspace fills the browser viewport, with reading and execution surfaces divided by thin borders.
 
 **Key Characteristics:**
 
 - Subtly luminous dark blue on blue-tinted black.
-- One monospace stack for Latin, Korean and terminal output.
+- Pretendard for body text and controls; bundled monospace for code, terminal output and the brand.
 - Full-width workspace with compact framing and bounded terminal geometry.
 - State expressed through labels, tonal changes and visible keyboard focus.
 
@@ -143,35 +178,37 @@ Semantic success, warning and danger colors support status and terminal output. 
 
 ## Typography
 
-**Font stack:** JetBrains Mono, D2Coding, monospace. Bundled JetBrains Mono supplies Latin glyphs; D2Coding supplies Korean glyphs. Both are served locally with `font-display: swap`; license files and source revisions are recorded in [fonts/README.md](packages/ui/src/fonts/README.md).
+**Body font stack:** Pretendard, system-ui, sans-serif. Pretendard Variable 1.3.9 supports the body, headings and controls. **Code stack:** JetBrains Mono, D2Coding, monospace. All fonts are bundled and served locally with `font-display: swap`; license files and source revisions are recorded in [fonts/README.md](packages/ui/src/fonts/README.md).
 
-The frontmatter's display role is the empty workspace prompt; headline is the problem title; title is the shared panel heading. Body sets the root scale, and label covers field and supporting labels. Smaller status and footnote text use the same stack. Headings and problem titles use medium weight. Numeric text uses tabular figures; ligatures are disabled.
+The display role is the empty workspace heading; headline is the selected problem title; title is the shared section heading. Body sets the root scale at (15px), and label covers fields and categories. Status and footnote roles carry secondary state. Headings use weight (600); body uses (400). Numeric text uses tabular figures; ligatures are disabled.
 
-Problem descriptions render Markdown, wrap at word boundaries, use a reading measure of (75ch) and line height of (1.85). Korean words stay together; controls keep whole labels and wrap as units. Code preserves literal whitespace inside a scrollable block. The real terminal uses (14px) type and line height of (1.4). Text inputs use (16px) at the narrow layout breakpoint.
+Problem descriptions render Markdown, wrap at word boundaries, use a reading measure of (72ch) and line height of (1.85). Korean words stay together; controls keep whole labels and wrap as units. Code preserves literal whitespace inside a scrollable block. The real terminal uses (14px) monospace type and line height of (1.4). Text inputs use (16px) at the narrow layout breakpoint.
 
-**The Shared Glyph Rule.** Keep Latin and Korean content in the bundled monospace stack, including controls and terminal output.
+**The Reading Rule.** Body text, headings and controls use Pretendard. Code, terminal output and the brand use the monospace stack.
 
 ## Layout
 
-The player occupies (100dvh), with a minimum height of (38rem), between a compact header and footer. Two nested `UISplit` controls divide the catalog, reading and terminal columns. The catalog starts at (20%) of the workspace and adjusts between (14%) and (36%). Reading starts at (50%) of the remaining width and adjusts between (30%) and (70%). Both boundaries support pointer dragging and keyboard arrows through Sectile separator semantics. Sidebar and reading content scroll within their bounds. Column changes preserve the selected problem and terminal session.
+The player occupies (100dvh) beneath a compact brand header. Two nested `UISplit` controls divide the catalog, reading and terminal columns. The catalog starts at (20%) of the workspace and adjusts between (14%) and (36%). Reading starts at (50%) of the remaining width and adjusts between (30%) and (70%). Both boundaries support pointer dragging and keyboard arrows through Sectile separator semantics. The catalog header, search and category controls stay outside the scrolling results. The selected problem title and category stay outside the independently scrolling body. Column changes preserve the selected problem and terminal session.
 
-At (48rem), panes stack in reading order and the resize handles are hidden. The sidebar has a maximum height of (18rem), the terminal a minimum height of (32rem), and the page uses document scrolling. Panel padding changes from `ui-space-3` to `ui-space-2`. The flag field and submit button stack when their own panel is narrower than (30rem). The document supports widths from (320px).
+At (48rem), panes stack in reading order and the resize handles are hidden. The catalog occupies (30rem), with its results scrolling between filters and pagination. The terminal has a minimum height of (32rem), and the page uses document scrolling. The selected problem header stays sticky at the top of its content. Panel padding changes from `ui-space-3` to `ui-space-2`. The flag field and submit button stack when their own panel is narrower than (30rem). The document supports widths from (320px).
 
 Shared panel bodies use `ui-space-3`; headings, terminal controls and output use `ui-space-2`. Control groups use `ui-space-1`. Panel headings wrap actions as whole units. Navigation labels ellipsize within narrow panes and retain full titles; URLs and file paths can wrap while prose preserves words.
 
-**The Bounded Terminal Rule.** Keep terminal measurement inside a positioned, bounded viewport. The terminal screen has a minimum height of (18rem), with its renderer positioned within that screen.
+**The Bounded Terminal Rule.** Keep terminal measurement inside a positioned, bounded viewport. The terminal screen can shrink to (6rem) on short desktop windows, with its renderer positioned within that screen.
+
+At desktop heights of (32rem) or less, catalog filters, rows and pagination scroll together beneath the list header so every control remains reachable. The terminal body also scrolls when its controls and error messages exceed the available height.
 
 Source: [App.vue](apps/player/src/App.vue), [UIPanel.vue](packages/ui/src/UIPanel.vue), [PlayPanel.vue](features/play/src/PlayPanel.vue), [TerminalPanel.vue](features/terminal/src/TerminalPanel.vue).
 
 ## Elevation & Depth
 
-Depth comes from tonal surfaces and dividing strokes. The shared blue glow is reserved for primary button hover, selected rows, focused fields, info status dots and terminal-style cursor marks. Its exact value is recorded in the sidecar. Keyboard focus uses a (2px) accent outline with a (3px) offset; inputs bring that outline to their edge.
+Depth comes from tonal surfaces and dividing strokes. The shared blue glow supports primary button hover, selected rows and focused fields. Its exact value is recorded in the sidecar. Keyboard focus uses a (2px) accent outline with a (3px) offset; inputs bring that outline to their edge.
 
-Control color, border and shadow transitions take (140ms). The empty workspace cursor pulses over (1.6s), while the brand cursor remains steady. Reduced-motion preferences remove CSS transitions and animations. The xterm renderer separately enables its blinking cursor.
+Control color, border and shadow transitions take (140ms). Reduced-motion preferences remove CSS transitions and animations. The xterm renderer enables its blinking cursor when connected.
 
 ## Shapes
 
-Controls have small, nearly square corners using `rounded.control`. Panels meet through straight borders. Status markers are circular dots of (0.375rem). Terminal prompts and cursors use simple text and rectangular blocks.
+Controls have small, nearly square corners using `rounded.control`. Panels meet through straight borders. Status is plain text with semantic color. Section headings use a raised navy surface and a dividing stroke.
 
 ## Components
 
@@ -183,31 +220,31 @@ Source: [UIButton.vue](packages/ui/src/UIButton.vue), [theme.css](packages/ui/sr
 
 ### Inputs / Fields
 
-An associated label precedes a full-width field. The resting field uses the active blue stroke, a dark canvas and an accent caret. Focus adds the outline and shared glow; placeholder text is muted. Disabled fields use (0.5) opacity. `UITextField` wraps Sectile through the public UI package.
+An associated label precedes a full-width field. The resting field uses the active blue stroke, a dark canvas and an accent caret. Focus adds the outline and shared glow; placeholder text is muted. Disabled fields use (0.5) opacity. `UITextField` wraps Sectile through the public UI package. `UISelect` supplies labeled, controlled native category choices.
 
 Source: [UITextField.vue](packages/ui/src/UITextField.vue).
 
 ### Panels
 
-Each panel is a semantic section with a labelled heading and optional actions. A lower heading border separates the content; the header has a minimum height of (3.5rem). Panels flex to fill available space while permitting their contents to shrink. The terminal panel uses the terminal background.
+Each panel is a semantic section with a labelled heading and optional actions. A lower heading border separates the content; the header has a minimum height of (3.5rem). `headingLevel` places catalog and terminal headings at level 2 and reading section headings at level 3 beneath the selected problem title. Brief, materials, execution and submission, hints and walkthrough share raised heading bands. Execution and submission precede the learning sections. Panels flex to fill available space while permitting their contents to shrink. The terminal panel uses the terminal background.
 
 Source: [UIPanel.vue](packages/ui/src/UIPanel.vue).
 
 ### Navigation
 
-Problem rows are full-width buttons with a title, slug and category/type metadata. `aria-pressed` identifies the current selection; its accent fill, stroke and glow provide the visual state. Selecting the current row preserves its terminal session. The responsive sidebar behavior follows Layout.
+Problem rows are compact full-width title buttons, grouped under readable Korean category headings. Search matches all words across titles, identifiers and categories; a category filter narrows results. Pages contain at most (20) rows, with the result range and previous/next controls below. `aria-pressed` identifies the current selection; its accent fill, stroke and glow provide the visual state. Search and pagination preserve the current problem and terminal session. The responsive sidebar behavior follows Layout.
 
 Source: [ProblemList.vue](features/catalog/src/ProblemList.vue), [App.vue](apps/player/src/App.vue).
 
 ### Status
 
-Inline text and a small dot communicate muted, info, success or danger tone. Labels describe actual client, execution or terminal state. Info dots receive the shared glow; alert text uses danger. Supporting status text uses (0.8rem).
+Inline text communicates muted, info, success or danger tone. Labels describe actual client, execution or terminal state. Alert text uses danger. Supporting status text uses (0.8rem).
 
 Source: [UIStatus.vue](packages/ui/src/UIStatus.vue).
 
 ### Terminal
 
-`UITerminal` owns xterm and its fit addon inside the UI package. It maps shared tokens to the terminal theme, enables screen reader mode and resizes after fonts load or column changes. The surrounding panel supplies connection controls and real connection status. A stopped service offers **문제 실행 후 터미널 연결**, delegating startup to the play feature through the app before opening a terminal. Failed preparation keeps the shell closed. Connection errors name the recovery action. The renderer is hidden until ready, then receives focus after Vue updates its input state. A centered prompt explains the closed state, and a footnote explains session cleanup.
+`UITerminal` owns xterm and its fit addon inside the UI package. It maps shared tokens to the terminal theme, enables screen reader mode and resizes after fonts load or column changes. Its public resize event contains only `cols` and `rows`. The surrounding panel supplies connection controls and real connection status. A stopped service offers **문제 실행 후 터미널 연결**, delegating startup to the play feature through the app before opening a terminal. Failed preparation keeps the shell closed. Connection errors name the recovery action. The renderer is hidden until ready, then receives focus after Vue updates its input state. Plain text explains the closed state, and a footnote explains session cleanup.
 
 Source: [UITerminal.vue](packages/ui/src/UITerminal.vue), [TerminalPanel.vue](features/terminal/src/TerminalPanel.vue).
 
@@ -224,7 +261,7 @@ Source: [UIMarkdown.vue](packages/ui/src/UIMarkdown.vue), [markdown.ts](packages
 ### Do:
 
 - **Do** use shared color, spacing and corner tokens for controls and panels.
-- **Do** keep the bundled Latin and Korean monospace stack throughout the workspace.
+- **Do** use Pretendard for reading and controls, and bundled monospace for code, terminal output and the brand.
 - **Do** keep input borders visible at rest and provide the shared keyboard focus outline.
 - **Do** preserve the full viewport layout and bounded terminal screen when adapting widths.
 - **Do** pair status colors with meaningful labels derived from actual state.

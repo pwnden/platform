@@ -3,9 +3,21 @@ import { createSSRApp, h } from 'vue';
 import { renderToString } from '@vue/server-renderer';
 import UIButton from '../packages/ui/src/UIButton.vue';
 import UITextField from '../packages/ui/src/UITextField.vue';
+import UISelect from '../packages/ui/src/UISelect.vue';
+import UIStatus from '../packages/ui/src/UIStatus.vue';
 import UIReveal from '../packages/ui/src/UIReveal.vue';
 import UICode from '../packages/ui/src/UICode.vue';
 import { terminalDocument } from '../packages/ui/src/terminal-document';
+
+it('renders labeled native category choices and a plain status without decorative markers', async () => {
+  const html = await renderToString(createSSRApp({ render: () => h(UISelect, { id: 'category', label: '분야', modelValue: 'web', options: [{ value: '', label: '전체 분야' }, { value: 'web', label: '웹' }] }) }));
+  expect(html).toContain('<label for="category">분야</label>');
+  expect(html).toContain('<select id="category"');
+  expect(html).toContain('<option value="web" selected>웹</option>');
+  const status = await renderToString(createSSRApp({ render: () => h(UIStatus, {}, () => '준비됨') }));
+  expect(status).toContain('준비됨');
+  expect(status).not.toContain('aria-hidden');
+});
 
 it('omits hidden spoilers and renders material source as escaped selectable code', async () => {
   const render = (open: boolean) => renderToString(createSSRApp({ render: () => h(UIReveal, { label: '해설 보기 · 정답 포함', modelValue: open }, () => 'answer spoiler') }));

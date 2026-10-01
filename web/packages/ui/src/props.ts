@@ -9,6 +9,7 @@ export interface UIButtonProps {
 export interface UIPanelProps {
   readonly title: string;
   readonly headingID: string;
+  readonly headingLevel?: 2 | 3;
 }
 
 export interface UISplitProps {
@@ -43,6 +44,14 @@ export interface UITextFieldProps {
   readonly modelValue: string;
   readonly disabled?: boolean;
   readonly required?: boolean;
+}
+
+export interface UISelectProps {
+  readonly id: string;
+  readonly label: string;
+  readonly modelValue: string;
+  readonly options: readonly { value: string; label: string }[];
+  readonly disabled?: boolean;
 }
 
 export interface UITerminalProps { readonly label: string; readonly enabled: boolean }

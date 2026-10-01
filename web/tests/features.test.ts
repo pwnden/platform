@@ -3,6 +3,7 @@ import { createRenderer, h, nextTick } from 'vue';
 import type { Catalog } from '../domains/catalog/src/index';
 import type { Player, RunStatus } from '../domains/play/src/index';
 import ProblemDetail from '../features/catalog/src/ProblemDetail.vue';
+import ProblemList from '../features/catalog/src/ProblemList.vue';
 import PlayPanel from '../features/play/src/PlayPanel.vue';
 import TerminalPanel from '../features/terminal/src/TerminalPanel.vue';
 import App from '../apps/player/src/App.vue';
@@ -19,6 +20,7 @@ vi.mock('../packages/ui/src/index.ts', async () => {
     UIReveal: defineComponent({ props: ['label', 'modelValue'], setup: (props, { attrs, slots }) => () => h('reveal', { ...attrs, label: props.label, modelValue: props.modelValue }, [props.label, props.modelValue ? slots.default?.() : null]) }),
     UIButton: defineComponent({ setup: (_, { attrs, slots }) => () => h('button', attrs, slots.default?.()) }),
     UITextField: defineComponent({ setup: (_, { attrs }) => () => h('input', attrs) }),
+    UISelect: defineComponent({ setup: (_, { attrs }) => () => h('select', attrs) }),
     UITerminal: defineComponent({ setup: (_, { attrs, expose }) => {
       expose({ write: (_data: Uint8Array, rendered: () => void) => rendered(), clear: () => {}, focus: () => {} });
       return () => h('terminal', attrs);
@@ -138,6 +140,41 @@ const click = (item: Node) => (item.props.onClick as () => unknown)();
 async function settle() { for (let i = 0; i < 8; i++) { await Promise.resolve(); await nextTick(); } }
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
+it('browses a large catalog by category, search and bounded pages without repeating identifiers', async () => {
+  const problems = Array.from({ length: 501 }, (_, i) => ({ slug: `exercise-${i}`, title: `Exercise ${String(i).padStart(3, '0')}`, category: i % 2 ? 'web' : 'rev', kind: 'file' as const }));
+  const catalog: Catalog = { list: vi.fn(async () => problems), detail: vi.fn(), download: vi.fn(), guidance: vi.fn() };
+  const selected = vi.fn();
+  const root = node('root');
+  renderer.render(h(ProblemList, { catalog, onSelect: selected }), root);
+  await settle();
+  const rows = () => flatten(root).filter(item => item.type === 'button' && item.props.variant === 'row');
+  expect(rows()).toHaveLength(20);
+  expect(text(root)).toContain('1–20 / 501개');
+  expect(text(root)).not.toContain('exercise-');
+  const first = text(rows()[0]!);
+  await click(button(root, '다음')); await settle();
+  expect(text(root)).toContain('21–40 / 501개');
+  expect(text(rows()[0]!)).not.toBe(first);
+  const search = flatten(root).find(item => item.props.id === 'problem-search')!;
+  const category = flatten(root).find(item => item.props.id === 'problem-category')!;
+  (category.props['onUpdate:modelValue'] as (value: string) => void)('web');
+  (search.props['onUpdate:modelValue'] as (value: string) => void)('EXERCISE-101');
+  await settle();
+  expect(rows()).toHaveLength(1);
+  expect(text(root)).toContain('웹');
+  expect(text(root)).toContain('1–1 / 1개');
+  await click(rows()[0]!);
+  expect(selected).toHaveBeenCalledWith(problems[101]);
+  (search.props['onUpdate:modelValue'] as (value: string) => void)('missing');
+  await settle();
+  expect(rows()).toHaveLength(0);
+  expect(text(root)).toContain('검색 결과가 없습니다.');
+  await click(button(root, '검색 조건 초기화')); await settle();
+  expect(rows()).toHaveLength(20);
+  expect(text(root)).toContain('1–20 / 501개');
+  renderer.render(null, root);
+});
+
 it('loads material and spoiler documents on demand, retries failures and caches reopened hints', async () => {
   const id = 'd'.repeat(64);
   const catalog: Catalog = {
@@ -243,7 +280,7 @@ it('shows file problems without service controls', async () => {
   const root = node('root');
   renderer.render(h(PlayPanel, { player, slug: 'test', kind: 'file' }), root);
   await settle();
-  expect(text(root)).toContain('서비스 실행 없이');
+  expect(text(root)).toContain('준비됨');
   expect(button(root, '문제 실행')).toBeUndefined();
   expect(player.run).not.toHaveBeenCalled();
   renderer.render(null, root);

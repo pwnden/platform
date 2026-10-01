@@ -95,7 +95,6 @@ onUnmounted(() => { active = false; disconnect(); });
     <div class="terminal-screen">
       <UITerminal ref="screen" label="문제 풀이 셸" class="terminal-renderer" :class="{ 'terminal-renderer--inactive': state !== 'ready' }" :aria-hidden="state !== 'ready'" :enabled="state === 'ready'" @input="input" @resize="resize" />
       <div v-if="state === 'closed' && !message" class="terminal-empty">
-        <span class="shell-prompt" aria-hidden="true">&gt;_</span>
         <p>{{ enabled ? '터미널을 연결하고 문제 분석을 시작하세요.' : prepare ? '연결 버튼을 누르면 문제를 실행하고 터미널에 연결합니다.' : busy ? '문제 실행 상태를 확인하는 중입니다.' : '실행 상태를 새로고침한 뒤 문제를 실행하세요.' }}</p>
         <p class="terminal-help">문제의 격리된 풀이 환경에서 명령을 실행합니다.</p>
       </div>
@@ -106,14 +105,13 @@ onUnmounted(() => { active = false; disconnect(); });
 
 <style scoped>
 .terminal-panel { height: 100%; background: var(--ui-terminal-background); }
-.terminal-panel :deep(.ui-panel-body) { display: flex; flex-direction: column; gap: var(--ui-space-2); padding: var(--ui-space-2); }
+.terminal-panel :deep(.ui-panel-body) { display: flex; flex-direction: column; gap: var(--ui-space-2); padding: var(--ui-space-2); overflow-y: auto; }
 .actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--ui-space-1); }
 .session-limit { margin-left: auto; font-size: 0.75rem; color: var(--ui-muted); }
-.terminal-screen { position: relative; flex: 1; min-height: 18rem; min-width: 0; }
+.terminal-screen { position: relative; flex: 1; min-height: 6rem; min-width: 0; }
 .terminal-screen :deep(.ui-terminal) { position: absolute; inset: 0; min-height: 0; }
 .terminal-renderer--inactive { visibility: hidden; pointer-events: none; }
 .terminal-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--ui-space-2); padding: var(--ui-space-2); text-align: center; pointer-events: none; }
-.shell-prompt { font-size: 2rem; color: var(--ui-border-active); }
 .terminal-empty p { max-width: 52ch; word-break: keep-all; color: var(--ui-muted); font-size: 0.9rem; }
 .terminal-help { font-size: 0.8rem !important; }
 .terminal-footnote { color: var(--ui-muted); font-size: 0.75rem; padding-inline: var(--ui-space-1); }

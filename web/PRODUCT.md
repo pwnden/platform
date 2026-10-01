@@ -24,7 +24,7 @@ The challenges repository owns the versioned problem contract and player content
 
 ## Brand Commitments
 
-The name is `pwnden`. The player uses a hacker terminal visual language, monospace typography, subtly luminous dark blue on blue-tinted black, and a workspace that fills the browser viewport. Korean UI labels and real problem content remain available.
+The name is `pwnden`. The player uses a hacker terminal visual language, subtly luminous dark blue on blue-tinted black, and a workspace that fills the browser viewport. Pretendard supplies readable Korean body text and controls; code, terminal output and the brand use the bundled monospace stack. The catalog supports keyword search, readable categories and bounded pages. The selected problem header stays visible while its content scrolls. Section headings identify the brief, materials, execution and submission, hints and walkthrough. Copy describes the goal and required actions directly. Status is conveyed by meaningful text and color.
 
 ## Evidence on Hand
 
