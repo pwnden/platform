@@ -28,8 +28,11 @@ const sizeLabel = computed(() => {
         <span class="ui-file-size" :title="`${size.toLocaleString('ko-KR')} 바이트`">{{ sizeLabel }}</span>
       </button>
       <UIButton variant="ghost" size="compact" class="ui-file-download" :busy="busy" :disabled="disabled" :aria-label="`${name} 다운로드`" :title="`${name} 다운로드`" @click="$emit('download')">
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4" /></svg>
-        <span>{{ busy ? '다운로드 중…' : '다운로드' }}</span>
+        <svg :class="{ 'ui-file-progress': busy }" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path v-if="busy" d="M20 12a8 8 0 1 1-8-8" />
+          <path v-else d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4" />
+        </svg>
+        <span>다운로드</span>
       </UIButton>
     </div>
     <div :id="previewID" class="ui-file-preview" :hidden="!modelValue"><slot v-if="modelValue" /></div>
@@ -47,7 +50,10 @@ const sizeLabel = computed(() => {
 .ui-file-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
 .ui-file-size { color: var(--ui-muted); white-space: nowrap; }
 .ui-file-download { gap: var(--ui-space-1); min-width: 2.5rem; }
-.ui-file-download svg { width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.ui-file-download svg { flex: none; width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.ui-file-progress { animation: file-progress 1s linear infinite; }
+@keyframes file-progress { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ui-file-progress { animation: none; } }
 .ui-file-preview { min-width: 0; border-top: 1px solid var(--ui-border); background: var(--ui-background); }
 .ui-file-preview :deep(.ui-code) { border: 0; border-radius: var(--ui-radius-flush); }
 .ui-file-preview :deep(.ui-code:last-child) { border-end-start-radius: var(--ui-file-radius-end, var(--ui-radius-surface)); border-end-end-radius: var(--ui-file-radius-end, var(--ui-radius-surface)); }

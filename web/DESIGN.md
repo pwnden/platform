@@ -216,6 +216,11 @@ Status and an icon-only refresh action remain together in the section header.
 
 **The Equal Inset Rule.** Top, right, bottom and left padding use one value. Control padding derives from border-box height, content line height and border thickness. Sibling rhythm uses gap. Responsive layouts replace the entire inset. `pnpm check:spacing` validates owned CSS and Vue style declarations through the existing CSS parser and runs as part of `pnpm verify`.
 
+**The Stable Loading Rule.** Loading transitions retain control dimensions and
+sibling positions. Material download retains its label and uses the existing
+icon box for progress. The control stays disabled and semantically busy during
+the request. Reduced-motion preferences keep the progress icon static.
+
 **The Bounded Terminal Rule.** Keep terminal measurement inside a positioned, bounded viewport. The terminal screen can shrink to (6rem) on short desktop windows, with its renderer positioned within that screen.
 
 At desktop heights of (32rem) or less, catalog filters, rows and pagination scroll together beneath the list header so every control remains reachable. The terminal body also scrolls when its controls and error messages exceed the available height.

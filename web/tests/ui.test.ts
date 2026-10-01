@@ -93,6 +93,12 @@ it('keeps disclosure and download as separate named buttons with stable preview 
   expect(busy).toContain('1 KiB');
   expect(busy).toContain('aria-busy="true"');
   expect(busy.match(/ disabled/g)).toHaveLength(1);
+  const downloadButton = (html: string) => html.match(/<button\b[^>]*>[\s\S]*?<\/button>/g)![1]!;
+  const buttonText = (html: string) => downloadButton(html).replace(/<[^>]*>/g, '').trim();
+  expect(buttonText(busy)).toBe(buttonText(closed));
+  expect(downloadButton(busy).match(/<svg\b/g)).toHaveLength(1);
+  expect(downloadButton(closed).match(/<svg\b/g)).toHaveLength(1);
+  expect(downloadButton(busy)).toContain('ui-file-progress');
   expect(await render(false, 0)).toContain('0 B');
 });
 

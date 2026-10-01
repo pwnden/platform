@@ -133,6 +133,11 @@ preview and download share the compact height and symmetric inset. The catalog f
 preview limits, retry and cached source; the UI component owns presentation and
 emits preview and download intent through its public API.
 
+Download keeps its visible label throughout loading. The download icon becomes
+a progress indicator inside the same icon box, retaining the file row and
+button dimensions. The control remains named and busy, and repeated download
+requests remain disabled. Reduced-motion preferences use a static indicator.
+
 The wide layout places the problem list, reading/execution controls and terminal
 in adjacent columns. At 76rem the terminal follows the reading column; at 48rem
 the list moves above the content and the full-width document scrolls vertically.
