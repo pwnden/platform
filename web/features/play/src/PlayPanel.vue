@@ -5,7 +5,7 @@ import { UIButton, UITextField, UIPanel, UIStatus } from '@pwnden/ui';
 import type { PlayPanelHandle } from './props';
 
 const props = defineProps<{ player: Player; slug: string; kind: RunStatus['kind'] }>();
-const emit = defineEmits<{ busy: [value: boolean]; status: [value: RunStatus | undefined] }>();
+const emit = defineEmits<{ busy: [value: boolean]; status: [value: RunStatus | undefined]; stopped: []; started: [] }>();
 const pending = ref(false);
 const status = ref<RunStatus>();
 const flag = ref('');
@@ -25,10 +25,11 @@ async function perform(operation: 'run' | 'stop' | 'submit' | 'status') {
       await props.player.run(props.slug);
       if (active) {
         message.value = '문제가 준비되었습니다.';
+        emit('started');
       }
     } else if (operation === 'stop') {
       await props.player.stop(props.slug);
-      if (active) message.value = '문제를 중지했습니다.';
+      if (active) { message.value = '문제를 중지했습니다.'; emit('stopped'); }
     } else if (operation === 'submit') {
       const result = await props.player.submit(props.slug, flag.value);
       if (active) { flag.value = ''; message.value = result.accepted ? '정답입니다.' : '정답이 아닙니다. 다시 시도하세요.'; }
@@ -52,11 +53,7 @@ async function perform(operation: 'run' | 'stop' | 'submit' | 'status') {
 }
 onMounted(() => perform('status'));
 const handle: PlayPanelHandle = {
-  async start() {
-    if (!active || pending.value || props.kind !== 'service' || status.value?.state !== 'stopped') return false;
-    const result = await perform('run');
-    return active && result?.state === 'running';
-  },
+  async refresh() { await perform('status'); },
 };
 defineExpose(handle);
 </script>

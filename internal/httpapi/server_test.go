@@ -94,7 +94,11 @@ func TestShutdownWaitsForDisconnectedHandlerCleanup(t *testing.T) {
 			if ctx.Err() != nil {
 				t.Error("shutdown canceled independent cleanup")
 			}
-			close(cleaning)
+			select {
+			case <-cleaning:
+			default:
+				close(cleaning)
+			}
 			<-finish
 			return application.StopInfo{}, cleanupFailure
 		},

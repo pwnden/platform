@@ -43,12 +43,18 @@ func (b fakeBackend) Download(ctx context.Context, slug, id string) (application
 	return b.download(ctx, slug, id)
 }
 func (b fakeBackend) Status(ctx context.Context, slug string) (application.RunStatus, error) {
+	if b.status == nil {
+		return application.RunStatus{Slug: slug, Kind: application.KindFile, State: "ready"}, nil
+	}
 	return b.status(ctx, slug)
 }
 func (b fakeBackend) Run(ctx context.Context, slug string) (application.RunInfo, error) {
 	return b.run(ctx, slug)
 }
 func (b fakeBackend) Stop(ctx context.Context, slug string) (application.StopInfo, error) {
+	if b.stop == nil {
+		return application.StopInfo{Slug: slug}, nil
+	}
 	return b.stop(ctx, slug)
 }
 func (b fakeBackend) Submit(ctx context.Context, slug, flag string) (application.Submission, error) {

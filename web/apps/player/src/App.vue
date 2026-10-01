@@ -11,15 +11,13 @@ import { UISplit, UIStatus } from '@pwnden/ui';
 defineProps<{ client?: APIClient | undefined; sessionRejected?: boolean }>();
 const selected = ref<Problem>();
 const busy = ref(false);
-const terminalEnabled = ref(false);
-const terminalStartAvailable = ref(false);
+const terminalPaused = ref(false);
 const play = ref<PlayPanelHandle>();
 const catalogWidth = ref(20);
 const briefingWidth = ref(50);
-async function prepareTerminal() { return await play.value?.start() ?? false; }
 function select(problem: Problem) {
   if (!busy.value && selected.value?.slug !== problem.slug) {
-    terminalEnabled.value = false; terminalStartAvailable.value = false; selected.value = problem;
+    terminalPaused.value = false; selected.value = problem;
   }
 }
 </script>
@@ -46,12 +44,12 @@ function select(problem: Problem) {
             <div class="briefing-scroll" tabindex="0" role="region" aria-labelledby="problem-heading">
               <ProblemDetail :catalog="client.catalog" :slug="selected.slug">
                 <template #play>
-                  <PlayPanel ref="play" :player="client.player" :slug="selected.slug" :kind="selected.kind" @busy="busy = $event" @status="terminalEnabled = $event?.state === 'ready' || $event?.state === 'running'; terminalStartAvailable = $event?.state === 'stopped'" />
+                  <PlayPanel ref="play" :player="client.player" :slug="selected.slug" :kind="selected.kind" @busy="busy = $event" @stopped="terminalPaused = true" @started="terminalPaused = false" />
                 </template>
               </ProblemDetail>
             </div>
           </div></template>
-          <template #after><TerminalPanel class="terminal-pane" :terminals="client.terminals" :slug="selected.slug" :enabled="terminalEnabled" :busy="busy" :prepare="terminalStartAvailable ? prepareTerminal : undefined" /></template>
+          <template #after><TerminalPanel class="terminal-pane" :terminals="client.terminals" :slug="selected.slug" :paused="terminalPaused" @ready="play?.refresh()" @stopped="play?.refresh()" /></template>
         </UISplit>
         <div v-else class="workspace-empty">
         <div class="empty-content">

@@ -2,6 +2,7 @@
 
 import argparse
 from http.cookiejar import CookieJar
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -171,6 +172,9 @@ def main():
         # CLI mutations complete before opening the HTTP session.
         file_flag = command(binary, environment, "exec", "rotor-lock", "--", "python3", "solve/solve.py")
         server, origin, token = start(binary, environment)
+        for mutation in (("stop", "note-vault"), ("exec", "rotor-lock", "--", "true"), ("serve",)):
+            blocked = subprocess.run([str(binary), *mutation], env=environment, capture_output=True, text=True, timeout=10)
+            assert blocked.returncode != 0 and not blocked.stdout, "CLI bypassed installation ownership"
         check_assets(origin, token)
         problems = api(origin, token, "GET", "/problems")["problems"]
         assert {p["slug"] for p in problems} == {"note-vault", "rotor-lock"}
@@ -208,6 +212,10 @@ def main():
                 terminal(args.terminal_driver.resolve(), origin, token, work, "rotor-lock", mode)
         assert api(origin, token, "GET", "/problems/note-vault")["files"] == []
         assert api(origin, token, "GET", "/problems/note-vault/status")["state"] == "stopped"
+        if args.terminal_driver:
+            terminal(args.terminal_driver.resolve(), origin, token, work, "note-vault", "disconnect")
+            assert api(origin, token, "GET", "/problems/note-vault/status")["state"] == "running"
+            api(origin, token, "DELETE", "/problems/note-vault/run")
         assert api(origin, token, "POST", "/problems/rotor-lock/run")["endpoints"] == []
         assert not api(origin, token, "POST", "/problems/rotor-lock/submissions", {"flag": "wrong"})["accepted"]
         assert api(origin, token, "POST", "/problems/rotor-lock/submissions", {"flag": file_flag})["accepted"]
@@ -225,13 +233,32 @@ def main():
             terminal(args.terminal_driver.resolve(), origin, token, work, "note-vault", "disconnect")
         stop(server)
         server = None
-        # Completed runs retain their state; a new process rotates credentials.
+        # Normal shutdown cleans owned runs; a new process rotates credentials.
         server, origin, next_token = start(binary, environment)
         assert next_token != token
         assert api(origin, token, "GET", "/problems", expected=401)["error"]["code"] == "unauthorized"
-        assert api(origin, next_token, "GET", "/problems/note-vault/status") == observed
+        assert api(origin, next_token, "GET", "/problems/note-vault/status")["state"] == "stopped"
         assert api(origin, next_token, "GET", "/problems/rotor-lock")["files"] == detail["files"]
-        assert api(origin, next_token, "POST", "/problems/note-vault/submissions", {"flag": flag})["accepted"]
+        assert api(origin, next_token, "POST", "/problems/note-vault/submissions", {"flag": flag}, expected=409)["error"]["code"] == "not_running"
+        api(origin, next_token, "POST", "/problems/note-vault/run")
+        if args.terminal_driver:
+            for slug in ("rotor-lock", "note-vault"):
+                terminal(args.terminal_driver.resolve(), origin, next_token, work, slug, "retain")
+            workspaces = api(origin, next_token, "GET", "/workspaces")
+            assert workspaces["limit"] == 10 and workspaces["idle_seconds"] == 600
+            assert {entry["slug"] for entry in workspaces["workspaces"]} == {"rotor-lock", "note-vault"}
+            # Kill only this isolated test server, then recover its journal.
+            server.kill()
+            server.communicate(timeout=10)
+            server = None
+            server, origin, next_token = start(binary, environment)
+            assert api(origin, next_token, "GET", "/workspaces")["workspaces"] == []
+            assert api(origin, next_token, "GET", "/problems/note-vault/status")["state"] == "stopped"
+            catalogs = list((work / "config" / "pwnden" / "catalogs").glob("*/catalog"))
+            identity = hashlib.sha256(str(catalogs[0].resolve()).encode()).hexdigest()
+            leftovers = subprocess.run([docker, "ps", "-aq", "--filter", f"label=pwnden.repository={identity}"], check=True, capture_output=True, text=True, timeout=30).stdout.strip()
+            assert not leftovers, "recovery left an owned toolbox behind"
+            api(origin, next_token, "POST", "/problems/note-vault/run")
         # Stop only this smoke run's service outside the platform, then observe
         # the actual container state without erasing its recorded ownership.
         receipts = list((work / "cache" / "pwnden" / "runs").glob("*.json"))

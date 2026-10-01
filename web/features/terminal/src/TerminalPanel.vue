@@ -1,69 +1,70 @@
 <script setup lang="ts">
-import { nextTick, onUnmounted, ref, shallowRef, watch } from 'vue';
-import type { TerminalConnection, TerminalSession, TerminalSize, Terminals } from '@pwnden/terminal';
+import { nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue';
+import type { TerminalConnection, TerminalSession, TerminalSize, Terminals, RetainedEnvironment } from '@pwnden/terminal';
 import { UIButton, UITerminal, UIPanel, UIStatus } from '@pwnden/ui';
 import type { UITerminalHandle } from '@pwnden/ui';
 
-const props = defineProps<{ terminals: Terminals; slug: string; enabled: boolean; busy: boolean; prepare?: (() => Promise<boolean>) | undefined }>();
+const props = defineProps<{ terminals: Terminals; slug: string; paused?: boolean }>();
+const emit = defineEmits<{ ready: []; stopped: [] }>();
 const screen = ref<UITerminalHandle>();
 const state = ref<'closed' | 'connecting' | 'ready'>('closed');
 const session = shallowRef<TerminalSession>();
 const message = ref('');
 const failed = ref(false);
+const retained = ref<readonly RetainedEnvironment[]>([]);
+const ending = ref(false);
 let size: TerminalSize = { cols: 80, rows: 24 };
 let connection: TerminalConnection | undefined;
 let generation = 0;
 let active = true;
+const visible = () => typeof document === 'undefined' || document.visibilityState !== 'hidden';
 
 function disconnect() {
   generation++;
   const owned = connection;
-  connection = undefined;
-  session.value = undefined;
-  state.value = 'closed';
+  connection = undefined; session.value = undefined; state.value = 'closed';
   owned?.close();
 }
 async function connect() {
-  if (state.value !== 'closed' || (!props.enabled && !props.prepare) || props.busy) return;
+  if (!active || state.value !== 'closed' || props.paused || !visible()) return;
   disconnect();
   const current = generation;
-  state.value = 'connecting'; message.value = ''; failed.value = false;
+  state.value = 'connecting'; message.value = ''; failed.value = false; retained.value = [];
   screen.value?.clear();
   try {
-    if (!props.enabled) {
-      message.value = '문제를 실행하고 풀이 환경을 준비하는 중…';
-      const prepared = await props.prepare?.();
-      if (!active || current !== generation) return;
-      if (!prepared) {
-        state.value = 'closed'; failed.value = true;
-        message.value = '문제를 실행하지 못했습니다. 실행 상태를 새로고침한 뒤 다시 시도하세요.';
-        return;
-      }
-      message.value = '';
-    }
     connection = props.terminals.connect(props.slug, size, event => {
       if (!active || current !== generation) return;
       if (event.type === 'output') screen.value?.write(event.data, event.acknowledge);
-      else if (event.type === 'exit') message.value = `셸이 종료되었습니다. 종료 코드: ${event.code}`;
-      else if (event.type === 'error') {
+      else if (event.type === 'exit') {
+        session.value = undefined; state.value = 'closed';
+        message.value = '셸이 종료되었습니다. 종료 코드: ' + event.code;
+      } else if (event.type === 'error') {
         failed.value = true;
         const reasons: Record<string, string> = {
-          terminal_busy: '다른 탭의 터미널 연결을 종료한 뒤 다시 연결하세요.',
-          not_running: '문제가 실행 중이지 않습니다. 실행 상태를 새로고침하고 문제를 실행하세요.',
-          unauthorized: '서버 연결 정보를 확인할 수 없습니다. 서버가 출력한 전체 주소로 다시 접속하세요.',
-          invalid_request: '터미널 연결 메시지를 처리하지 못했습니다. 페이지를 새로고침한 뒤 다시 연결하세요.',
-          deadline_exceeded: '터미널 연결 시간이 끝났습니다. 다시 연결하세요.',
-          network_error: '서버 연결이 끊겼습니다. 서버가 실행 중인지 확인하고 다시 연결하세요.',
-          output_backpressure: '터미널 출력 응답이 지연되어 연결이 종료되었습니다. 다시 연결하세요.',
-          execution_failed: '풀이 컨테이너를 시작하지 못했습니다. Docker 상태를 확인하고 다시 연결하세요.',
+          terminal_busy: '다른 탭에서 이 문제의 터미널을 사용 중입니다.',
+          workspace_full: '최대 10개 환경이 유지 중입니다. 환경 하나를 종료한 뒤 다시 연결하세요.',
+          unauthorized: '서버가 출력한 전체 주소로 다시 접속하세요.',
+          invalid_request: '페이지를 새로고침한 뒤 다시 연결하세요.',
+          deadline_exceeded: '환경 준비 시간이 끝났습니다. 다시 연결하세요.',
+          network_error: '서버 연결이 끊겼습니다. 다시 연결하세요.',
+          output_backpressure: '출력 처리가 지연되었습니다. 다시 연결하세요.',
+          execution_failed: '풀이 환경을 준비하지 못했습니다. Docker 상태를 확인하고 다시 연결하세요.',
+          cleanup_failed: '환경 정리에 실패했습니다. 실행 상태를 확인하세요.',
+          not_running: '문제 실행 상태를 확인한 뒤 다시 연결하세요.',
         };
-        message.value = reasons[event.code] ?? '터미널에 연결하지 못했습니다. 실행 상태를 새로고침하고 다시 연결하세요.';
+        message.value = reasons[event.code] ?? '터미널에 연결하지 못했습니다. 다시 연결하세요.';
         session.value = undefined; state.value = 'closed';
-      } else { session.value = undefined; state.value = 'closed'; if (!message.value) message.value = '터미널 연결이 종료되었습니다.'; }
+        if (event.code === 'workspace_full') void loadRetained();
+      } else {
+        session.value = undefined; state.value = 'closed';
+        if (!message.value) message.value = '터미널 연결이 종료되었습니다.';
+      }
     });
     const result = await connection.ready;
     if (!active || current !== generation) { result.close(); return; }
     session.value = result; state.value = 'ready'; result.resize(size);
+    message.value = result.reused ? '이전 풀이 상태로 연결했습니다.' : '새 풀이 환경에 연결했습니다.';
+    emit('ready');
     await nextTick();
     if (active && current === generation) screen.value?.focus();
   } catch {
@@ -73,33 +74,63 @@ async function connect() {
     }
   }
 }
+async function loadRetained() {
+  try { const items = await props.terminals.list(); if (active) retained.value = items; }
+  catch { if (active) message.value = '유지 환경 목록을 불러오지 못했습니다. 다시 연결하세요.'; }
+}
+async function endEnvironment(slug = props.slug) {
+  if (ending.value) return;
+  ending.value = true;
+  try {
+    await props.terminals.stop(slug);
+    if (!active) return;
+    if (slug === props.slug) { disconnect(); message.value = '문제 환경을 종료했습니다.'; emit('stopped'); }
+    else { await loadRetained(); await connect(); }
+  } catch { if (active) { failed.value = true; message.value = '환경을 종료하지 못했습니다. 다시 시도하세요.'; } }
+  finally { if (active) ending.value = false; }
+}
+function visibility() {
+  if (!visible()) disconnect();
+  else if (!props.paused) void connect();
+}
 function resize(next: TerminalSize) { size = next; session.value?.resize(next); }
 function input(data: Uint8Array) {
-  // Paste input is split into protocol-sized chunks without changing bytes.
   for (let offset = 0; offset < data.byteLength; offset += 16 * 1024) session.value?.input(data.slice(offset, offset + 16 * 1024));
 }
-watch(() => props.enabled, enabled => { if (!enabled) disconnect(); });
-onUnmounted(() => { active = false; disconnect(); });
+watch(() => props.paused, paused => {
+  if (paused) disconnect();
+  else void connect();
+});
+onMounted(() => {
+  if (typeof document !== 'undefined') document.addEventListener('visibilitychange', visibility);
+  void connect();
+});
+onUnmounted(() => {
+  active = false;
+  if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', visibility);
+  disconnect();
+});
 </script>
 
 <template>
   <UIPanel title="풀이 터미널" headingID="terminal-heading" class="terminal-panel">
-    <template #actions><UIStatus role="status" :tone="state === 'ready' ? 'info' : 'muted'">{{ state === 'ready' ? '연결됨' : state === 'connecting' ? '연결 중' : '연결 대기' }}</UIStatus></template>
+    <template #actions><UIStatus role="status" :tone="state === 'ready' ? 'info' : 'muted'">{{ state === 'ready' ? '연결됨' : state === 'connecting' ? '준비·연결 중' : '연결 대기' }}</UIStatus></template>
     <div class="actions">
-      <UIButton variant="primary" size="compact" :disabled="(!enabled && !prepare) || busy || state !== 'closed'" @click="connect">{{ !enabled && prepare ? '문제 실행 후 터미널 연결' : '터미널 연결' }}</UIButton>
-      <UIButton variant="ghost" size="compact" :disabled="state === 'closed'" @click="disconnect">연결 종료</UIButton>
-      <span class="session-limit">최대 15분</span>
+      <UIButton v-if="state === 'closed'" variant="primary" size="compact" :disabled="ending || paused" @click="connect">터미널 다시 연결</UIButton>
+      <UIButton variant="danger" size="compact" :disabled="ending" @click="endEnvironment()">문제 환경 종료</UIButton>
     </div>
-    <p v-if="state === 'connecting'" role="status">풀이 환경에 연결하는 중…</p>
+    <p v-if="state === 'connecting'" role="status">풀이 환경을 준비하고 터미널에 연결하는 중…</p>
     <p v-if="message" :role="failed ? 'alert' : 'status'">{{ message }}</p>
+    <ul v-if="retained.length" class="retained">
+      <li v-for="environment in retained" :key="environment.slug">
+        <span>{{ environment.title }} · {{ environment.connected ? '사용 중' : '자동 정리 대기' }}</span>
+        <UIButton variant="danger" size="compact" :disabled="ending" @click="endEnvironment(environment.slug)">종료</UIButton>
+      </li>
+    </ul>
     <div class="terminal-screen">
-      <UITerminal ref="screen" label="문제 풀이 셸" class="terminal-renderer" :class="{ 'terminal-renderer--inactive': state !== 'ready' }" :aria-hidden="state !== 'ready'" :enabled="state === 'ready'" @input="input" @resize="resize" />
-      <div v-if="state === 'closed' && !message" class="terminal-empty">
-        <p>{{ enabled ? '터미널을 연결하고 문제 분석을 시작하세요.' : prepare ? '연결 버튼을 누르면 문제를 실행하고 터미널에 연결합니다.' : busy ? '문제 실행 상태를 확인하는 중입니다.' : '실행 상태를 새로고침한 뒤 문제를 실행하세요.' }}</p>
-        <p class="terminal-help">문제의 격리된 풀이 환경에서 명령을 실행합니다.</p>
-      </div>
+      <UITerminal ref="screen" label="문제 풀이 셸" class="terminal-renderer" :enabled="state === 'ready'" @input="input" @resize="resize" />
     </div>
-    <p class="terminal-footnote">연결을 종료하면 셸과 임시 컨테이너가 정리됩니다.</p>
+    <p class="terminal-footnote">문제에서 나간 뒤 10분 동안 풀이 상태가 유지됩니다.</p>
   </UIPanel>
 </template>
 
@@ -107,12 +138,9 @@ onUnmounted(() => { active = false; disconnect(); });
 .terminal-panel { height: 100%; background: var(--ui-terminal-background); }
 .terminal-panel :deep(.ui-panel-body) { display: flex; flex-direction: column; gap: var(--ui-space-2); padding: var(--ui-space-2); overflow-y: auto; }
 .actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--ui-space-1); }
-.session-limit { margin-left: auto; font-size: 0.75rem; color: var(--ui-muted); }
 .terminal-screen { position: relative; flex: 1; min-height: 6rem; min-width: 0; }
 .terminal-screen :deep(.ui-terminal) { position: absolute; inset: 0; min-height: 0; }
-.terminal-renderer--inactive { visibility: hidden; pointer-events: none; }
-.terminal-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--ui-space-2); padding: var(--ui-space-2); text-align: center; pointer-events: none; }
-.terminal-empty p { max-width: 52ch; word-break: keep-all; color: var(--ui-muted); font-size: 0.9rem; }
-.terminal-help { font-size: 0.8rem !important; }
 .terminal-footnote { color: var(--ui-muted); font-size: 0.75rem; padding-inline: var(--ui-space-1); }
+.retained { padding: 0; margin: 0; list-style: none; display: grid; gap: var(--ui-space-1); }
+.retained li { display: flex; align-items: center; justify-content: space-between; gap: var(--ui-space-1); }
 </style>

@@ -1,128 +1,126 @@
 # Browser terminal
 
-Select a problem and choose **터미널 연결** in the local player. File problems
-need no service. A stopped service offers **문제 실행 후 터미널 연결**: the play
-feature starts the problem and refreshes its observed state before the terminal
-connects. An already-running service connects directly. Failed or canceled
-preparation keeps the shell closed. Connection errors provide recovery guidance,
-and input receives focus only after the shell is ready. Both desktop column
-boundaries support resizing; the existing connection receives new dimensions.
-The terminal opens interactive Bash with Readline inside the declared solution
-image at `/challenge`. The image must provide `/bin/bash`, `stty` and the
-`C.UTF-8` locale. Startup enables the TTY's `iutf8` mode and sets `LANG` and
-`LC_ALL` to `C.UTF-8` so line editing and terminal erase use UTF-8 characters.
-Bash starts with `--noprofile --norc` and `INPUTRC=/dev/null` for consistent
-default Readline bindings. The Docker Engine allocates the TTY. The official Docker CLI connection
-helper preserves the same context, TLS and endpoint selection as Compose.
+Selecting a problem prepares its services and toolbox, then automatically connects
+the terminal. Reentering within ten inactive minutes attaches to the same shell:
+working directory, environment variables, history, temporary files and background
+jobs remain available. A hidden tab, problem switch, refresh or lost connection
+detaches the browser. Returning cancels expiry; leaving starts another ten minutes.
+Visible attachments stay active even without keyboard input.
 
-## Input and editing
+Up to ten problem environments are retained per server. Each environment includes
+its service containers and one toolbox; the limit counts problems, not containers.
+At capacity, existing work remains intact. The terminal shows the retained
+environments and lets the player end one before retrying.
 
-xterm translates keyboard and IME input into terminal bytes; the transport
-preserves those bytes. Bash/Readline owns completion, editing and command
-history. Tabs complete commands and paths at the shell prompt. Arrow keys browse
-history and move within a line. Home/End, Delete, Ctrl+A/E, Ctrl+U/K/W/Y,
-Ctrl+R and Ctrl+L use the standard Readline bindings. Ctrl+C interrupts the
-foreground process; Ctrl+Z and `fg` use Bash job control. Ctrl+D deletes at the
-cursor or closes the shell on an empty line. UTF-8 Backspace erases the input
-character and stops at the beginning of the editable line.
+## Input and isolation
 
-Bracketed paste keeps pasted input literal until the player confirms it. Programs
-running in the terminal own their own key bindings, including literal Tab where
-appropriate. Browser and operating system reserved shortcuts remain subject to
-their normal restrictions. Clipboard and IME handling use xterm's native paths.
+xterm translates keyboard and IME input into terminal bytes. Bash/Readline owns
+completion, history and editing: Tab, arrows, Home/End, Delete, Ctrl+A/E,
+Ctrl+U/K/W/Y/R/L, Ctrl+C/Z and `fg` keep their normal shell behavior. Ctrl+D
+deletes at the cursor or exits on an empty line. Bracketed paste waits for
+confirmation. Browser and operating system reserved shortcuts follow their own rules.
 
-Command history lives within the connection; `HISTFILE=/dev/null` keeps it out of
-the problem mount. Reconnecting starts a fresh shell and history.
+The declared solution image supplies Bash, `stty` and `C.UTF-8`. Startup enables
+TTY `iutf8`, uses `LANG=LC_ALL=C.UTF-8`, `--noprofile --norc` and
+`INPUTRC=/dev/null`. History remains in the retained shell with
+`HISTFILE=/dev/null`. The Docker Engine owns the PTY; the Docker CLI helper
+preserves context, TLS and endpoint selection.
 
-The toolbox mounts only the allowed problem directory with its declared
-read-only/writable setting, drops all capabilities and uses `no-new-privileges`.
-Writable mounts use the host UID/GID where available. File problems use network
-`none`; service problems use the current project's declared solve network.
-Clients choose a slug and dimensions; Docker options stay inside the runtime.
+The toolbox mounts only the declared repository-contained problem directory,
+honors its writable setting, drops all capabilities and uses
+`no-new-privileges`. File problems use network `none`; service problems use
+their declared solve network. Clients select a slug and dimensions.
 
-## Session ownership
+## Ownership and cleanup
 
-`application.Terminals.OpenTerminal(ctx, slug, cols, rows)` returns a
-`TerminalSession`: `io.ReadWriteCloser`, `Resize(ctx, cols, rows)` and
-`Wait(ctx) (exitCode, error)`. Output is merged raw TTY stdout/stderr. The owner
-closes the session. Repeatable close removes its container and anonymous volumes,
-with independent cleanup limited to thirty seconds. Cancellation triggers close.
-An interrupted create response attempts cleanup using the random owned name.
-The session uses the caller's deadline rather than the automatic solution timeout.
+The application workspace manager owns the Docker stream and shell independently
+of WebSocket requests. One browser attachment receives input per problem; another
+tab receives `terminal_busy`. The connection also records presence after shell
+exit, keeping a visible service problem active.
 
-HTTP permits one terminal per problem. Creation shares the mutation lock;
-streaming releases it, allowing submissions and status reads. HTTP problem stop
-cancels and waits for its terminal before stopping services. Exit, disconnect
-and server shutdown close the session. Cleanup failure remains a server failure;
-service stop reports it rather than claiming success. Setup and CLI mutations
-are performed outside an active server. Reconnection opens a new shell.
+`exit` and empty-line Ctrl+D report the exit code and remove the toolbox.
+Services remain while their problem is visible. Reconnect creates a fresh shell.
+Browser disconnect preserves the shell. `DELETE /problems/{slug}/terminal`
+explicitly removes only the toolbox. **문제 환경 종료** and
+`DELETE /problems/{slug}/run` remove the toolbox and services. After inactivity
+expires, or on normal server shutdown, the manager performs the same full cleanup.
 
-## WebSocket protocol v1
+The installation lock excludes another server and standalone `run`, `exec`,
+`verify` and `stop` operations while the server owns the installation.
+Read-only commands remain available. Setup is performed before starting the server.
+Ownership is persisted before creating resources in the user configuration
+directory under `pwnden/workspaces`. After a process crash, startup cleans only
+recorded problems from that repository using repository/problem Docker labels and
+their Compose projects. Failed cleanup retains ownership and blocks startup;
+independent environments are still attempted.
 
-Connect to `GET /api/v1/problems/{slug}/terminal` with exact same-origin `Origin`
-and subprotocol `pwnden.terminal.v1`. Query parameters, encoded paths and request
-bodies are rejected. Native browser WebSocket does not supply a bearer header;
-the first text frame within five seconds authenticates the session:
+## WebSocket protocol v2
+
+Connect to `GET /api/v1/problems/{slug}/terminal` with exact same-origin
+`Origin` and subprotocol `pwnden.terminal.v2`. Authentication arrives in the
+first text frame within five seconds:
 
 ```json
 {"type":"authenticate","token":"PROCESS_SESSION_TOKEN","cols":80,"rows":24}
 ```
 
-Authentication precedes container creation. The initial page fragment and
-same-tab credential lifetime are described in [local-server.md](local-server.md).
-Tokens stay outside WebSocket URLs, diagnostics and terminal output. Columns are integers 2–500 and rows
-1–200. Unknown fields, duplicate keys and invalid messages fail. Incoming messages
-are limited to 16 KiB. The existing fifteen-minute HTTP deadline limits sessions.
+Credentials stay out of URLs and diagnostics. Query parameters, encoded paths,
+bodies, duplicate keys, unknown fields and invalid messages are rejected.
+Columns are integers 2–500 and rows 1–200; input frames are at most 16 KiB.
+Environment preparation has a fifteen-minute limit. Active attachments have
+heartbeat checks and no fixed lifetime deadline.
 
 | Direction | Frame | Meaning |
 | --- | --- | --- |
-| Server → client | Text `{"type":"ready"}` | Shell accepts input. |
-| Client → server | Binary | Raw input bytes, including Ctrl+C (byte 3). |
-| Server → client | Binary | Raw output, at most 16 KiB per frame. |
-| Client → server | Text `{"type":"ack"}` | Previous output frame has rendered. |
-| Client → server | Text `{"type":"resize","cols":120,"rows":40}` | Resize the daemon TTY. |
-| Server → client | Text `{"type":"exit","code":7}` | Shell exit code. |
-| Server → client | Text `{"type":"error","code":"..."}` | Public failure code, then disconnect. |
+| Server → client | Text `{"type":"ready","reused":true}` | Ready; `reused` identifies an existing shell. |
+| Client → server | Binary | Raw input bytes. |
+| Server → client | Binary | Snapshot followed by live output, at most 16 KiB per frame. |
+| Client → server | Text `{"type":"ack"}` | Previous output rendered. |
+| Client → server | Text `{"type":"resize","cols":120,"rows":40}` | Resize the daemon PTY. |
+| Server → client | Text `{"type":"exit","code":7}` | Shell exited; connection still records visible presence. |
+| Server → client | Text `{"type":"error","code":"..."}` | Failure followed by disconnect. |
 
-The server waits fifteen seconds for each output acknowledgement and limits
-writes to five seconds. Missing acknowledgements end with `output_backpressure`.
-Client buffered input is limited to 64 KiB (`input_backpressure`); paste is split
-into 16 KiB frames. Other codes include `unauthorized`, `terminal_busy`,
-`invalid_argument` and application error codes. Closing the socket terminates
-the owned session.
+## Output restoration
 
-## Frontend and styles
+The server continuously reads detached output into a VT screen, using the pinned
+Charmbracelet emulator. Its primary scrollback holds the latest 500 lines; older
+history is discarded. Reattachment restores primary/alternate screen content,
+cursor position and terminal modes, then streams live output in order. Pending
+UTF-8 and ANSI sequence prefixes carry across attachment boundaries.
+Queries while detached are answered by the emulator; attached xterm supplies its
+own responses.
 
-Pure TypeScript `domains/terminal` owns the ports and byte events; `packages/api`
-implements WebSocket. The app injects it into `features/terminal`, which owns
-connection controls and unmount cleanup. `packages/ui` alone wraps xterm and fit,
-owns their CSS and exports its own props, events and handle.
+Each attachment has sixteen pending frames of at most 16 KiB. A slow attachment
+is closed without terminating its shell. Snapshot chunks use the same render
+acknowledgement path as live output. Acknowledgements have fifteen seconds,
+writes five seconds; heartbeat detects abandoned connections. Rendering changes
+are confined to the browser terminal.
 
-Each HTML response issues a fresh style nonce in CSP and a meta element. The UI
-uses xterm's documented `documentOverride` with a document proxy to assign that
-nonce only to its generated styles. Global DOM methods remain unchanged.
-The viewport's styles receive the nonce before insertion into xterm's own
-containers, including styles created through the native document in xterm 6.
-Scripts retain `default-src 'self'`; arbitrary inline styles remain blocked.
-WebSocket connections are explicitly permitted only to the printed server host.
+Input uses a separate sixteen-frame queue and a server-owned writer. A blocked
+program cannot prevent browser detach. A full queue reports input backpressure;
+its capacity remains bounded independently of the browser's network buffer.
+
+The server's style nonce is assigned to xterm's own generated style elements;
+global DOM methods are unchanged. JavaScript eval and arbitrary inline styles
+remain blocked. WebSocket connections target the printed server origin only.
 
 ## Verification
 
-Go tests cover authentication before creation, origin/protocol, bytes, resize,
-duplicate sessions, exit codes, invalid messages, disconnect, problem stop and
-server cancellation. Frontend tests cover ports, connection cancellation,
-render acknowledgements, input limits and feature lifetime.
-
-The maintainer integration driver checks real Docker while the packaged player's
-PATH contains only Docker:
-
 ```sh
+go test ./...
+go vet ./...
+go test -race ./internal/application -run '^TestWorkspace'
+go test -race ./internal/httpapi
 go build -o dist/smoke-terminal ./tools/smoke_terminal
 python3 -B tools/smoke_http.py --package dist/pwnden-linux-amd64.tar.gz --terminal-driver dist/smoke-terminal
 ```
 
-It inspects mount/privilege/network policies, runs the file solver, accesses the
-service internally, checks UTF-8 erase, path completion, history, cursor editing,
-Readline shortcuts, bracketed paste, size/Ctrl+C/exit codes, and verifies cleanup on exit,
-disconnect and problem stop. Browser interaction and Windows/macOS execution
-are separate validation scopes.
+Unit tests cover timer cancellation/reset, active retention, ten-environment cap,
+exit, cleanup errors, installation locks, crash recovery and split UTF-8/ANSI
+screen restoration. Frontend tests cover automatic attachment, stale callbacks,
+visibility, capacity recovery, keyboard byte transport and resize.
+
+Actual Docker checks cover shell state retention, detached output, Readline,
+mount/network/privilege policy, automatic service startup, terminal-only stop,
+full stop, normal shutdown and crash recovery. Browser Plugin screen/IME checks
+and Windows/macOS host execution are separate validation scopes.

@@ -26,11 +26,12 @@ export function connectTerminal(
   const url = new URL(path, origin);
   if (url.origin !== origin || !['http:', 'https:'].includes(url.protocol)) throw new Error('invalid_origin');
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-  const socket = create(url.href, 'pwnden.terminal.v1');
+  const socket = create(url.href, 'pwnden.terminal.v2');
   socket.binaryType = 'arraybuffer';
   let opened = false;
   let active = true;
   let settled = false;
+  let exited = false;
   let finish: (session: TerminalSession) => void = () => {};
   let reject: (error: Error) => void = () => {};
   const ready = new Promise<TerminalSession>((resolve, failure) => { finish = resolve; reject = failure; });
@@ -70,10 +71,12 @@ export function connectTerminal(
     try {
       if (typeof event.data !== 'string') throw new Error();
       const message = JSON.parse(event.data) as Record<string, unknown>;
-      if (message?.type === 'ready' && !opened) {
+      if (message?.type === 'ready' && !opened && typeof message.reused === 'boolean') {
         opened = true; settled = true; clearTimeout(timer);
         finish({
+          reused: message.reused,
           input(data) {
+            if (exited) return;
             if (data.byteLength > 16 * 1024) { terminate('invalid_argument'); return; }
             send(Uint8Array.from(data));
           },
@@ -84,7 +87,8 @@ export function connectTerminal(
           close: () => terminate(),
         });
       } else if (message?.type === 'exit' && opened && Number.isInteger(message.code)) {
-        receive({ type: 'exit', code: message.code as number }); terminate();
+        exited = true;
+        receive({ type: 'exit', code: message.code as number });
       } else if (message?.type === 'error' && typeof message.code === 'string') {
         terminate(message.code);
       } else terminate('invalid_response');

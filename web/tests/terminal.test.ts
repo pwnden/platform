@@ -32,8 +32,9 @@ it('sends only protocol dimensions even when an xterm 6 resize event has extra f
   const { socket, connection } = fixture(dimensions);
   socket.open();
   expect(JSON.parse(socket.send.mock.calls[0]![0])).toEqual({ type: 'authenticate', token: 'a'.repeat(64), cols: 100, rows: 30 });
-  socket.message('{"type":"ready"}');
+  socket.message('{"type":"ready","reused":false}');
   const session = await connection.ready;
+  expect(session.reused).toBe(false);
   session.resize(dimensions);
   expect(JSON.parse(socket.send.mock.calls.at(-1)![0])).toEqual({ type: 'resize', cols: 100, rows: 30 });
   session.close();
@@ -50,13 +51,14 @@ it.each(['unauthorized', 'invalid_request', 'network_error'])('invalidates crede
 
 it('authenticates inside the fixed-origin protocol and preserves terminal bytes with render acknowledgement', async () => {
   const { socket, create, connection, events } = fixture();
-  expect(create).toHaveBeenCalledWith('ws://127.0.0.1:12345/api/v1/problems/test/terminal', 'pwnden.terminal.v1');
+  expect(create).toHaveBeenCalledWith('ws://127.0.0.1:12345/api/v1/problems/test/terminal', 'pwnden.terminal.v2');
   expect(socket.url).not.toContain('a'.repeat(64));
   expect(socket.binaryType).toBe('arraybuffer');
   socket.open();
   expect(JSON.parse(socket.send.mock.calls[0]![0])).toEqual({ type: 'authenticate', token: 'a'.repeat(64), cols: 80, rows: 24 });
-  socket.message('{"type":"ready"}');
+  socket.message('{"type":"ready","reused":true}');
   const session = await connection.ready;
+  expect(session.reused).toBe(true);
   socket.message(new Uint8Array([0, 255, 3]).buffer);
   const event = events[0]!;
   expect(event.type).toBe('output');
@@ -72,7 +74,11 @@ it('authenticates inside the fixed-origin protocol and preserves terminal bytes 
   session.resize({ cols: 100, rows: 40 });
   expect(socket.send).toHaveBeenLastCalledWith('{"type":"resize","cols":100,"rows":40}');
   socket.message('{"type":"exit","code":7}');
-  expect(events.slice(-2)).toEqual([{ type: 'exit', code: 7 }, { type: 'closed' }]);
+  expect(events.at(-1)).toEqual({ type: 'exit', code: 7 });
+  expect(socket.close).not.toHaveBeenCalled();
+  session.input(new Uint8Array([13]));
+  expect(socket.send).toHaveBeenLastCalledWith('{"type":"resize","cols":100,"rows":40}');
+  connection.close();
   expect(socket.close).toHaveBeenCalledOnce();
 });
 
@@ -95,7 +101,7 @@ it('limits buffered input and handles setup timeout without retaining a socket',
   await vi.advanceTimersByTimeAsync(15 * 60 * 1000); await timeout;
   expect(current.socket.close).toHaveBeenCalledOnce();
   current = fixture();
-  current.socket.message('{"type":"ready"}');
+  current.socket.message('{"type":"ready","reused":false}');
   const session = await current.connection.ready;
   current.socket.bufferedAmount = 65537;
   session.input(new Uint8Array([1]));

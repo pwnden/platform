@@ -138,6 +138,12 @@ func ErrorFrom(err error) (int, ErrorResponse) {
 	status := http.StatusInternalServerError
 	message := ""
 	switch failure.Code {
+	case application.WorkspaceFull:
+		status, message = http.StatusConflict, "End a retained environment before opening another."
+	case application.TerminalBusy:
+		status, message = http.StatusConflict, "The terminal is attached in another tab."
+	case application.WorkspaceBusy:
+		status, message = http.StatusConflict, "The problem installation is in use."
 	case application.InvalidArgument:
 		status, message = http.StatusBadRequest, "The problem input is invalid."
 	case application.NotFound:

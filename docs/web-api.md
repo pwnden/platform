@@ -9,6 +9,7 @@ The API version is independent of the challenges-owned problem contract. Version
 | Method and path | Application capability | Success |
 | --- | --- | --- |
 | `GET /api/v1/problems` | `Catalog.List` | `200`, problem summaries sorted by slug. |
+| `GET /api/v1/workspaces` | `Workspaces.List` | `200`, retained problem environments, limit and idle duration. |
 | `GET /api/v1/problems/{slug}` | `Details.Detail` | `200`, summary, description text and declared file metadata. |
 | `GET /api/v1/problems/{slug}/guidance/{id}` | `Guidance.Guidance` | `200`, declared hint or walkthrough Markdown after explicit activation. |
 | `GET /api/v1/problems/{slug}/files/{id}` | `Files.Download` | `200`, binary attachment for a current declared file ID. |
@@ -16,7 +17,8 @@ The API version is independent of the challenges-owned problem contract. Version
 | `POST /api/v1/problems/{slug}/run` | `Runner.Run` | `200`, problem kind, file count and published endpoints. |
 | `DELETE /api/v1/problems/{slug}/run` | `Runner.Stop` | `200`, stopped slug after cleanup. |
 | `POST /api/v1/problems/{slug}/submissions` | `Submit` | `200`, slug and `accepted` boolean. |
-| `GET /api/v1/problems/{slug}/terminal` | `Terminals.OpenTerminal` | `101`, same-origin WebSocket with first-frame authentication. |
+| `GET /api/v1/problems/{slug}/terminal` | `Workspaces.Attach` | `101`, same-origin WebSocket v2 with first-frame authentication; prepares stopped services automatically. |
+| `DELETE /api/v1/problems/{slug}/terminal` | `Workspaces.EndTerminal` | `200`, toolbox removed while problem services remain. |
 
 Problem summaries contain `slug`, `title`, `category`, and `kind`. Missing display titles use the slug. Kind is `file` or `service`. Arrays are JSON arrays, including empty arrays; they never serialize as `null`.
 

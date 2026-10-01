@@ -51,7 +51,16 @@ func terminalServer(t *testing.T, b fakeBackend) (*handler, *httptest.Server) {
 	h := newHandler(context.Background(), b, server.Listener.Addr().String(), testToken, io.Discard)
 	server.Config.Handler = h
 	server.Start()
-	t.Cleanup(server.Close)
+	t.Cleanup(func() {
+		h.mu.Lock()
+		for _, e := range h.terminals {
+			e.cancel()
+		}
+		h.mu.Unlock()
+		h.active.Wait()
+		h.workspaces.Close()
+		server.Close()
+	})
 	return h, server
 }
 func dialTerminal(t *testing.T, server *httptest.Server, token string) *websocket.Conn {
@@ -120,7 +129,7 @@ func TestTerminalAuthenticationAndAdmission(t *testing.T) {
 	}
 	conn = dialTerminal(t, server, testToken)
 	_, data = readTerminal(t, conn)
-	if string(data) != `{"type":"ready"}` {
+	if string(data) != `{"reused":false,"type":"ready"}` {
 		t.Fatal(string(data))
 	}
 	other := dialTerminal(t, server, testToken)
@@ -158,6 +167,14 @@ func TestTerminalBytesResizeFlowAndExit(t *testing.T) {
 	writeTerminal(t, conn, map[string]any{"type": "resize", "cols": 120, "rows": 40})
 	select {
 	case size := <-session.resize:
+		if size != [2]int{80, 24} {
+			t.Fatal(size)
+		}
+	case <-ctx.Done():
+		t.Fatal("initial resize blocked")
+	}
+	select {
+	case size := <-session.resize:
 		if size != [2]int{120, 40} {
 			t.Fatal(size)
 		}
@@ -174,11 +191,29 @@ func TestTerminalBytesResizeFlowAndExit(t *testing.T) {
 	if string(data) != `{"code":7,"type":"exit"}` {
 		t.Fatal(string(data))
 	}
+	conn.CloseNow()
 	h.active.Wait()
 	select {
 	case <-session.closed:
 	default:
 		t.Fatal("exit leaked shell")
+	}
+}
+
+func TestTerminalImmediateReconnectReusesShell(t *testing.T) {
+	shell := newFakeTerminal()
+	var calls atomic.Int32
+	_, server := terminalServer(t, fakeBackend{terminal: func(context.Context, string, int, int) (application.TerminalSession, error) {
+		calls.Add(1)
+		return shell, nil
+	}})
+	first := dialTerminal(t, server, testToken)
+	readTerminal(t, first)
+	first.CloseNow()
+	next := dialTerminal(t, server, testToken)
+	_, data := readTerminal(t, next)
+	if string(data) != `{"reused":true,"type":"ready"}` || calls.Load() != 1 {
+		t.Fatalf("fast reattach replaced shell: %s", data)
 	}
 }
 
@@ -230,6 +265,7 @@ func TestTerminalInvalidControlAndServerCancellation(t *testing.T) {
 	readTerminal(t, conn)
 	cancel()
 	h.active.Wait()
+	h.workspaces.Close()
 	select {
 	case <-session.closed:
 	default:

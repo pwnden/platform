@@ -118,6 +118,18 @@ export function createAPI(options: APIOptions): APIClient {
 
   return {
     terminals: {
+      async list() {
+        const payload = await request('/workspaces');
+        return array(payload.workspaces).map(value => {
+          const item = object(value);
+          if (typeof item.connected !== 'boolean' || (item.expires_at !== null && typeof item.expires_at !== 'string')) throw new APIError('invalid_response', 0);
+          return { slug: string(item.slug), title: string(item.title), connected: item.connected, expiresAt: item.expires_at as string | null };
+        });
+      },
+      async stop(slug) {
+        const item = await request(`${route(slug)}/run`, 'DELETE');
+        if (item.slug !== slug) throw new APIError('invalid_response', 0);
+      },
       connect(slug, size, receive) {
         const path = `/api/v1${route(slug)}/terminal`;
         return connectTerminal(path, options.token, size, event => {

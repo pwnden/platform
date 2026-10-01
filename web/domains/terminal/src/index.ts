@@ -6,17 +6,26 @@ export type TerminalEvent =
   | { readonly type: 'closed' };
 
 export interface TerminalSession {
+	readonly reused?: boolean;
   input(data: Uint8Array): void;
   resize(size: TerminalSize): void;
   close(): void;
 }
 
-// DOM cancellation and transport details stay in the adapter. Closing a
-// connection attempt is the same ownership operation as closing a ready shell.
+// Closing a browser attachment preserves the environment until inactive expiry.
 export interface TerminalConnection {
   readonly ready: Promise<TerminalSession>;
   close(): void;
 }
 export interface Terminals {
   connect(slug: string, size: TerminalSize, receive: (event: TerminalEvent) => void): TerminalConnection;
+  list(): Promise<readonly RetainedEnvironment[]>;
+  stop(slug: string): Promise<void>;
+}
+
+export interface RetainedEnvironment {
+  readonly slug: string;
+  readonly title: string;
+  readonly connected: boolean;
+  readonly expiresAt: string | null;
 }

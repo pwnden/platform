@@ -22,8 +22,7 @@ type serverFailure struct{ cause error }
 func (e *serverFailure) Error() string { return "local server failed; check cleanup diagnostics" }
 func (e *serverFailure) Unwrap() error { return e.cause }
 
-// Serve owns a loopback listener until cancellation. Completed problem runs
-// survive shutdown; interrupted starts and failed response delivery are cleaned.
+// Serve owns its retained environments until cancellation and waits for cleanup.
 func Serve(ctx context.Context, backend Backend, stdout, stderr io.Writer) error {
 	return serve(ctx, backend, stdout, stderr, nil)
 }
@@ -31,6 +30,15 @@ func Serve(ctx context.Context, backend Backend, stdout, stderr io.Writer) error
 func serve(ctx context.Context, backend Backend, stdout, stderr io.Writer, frontend *Frontend) error {
 	if err := ctx.Err(); err != nil {
 		return err
+	}
+	if owner, ok := backend.(interface {
+		AcquireWorkspace(context.Context) (func() error, error)
+	}); ok {
+		release, err := owner.AcquireWorkspace(ctx)
+		if err != nil {
+			return err
+		}
+		defer release()
 	}
 	listener, err := net.Listen("tcp4", "127.0.0.1:0")
 	if err != nil {
@@ -75,10 +83,11 @@ func serve(ctx context.Context, backend Backend, stdout, stderr io.Writer, front
 	// Shutdown tracks connections. A disconnected handler can still be performing
 	// independent Docker cleanup, so wait for our own admitted handlers as well.
 	handler.active.Wait()
+	workspaceErr := handler.workspaces.Close()
 	if errors.Is(err, http.ErrServerClosed) {
 		err = nil
 	}
-	if failure := errors.Join(err, shutdownErr, handler.cleanupError()); failure != nil {
+	if failure := errors.Join(err, shutdownErr, handler.cleanupError(), workspaceErr); failure != nil {
 		return &serverFailure{cause: failure}
 	}
 	return nil

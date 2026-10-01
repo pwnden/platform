@@ -11,15 +11,13 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
-	"github.com/pwnden/platform/internal/application"
 )
 
-const terminalProtocol = "pwnden.terminal.v1"
+const terminalProtocol = "pwnden.terminal.v2"
 
 type terminalConnection struct {
 	cancel context.CancelFunc
 	done   chan struct{}
-	err    error // published before done closes
 }
 type terminalMessage struct {
 	Type  string `json:"type"`
@@ -85,7 +83,34 @@ func decodeTerminal(data []byte) (terminalMessage, error) {
 }
 
 func (h *handler) terminal(w http.ResponseWriter, r *http.Request, slug string) {
-	if !method(w, r, "GET") || !emptyBody(w, r) {
+	if r.Method == "DELETE" {
+		if !emptyBody(w, r) {
+			return
+		}
+		if len(r.Header.Values("Authorization")) != 1 || subtle.ConstantTimeCompare([]byte(r.Header.Get("Authorization")), []byte("Bearer "+h.token)) != 1 {
+			transportError(w, 401, "unauthorized", "A server session token is required.")
+			return
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), operationTimeout)
+		defer cancel()
+		release, err := h.acquire(ctx, slug)
+		if err != nil {
+			applicationError(w, err)
+			return
+		}
+		defer release()
+		if err := h.stopTerminal(slug); err != nil {
+			applicationError(w, err)
+			return
+		}
+		if err := h.workspaces.EndTerminal(slug); err != nil {
+			applicationError(w, err)
+			return
+		}
+		writeJSON(w, 200, Stop{Slug: slug})
+		return
+	}
+	if !method(w, r, "GET", "DELETE") || !emptyBody(w, r) {
 		return
 	}
 	if r.Header.Get("Origin") != "http://"+h.host {
@@ -102,13 +127,10 @@ func (h *handler) terminal(w http.ResponseWriter, r *http.Request, slug string) 
 	}
 	defer conn.CloseNow()
 	conn.SetReadLimit(16 << 10)
-	ctx, cancel := context.WithTimeout(r.Context(), operationTimeout)
+	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
 	stopBase := context.AfterFunc(h.base, cancel)
 	defer stopBase()
-	if h.base.Err() != nil {
-		cancel()
-	}
 	stopSocket := context.AfterFunc(ctx, func() { conn.CloseNow() })
 	defer stopSocket()
 	send := func(value any) error {
@@ -148,18 +170,30 @@ func (h *handler) terminal(w http.ResponseWriter, r *http.Request, slug string) 
 		return
 	}
 	h.mu.Lock()
-	_, busy := h.terminals[slug]
+	previous := h.terminals[slug]
 	h.mu.Unlock()
-	if busy {
-		release()
-		fail("terminal_busy")
-		return
+	if previous != nil {
+		// Let a closing previous attachment finish during a quick A→B→A
+		// transition. A live attachment keeps ownership and receives a conflict.
+		timer := time.NewTimer(300 * time.Millisecond)
+		select {
+		case <-previous.done:
+		case <-ctx.Done():
+			timer.Stop()
+			release()
+			return
+		case <-timer.C:
+			release()
+			fail("terminal_busy")
+			return
+		}
+		timer.Stop()
 	}
-	session, err := h.backend.OpenTerminal(ctx, slug, message.Cols, message.Rows)
+	session, err := h.workspaces.Attach(slug, message.Cols, message.Rows)
 	if err != nil {
 		release()
 		_, response := ErrorFrom(err)
-		send(map[string]any{"type": "error", "code": response.Error.Code})
+		fail(response.Error.Code)
 		return
 	}
 	entry := &terminalConnection{cancel: cancel, done: make(chan struct{})}
@@ -169,18 +203,13 @@ func (h *handler) terminal(w http.ResponseWriter, r *http.Request, slug string) 
 	release()
 	defer func() {
 		cancel()
-		entry.err = session.Close()
+		session.Close()
 		h.mu.Lock()
 		delete(h.terminals, slug)
-		if entry.err != nil {
-			h.cleanupFailures = errors.Join(h.cleanupFailures, entry.err)
-			// No shell output or backend cause enters diagnostics.
-			io.WriteString(h.diagnostics, "pwnden: terminal cleanup_failed for "+slug+"\n")
-		}
 		close(entry.done)
 		h.mu.Unlock()
 	}()
-	if send(map[string]any{"type": "ready"}) != nil {
+	if send(map[string]any{"type": "ready", "reused": session.Reused}) != nil {
 		return
 	}
 	inputDone := make(chan struct{})
@@ -194,14 +223,15 @@ func (h *handler) terminal(w http.ResponseWriter, r *http.Request, slug string) 
 				return
 			}
 			if typ == websocket.MessageBinary {
-				if _, err := session.Write(data); err != nil {
+				if err := session.Input(data); err != nil {
+					fail("input_backpressure")
 					cancel()
 					return
 				}
 				continue
 			}
 			control, err := decodeTerminal(data)
-			if err == nil && control.Type == "ack" && control.Token == "" && control.Cols == 0 && control.Rows == 0 {
+			if err == nil && control.Type == "ack" {
 				select {
 				case ack <- struct{}{}:
 				default:
@@ -211,7 +241,7 @@ func (h *handler) terminal(w http.ResponseWriter, r *http.Request, slug string) 
 				}
 				continue
 			}
-			if err != nil || control.Type != "resize" || control.Token != "" || control.Cols < 2 || control.Cols > 500 || control.Rows < 1 || control.Rows > 200 {
+			if err != nil || control.Type != "resize" || control.Cols < 2 || control.Cols > 500 || control.Rows < 1 || control.Rows > 200 {
 				fail("invalid_argument")
 				cancel()
 				return
@@ -226,44 +256,73 @@ func (h *handler) terminal(w http.ResponseWriter, r *http.Request, slug string) 
 			}
 		}
 	}()
-	// Closing both ends on cancellation unblocks writes as well as reads. Wait
-	// for the reader before publishing cleanup completion to a problem stop.
-	stopStream := context.AfterFunc(ctx, func() { session.Close() })
-	defer func() { cancel(); session.Close(); <-inputDone; stopStream() }()
-	buffer := make([]byte, 16<<10)
-	for {
-		n, err := session.Read(buffer)
-		if n > 0 {
-			writeCtx, done := context.WithTimeout(ctx, 5*time.Second)
-			failure := conn.Write(writeCtx, websocket.MessageBinary, buffer[:n])
-			done()
-			if failure != nil {
-				return
-			}
-			ackTimer := time.NewTimer(15 * time.Second)
+	defer func() { cancel(); <-inputDone }()
+	go func() {
+		tick := time.NewTicker(20 * time.Second)
+		defer tick.Stop()
+		for {
 			select {
-			case <-ack:
-				ackTimer.Stop()
 			case <-ctx.Done():
-				ackTimer.Stop()
 				return
-			case <-ackTimer.C:
-				fail("output_backpressure")
-				return
+			case <-tick.C:
+				ping, done := context.WithTimeout(ctx, 5*time.Second)
+				err := conn.Ping(ping)
+				done()
+				if err != nil {
+					cancel()
+					return
+				}
 			}
 		}
+	}()
+	write := func(data []byte) bool {
+		for len(data) > 0 {
+			n := min(len(data), 16<<10)
+			writeCtx, done := context.WithTimeout(ctx, 5*time.Second)
+			err := conn.Write(writeCtx, websocket.MessageBinary, data[:n])
+			done()
+			if err != nil {
+				return false
+			}
+			timer := time.NewTimer(15 * time.Second)
+			select {
+			case <-ack:
+				timer.Stop()
+			case <-ctx.Done():
+				timer.Stop()
+				return false
+			case <-timer.C:
+				fail("output_backpressure")
+				return false
+			}
+			data = data[n:]
+		}
+		return true
+	}
+	if !write(session.Snapshot) {
+		return
+	}
+	if err := session.Resize(ctx, message.Cols, message.Rows); err != nil {
+		fail("execution_failed")
+		return
+	}
+	for {
+		data, err := session.Next(ctx)
+		if len(data) > 0 && !write(data) {
+			return
+		}
 		if err != nil {
-			if err == io.EOF && ctx.Err() == nil {
-				waitCtx, done := context.WithTimeout(ctx, 5*time.Second)
-				code, waitErr := session.Wait(waitCtx)
-				done()
-				if waitErr == nil {
-					send(map[string]any{"type": "exit", "code": code})
-				} else {
+			if errors.Is(err, io.EOF) && ctx.Err() == nil {
+				code, failure := session.Result()
+				if failure != nil {
 					fail("execution_failed")
+					return
 				}
-			} else if ctx.Err() == nil {
-				fail("execution_failed")
+				if send(map[string]any{"type": "exit", "code": code}) != nil {
+					return
+				}
+				// Keep problem presence while the player reads its visible page.
+				<-ctx.Done()
 			}
 			return
 		}
@@ -279,8 +338,5 @@ func (h *handler) stopTerminal(slug string) error {
 	}
 	entry.cancel()
 	<-entry.done
-	if entry.err != nil {
-		return &application.Error{Code: application.CleanupFailed, Operation: "terminal", Slug: slug, Cause: entry.err}
-	}
 	return nil
 }

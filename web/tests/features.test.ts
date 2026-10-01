@@ -28,20 +28,22 @@ vi.mock('../packages/ui/src/index.ts', async () => {
   };
 });
 
-it('owns pending and ready terminal connections across cancellation and unmount', async () => {
+it('automatically connects and releases pending and ready attachments on unmount', async () => {
   const close = vi.fn();
   let resolve: (value: unknown) => void = () => {};
   const session = { input: vi.fn(), resize: vi.fn(), close: vi.fn() };
-  const terminals = { connect: vi.fn(() => ({ ready: new Promise<any>(done => { resolve = done; }), close })) };
+  const terminals = { connect: vi.fn(() => ({ ready: new Promise<any>(done => { resolve = done; }), close })), list: vi.fn(), stop: vi.fn() };
   const root = node('root');
-  renderer.render(h(TerminalPanel, { terminals, slug: 'test', enabled: true, busy: false }), root);
-  const pending = click(button(root, '터미널 연결')); await settle();
+  renderer.render(h(TerminalPanel, { terminals, slug: 'test' }), root);
+  await settle();
+  expect(terminals.connect).toHaveBeenCalledOnce();
   expect(text(root)).toContain('연결하는 중');
-  await click(button(root, '연결 종료')); resolve(session); await pending; await settle();
+  renderer.render(null, root);
+  resolve(session); await settle();
   expect(close).toHaveBeenCalledOnce();
   expect(session.close).toHaveBeenCalledOnce();
-  expect(text(root)).not.toContain('연결됨');
-  const next = click(button(root, '터미널 연결')); resolve(session); await next; await settle();
+  renderer.render(h(TerminalPanel, { terminals, slug: 'test' }), root);
+  resolve(session); await settle();
   expect(text(root)).toContain('연결됨');
   const terminal = flatten(root).find(item => item.type === 'terminal')!;
   (terminal.props.onInput as (data: Uint8Array) => void)(new Uint8Array([3]));
@@ -50,7 +52,7 @@ it('owns pending and ready terminal connections across cancellation and unmount'
   expect(close).toHaveBeenCalledTimes(2);
 });
 
-it('starts a stopped Note Vault, connects its shell and preserves it across column resize', async () => {
+it('automatically enters Note Vault and preserves its attachment across column resize', async () => {
   const problem = { slug: 'note-vault', title: 'Note Vault', category: 'web', kind: 'service' as const };
   let status: RunStatus = { ...problem, state: 'stopped', endpoints: [] };
   const session = { input: vi.fn(), resize: vi.fn(), close: vi.fn() };
@@ -58,22 +60,18 @@ it('starts a stopped Note Vault, connects its shell and preserves it across colu
   const client = {
     catalog: { list: vi.fn(async () => [problem]), detail: vi.fn(async () => ({ ...problem, description: '설명', files: [], hintCount: 0, walkthrough: false })), download: vi.fn(), guidance: vi.fn() },
     player: {
-      status: vi.fn(async () => status),
-      run: vi.fn(async () => { status = { ...status, state: 'running' }; return { ...status, fileCount: 0 }; }),
+      status: vi.fn(async () => status), run: vi.fn(async () => { status = { ...status, state: 'running' }; return { ...status, fileCount: 0 }; }),
       stop: vi.fn(async () => { status = { ...status, state: 'stopped' }; }), submit: vi.fn(),
     },
-    terminals: { connect: vi.fn(() => ({ ready: Promise.resolve(session), close })) },
+    terminals: { connect: vi.fn(() => { status = { ...status, state: 'running' }; return { ready: Promise.resolve(session), close }; }), list: vi.fn(), stop: vi.fn() },
   };
   const root = node('root');
   renderer.render(h(App, { client }), root);
   await settle();
   await click(flatten(root).find(item => item.type === 'button' && text(item).includes('Note Vault'))!);
   await settle();
-  const start = button(root, '문제 실행 후 터미널 연결');
-  expect(start.props.disabled).toBe(false);
-  await click(start); await settle();
-  expect(client.player.run).toHaveBeenCalledWith('note-vault');
-  expect(client.player.run.mock.invocationCallOrder[0]).toBeLessThan(client.terminals.connect.mock.invocationCallOrder[0]!);
+  expect(client.terminals.connect).toHaveBeenCalledOnce();
+  expect(client.player.run).not.toHaveBeenCalled();
   expect(text(root)).toContain('연결됨');
   for (const split of flatten(root).filter(item => item.type === 'split')) {
     (split.props['onUpdate:modelValue'] as (value: number) => void)(30);
@@ -90,24 +88,45 @@ it('starts a stopped Note Vault, connects its shell and preserves it across colu
   await click(button(root, '문제 중지')); await settle();
   expect(close).toHaveBeenCalledOnce();
   expect(terminal.props.enabled).toBe(false);
+  expect(client.terminals.connect).toHaveBeenCalledOnce();
+  await click(button(root, '문제 실행')); await settle();
+  expect(client.terminals.connect).toHaveBeenCalledTimes(2);
+  expect(terminal.props.enabled).toBe(true);
   renderer.render(null, root);
 });
 
-it('keeps the terminal closed after failed or canceled service preparation', async () => {
-  const terminals = { connect: vi.fn() };
+it('retries failed preparation explicitly and exposes environments when the limit is reached', async () => {
+  const stop = vi.fn(async () => {});
+  const list = vi.fn(async () => [{ slug: 'other', title: '다른 문제', connected: false, expiresAt: null }]);
+  const terminals = { connect: vi.fn((_slug, _size, receive) => {
+    receive({ type: 'error', code: 'workspace_full' });
+    return { ready: Promise.reject(new Error('workspace_full')), close: vi.fn() };
+  }), list, stop };
   const root = node('root');
-  renderer.render(h(TerminalPanel, { terminals, slug: 'note-vault', enabled: false, busy: false, prepare: async () => false }), root);
-  await click(button(root, '문제 실행 후 터미널 연결')); await settle();
-  expect(text(root)).toContain('문제를 실행하지 못했습니다.');
-  expect(terminals.connect).not.toHaveBeenCalled();
-  renderer.render(null, root);
-  let finish: (value: boolean) => void = () => {};
-  renderer.render(h(TerminalPanel, { terminals, slug: 'note-vault', enabled: false, busy: false, prepare: () => new Promise<boolean>(resolve => { finish = resolve; }) }), root);
-  const pending = click(button(root, '문제 실행 후 터미널 연결'));
+  renderer.render(h(TerminalPanel, { terminals, slug: 'note-vault' }), root);
   await settle();
-  await click(button(root, '연결 종료')); finish(true);
-  await pending; await settle();
-  expect(terminals.connect).not.toHaveBeenCalled();
+  expect(terminals.connect).toHaveBeenCalledOnce();
+  expect(text(root)).toContain('최대 10개');
+  expect(text(root)).toContain('다른 문제');
+  await click(button(root, '종료')); await settle();
+  expect(stop).toHaveBeenCalledWith('other');
+  expect(terminals.connect).toHaveBeenCalledTimes(2);
+  renderer.render(null, root);
+});
+
+it('detaches on hidden pages and automatically reattaches when visible', async () => {
+  const target = new EventTarget();
+  const document = { visibilityState: 'visible', addEventListener: target.addEventListener.bind(target), removeEventListener: target.removeEventListener.bind(target) };
+  vi.stubGlobal('document', document);
+  const close = vi.fn();
+  const terminals = { connect: vi.fn(() => ({ ready: Promise.resolve({ input: vi.fn(), resize: vi.fn(), close }), close })), list: vi.fn(), stop: vi.fn() };
+  const root = node('root');
+  renderer.render(h(TerminalPanel, { terminals, slug: 'test' }), root);
+  await settle();
+  document.visibilityState = 'hidden'; target.dispatchEvent(new Event('visibilitychange')); await settle();
+  expect(close).toHaveBeenCalledOnce();
+  document.visibilityState = 'visible'; target.dispatchEvent(new Event('visibilitychange')); await settle();
+  expect(terminals.connect).toHaveBeenCalledTimes(2);
   renderer.render(null, root);
 });
 

@@ -31,7 +31,7 @@ func (s *terminal) control(value any) error {
 	return s.conn.Write(s.ctx, websocket.MessageText, data)
 }
 func connect(ctx context.Context, c config) (*terminal, error) {
-	conn, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(c.Origin, "http")+"/api/v1/problems/"+c.Slug+"/terminal", &websocket.DialOptions{Subprotocols: []string{"pwnden.terminal.v1"}, HTTPHeader: http.Header{"Origin": []string{c.Origin}}})
+	conn, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(c.Origin, "http")+"/api/v1/problems/"+c.Slug+"/terminal", &websocket.DialOptions{Subprotocols: []string{"pwnden.terminal.v2"}, HTTPHeader: http.Header{"Origin": []string{c.Origin}}})
 	if err != nil {
 		return nil, errors.New("terminal upgrade failed")
 	}
@@ -41,7 +41,11 @@ func connect(ctx context.Context, c config) (*terminal, error) {
 		return nil, err
 	}
 	typ, data, err := conn.Read(ctx)
-	if err != nil || typ != websocket.MessageText || string(data) != `{"type":"ready"}` {
+	var ready struct {
+		Type   string
+		Reused bool
+	}
+	if err != nil || typ != websocket.MessageText || json.Unmarshal(data, &ready) != nil || ready.Type != "ready" {
 		conn.CloseNow()
 		return nil, errors.New("terminal was not ready")
 	}
@@ -278,8 +282,52 @@ func run(c config) error {
 		if response.StatusCode != 200 {
 			return errors.New("problem stop did not clean terminal")
 		}
-	} else if c.Mode == "disconnect" {
+	} else if c.Mode == "retain" {
+		usage, err := docker(ctx, "stats", "--no-stream", "--format", "memory={{.MemUsage}} cpu={{.CPUPerc}}", id)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Retained toolbox %s: %s\n", c.Slug, strings.TrimSpace(string(usage)))
 		s.conn.CloseNow()
+		return nil
+	} else if c.Mode == "disconnect" {
+		if err := s.input("cd /tmp; export PWNDEN_KEEP=retained; printf retained > pwnden-kept; sleep 300 & (sleep 0.3; seq 1 5000; printf '\\137\\137DETACHED\\137\\137\\n') & printf '\\137\\137RETAIN_READY\\137\\137\\n'\n"); err != nil {
+			return err
+		}
+		if err := s.until("__RETAIN_READY__\r\n"); err != nil {
+			return err
+		}
+		s.conn.CloseNow()
+		time.Sleep(800 * time.Millisecond)
+		// Detached output must keep draining even when it exceeds browser queues.
+		next, err := connect(ctx, c)
+		if err != nil {
+			return err
+		}
+		defer next.conn.CloseNow()
+		if err := next.input("printf '__RETAIN__'; printf '%s %s ' \"$PWD\" \"$PWNDEN_KEEP\"; cat pwnden-kept /etc/hostname; jobs -r; history 3; printf '__RETAIN_END__\\n'\n"); err != nil {
+			return err
+		}
+		if err := next.until("__RETAIN_END__\r\n"); err != nil {
+			return err
+		}
+		output := next.output.String()
+		for _, check := range []struct{ name, marker string }{{"cwd/env/file/identity", "/tmp retained retained" + id}, {"background job", "sleep 300"}, {"history", "PWNDEN_KEEP=retained"}, {"detached output", "__DETACHED__"}} {
+			if !strings.Contains(output, check.marker) {
+				return fmt.Errorf("reattachment lost %s", check.name)
+			}
+		}
+		req, _ := http.NewRequestWithContext(ctx, "DELETE", c.Origin+"/api/v1/problems/"+c.Slug+"/terminal", nil)
+		req.Header.Set("Authorization", "Bearer "+c.Token)
+		req.Header.Set("Origin", c.Origin)
+		response, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return errors.New("terminal cleanup request failed")
+		}
+		response.Body.Close()
+		if response.StatusCode != 200 {
+			return errors.New("terminal cleanup failed")
+		}
 	} else {
 		if err := s.input("exit 7\n"); err != nil {
 			return err

@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 	"unicode/utf8"
 
 	"github.com/pwnden/platform/internal/application"
@@ -37,10 +38,11 @@ type handler struct {
 	cleanupFailures error
 	terminals       map[string]*terminalConnection
 	frontend        *Frontend
+	workspaces      *application.Workspaces
 }
 
 func newHandler(base context.Context, backend Backend, host, token string, diagnostics io.Writer) *handler {
-	return &handler{base: base, backend: backend, host: host, token: token, diagnostics: diagnostics, locks: make(map[string]*problemLock), terminals: make(map[string]*terminalConnection)}
+	return &handler{base: base, backend: backend, host: host, token: token, diagnostics: diagnostics, locks: make(map[string]*problemLock), terminals: make(map[string]*terminalConnection), workspaces: application.NewWorkspaces(base, backend)}
 }
 
 func (h *handler) closeAdmission() {
@@ -109,6 +111,25 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	stop := context.AfterFunc(h.base, cancel)
 	defer stop()
+	if r.URL.Path == BasePath+"/workspaces" {
+		if method(w, r, "GET") && emptyBody(w, r) {
+			problems, err := h.backend.List(ctx)
+			if err != nil {
+				applicationError(w, err)
+				return
+			}
+			names := map[string]string{}
+			for _, p := range problems {
+				names[p.Slug] = p.Title
+			}
+			items := make([]map[string]any, 0)
+			for _, e := range h.workspaces.List() {
+				items = append(items, map[string]any{"slug": e.Slug, "title": names[e.Slug], "connected": e.Connected, "expires_at": e.ExpiresAt})
+			}
+			writeJSON(w, 200, map[string]any{"workspaces": items, "limit": application.WorkspaceLimit, "idle_seconds": int(application.WorkspaceIdle / time.Second)})
+		}
+		return
+	}
 	if h.base.Err() != nil {
 		cancel()
 	}
@@ -223,14 +244,14 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			applicationError(w, err)
 			return
 		}
-		result, err := h.backend.Stop(ctx, slug)
+		err := h.workspaces.Stop(slug)
 		if err != nil {
 			applicationError(w, err)
 			return
 		}
-		writeJSON(w, 200, Stop{Slug: result.Slug})
+		writeJSON(w, 200, Stop{Slug: slug})
 	default:
-		result, err := h.backend.Run(ctx, slug)
+		result, err := h.workspaces.Run(ctx, slug)
 		if err != nil {
 			applicationError(w, err)
 			return
@@ -252,7 +273,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) stopUndelivered(ctx context.Context, slug string) error {
-	_, err := h.backend.Stop(context.WithoutCancel(ctx), slug)
+	err := h.workspaces.Stop(slug)
 	if err != nil {
 		h.mu.Lock()
 		h.cleanupFailures = errors.Join(h.cleanupFailures, err)

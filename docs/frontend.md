@@ -125,7 +125,7 @@ docker build --file Dockerfile.web --target assets --output type=local,dest=dist
 
 ## Integration status
 
-The Vue app composes catalog, play and terminal features for seven HTTP reads/mutations and a WebSocket upgrade,
+The Vue app composes catalog, play and terminal features for HTTP operations and a WebSocket upgrade,
 including detail, declared file downloads and observed run status. Descriptions
 are rendered as Markdown through the UI-owned AST renderer. Download
 ports return plain `Uint8Array`; the catalog feature creates the browser Blob URL
