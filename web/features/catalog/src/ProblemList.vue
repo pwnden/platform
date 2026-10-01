@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import type { Catalog, Problem } from '@pwnden/catalog';
-import { UIButton, UITextField, UISelect, UIPanel } from '@pwnden/ui';
+import { UIButton, UITextField, UISelect, UIPanel, UIIconButton } from '@pwnden/ui';
 import { categoryLabel, filterProblems } from './browse';
 
 const props = defineProps<{ catalog: Catalog; selectionDisabled?: boolean; selectedSlug?: string | undefined }>();
@@ -59,14 +59,15 @@ onMounted(load);
 
 <template>
   <UIPanel title="문제 목록" headingID="catalog-heading" :aria-busy="pending" class="catalog-panel">
-    <template #actions><UIButton variant="ghost" size="compact" :busy="pending" @click="load">{{ pending ? '불러오는 중…' : '새로고침' }}</UIButton></template>
+    <template #actions><UIIconButton label="문제 목록 새로고침" icon="refresh" :busy="pending" @click="load" /></template>
     <div class="catalog-filters">
       <UITextField id="problem-search" v-model="query" label="검색" type="search" placeholder="문제 이름 또는 키워드" />
       <UISelect id="problem-category" v-model="category" label="분야" :options="options" />
     </div>
+    <div class="catalog-viewport">
+      <p v-if="failed" class="catalog-notice" role="alert">목록을 불러오지 못했습니다. 새로고침으로 다시 시도하세요.</p>
     <div ref="results" class="catalog-results" tabindex="0" role="region" aria-label="문제 검색 결과">
-      <p v-if="failed" role="alert">목록을 불러오지 못했습니다. 새로고침으로 다시 시도하세요.</p>
-      <p v-else-if="!pending && problems.length === 0">등록된 문제가 없습니다.</p>
+      <p v-if="!pending && problems.length === 0">등록된 문제가 없습니다.</p>
       <div v-else-if="!pending && !filtered.length" class="no-results">
         <p role="status">검색 결과가 없습니다.</p>
         <UIButton variant="ghost" size="compact" @click="query = ''; category = ''">검색 조건 초기화</UIButton>
@@ -82,6 +83,7 @@ onMounted(load);
         </ul>
       </section>
     </div>
+    </div>
     <nav class="catalog-pagination" aria-label="문제 목록 페이지">
       <p role="status" aria-live="polite">{{ filtered.length ? `${offset + 1}–${Math.min(offset + pageSize, filtered.length)} / ${filtered.length}개` : '0개' }}</p>
       <div v-if="pageCount > 1" class="page-actions">
@@ -96,12 +98,15 @@ onMounted(load);
 .catalog-panel { height: 100%; }
 .catalog-panel :deep(.ui-panel-body) { padding: 0; display: flex; flex-direction: column; overflow: hidden; }
 .catalog-filters { padding: var(--ui-space-2); display: grid; gap: var(--ui-space-2); border-bottom: 1px solid var(--ui-border); flex: none; }
-.catalog-results { flex: 1; min-height: 0; overflow-y: auto; padding: var(--ui-space-2); }
+.catalog-viewport { position: relative; flex: 1; min-height: 0; }
+.catalog-results { height: 100%; min-height: 0; overflow-y: auto; padding: var(--ui-space-2); }
+.catalog-notice { position: absolute; inset: 0; z-index: 1; padding: var(--ui-space-2); background: var(--ui-surface); overflow: auto; }
 .problem-group + .problem-group { margin-top: var(--ui-space-3); }
 .problem-group h3 { margin: 0; padding: var(--ui-inset-control); border: 1px solid transparent; color: var(--ui-muted); font-size: 0.85rem; font-weight: 600; }
 .problem-list { padding: 0; margin: 0; list-style: none; display: grid; gap: 0.25rem; }
 .problem-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
-.catalog-pagination { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--ui-space-1); padding: var(--ui-space-2); border-top: 1px solid var(--ui-border); flex: none; color: var(--ui-muted); font-size: 0.85rem; }
+.catalog-pagination { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; min-height: var(--ui-workspace-header-size); gap: var(--ui-space-1); padding: var(--ui-space-2); border-top: 1px solid var(--ui-border); flex: none; color: var(--ui-muted); font-size: 0.85rem; }
+.catalog-pagination p { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .page-actions { display: flex; gap: 0.25rem; }
 .catalog-results > p, .no-results { padding: 0; }
 .no-results { display: grid; gap: var(--ui-space-1); }

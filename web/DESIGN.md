@@ -198,7 +198,7 @@ Problem descriptions render Markdown, wrap at word boundaries, use a reading mea
 
 The player occupies (100dvh) beneath a compact brand header. Two nested `UISplit` controls divide the catalog, reading and tool columns. The catalog starts at (20%) of the workspace and adjusts between (14%) and (36%). Reading starts at (50%) of the remaining width and adjusts between (30%) and (70%). Both boundaries support pointer dragging and keyboard arrows through Sectile separator semantics. The catalog header, search and category controls stay outside the scrolling results. The selected problem title and category stay outside the independently scrolling body. Column changes preserve the selected problem, terminal session and web document.
 
-At (48rem), panes stack in reading order and the resize handles are hidden. The catalog occupies (30rem), with its results scrolling between filters and pagination. The tool pane occupies (36rem), and the page uses document scrolling. The selected problem header stays sticky at the top of its content. Reading panel padding changes from `ui-space-3` to `ui-space-2`. The execution panel uses `ui-space-2` at all widths. The flag field and submit button stack at full width when their own panel is narrower than (24rem). The document supports widths from (320px).
+At (48rem), panes stack in reading order and the resize handles are hidden. The catalog occupies (30rem), with its results scrolling between filters and pagination. The tool pane occupies (36rem), and the page uses document scrolling. The selected problem header stays sticky at the top of its content. Reading panel padding changes from `ui-space-3` to `ui-space-2`. The execution panel uses `ui-space-2` at all widths. The flag field and submit button stack at full width when their own panel is narrower than (20rem). The document supports widths from (320px).
 
 Each container uses the same inset on all four sides. Panel headings and bodies share `--ui-panel-inset`: reading sections use `ui-space-3` on desktop and `ui-space-2` on narrow screens; execution, catalog and terminal sections use `ui-space-2`. Catalog filters, results and pagination use the same inset. The embedded terminal receives its inset once from the panel body. Control groups use `ui-space-1` as gap. Panel headings wrap actions as whole units. Navigation labels ellipsize within narrow panes and retain full titles; URLs and file paths can wrap while prose preserves words.
 
@@ -208,21 +208,11 @@ full-title tooltip. `--ui-workspace-header-size` derives the minimum height from
 the compact control, two equal workspace insets and a divider. Category badges
 use the control radius and equal padding, with accessible category context.
 
-The execution section shows TCP addresses and the flag form. Connecting the
-terminal prepares the environment; its header owns connection and immediate
-environment termination. HTTP documents appear in the Web tool. A divider
-separates the flag form from preceding content; its field and submit button share the default height.
-Status and an icon-only refresh action remain together in the section header.
-Status refresh retains the body, editable flag input and submission
-result throughout observation. Progress appears in the existing header icon box
-and respects reduced-motion preferences. A completed state change or observation
-failure updates the content; unknown state disables submission and removes stale
-entry points.
+The submission bar is fixed below the right-side tool pane, outside its scrolling contents. Its field and button share the default control height; narrow panes stack them. A fixed-height caption holds the result and environment refresh. An accepted flag remains visible and readonly, styled with the success color and a check icon in the completed button. Loading, rejection and connection errors update existing slots and controls. Tool errors and progress use overlays within their viewports so adjacent controls keep their positions. TCP endpoints appear in terminal tab actions.
 
 The right-side tools use `UITabs`, with a continuous navigation strip at the
 workspace-header height. Each tab fills the strip height and uses the workspace
-inset equally on all sides. Terminal is the default. Files appears for declared
-materials; Web appears after a local HTTP endpoint is observed. The selected tab
+inset equally on all sides. The declared `[player].tools` determine visible tools and their order; the first tool is the default. Note Vault uses Web; Rotor Lock uses Files and Terminal. The selected tab
 uses accent text and a bottom indicator along the shared content edge. Hover and
 press affect the tab surface; keyboard focus outlines its label separately from
 selection. Navigation uses the flush radius and the label uses the inline radius. Sectile owns
@@ -280,9 +270,9 @@ Source: [UITextField.vue](packages/ui/src/UITextField.vue).
 
 ### Panels
 
-Each reading panel is a semantic section with a labelled heading and optional actions. A lower heading border separates the content; the header has a minimum height of (3.5rem). `headingLevel` places the catalog heading at level 2 and reading section headings at level 3 beneath the selected problem title. Brief, execution and submission, hints and walkthrough share raised heading bands. Execution and submission precede the learning sections. Tool contents use accessible region names beneath their shared tab strip. Panels flex to fill available space while permitting their contents to shrink. The terminal uses the terminal background.
+Each reading panel is a semantic section with a labelled heading and optional actions. A lower heading border separates the content; the header has a minimum height of (3.5rem). `headingLevel` places the catalog heading at level 2 and reading section headings at level 3 beneath the selected problem title. Brief, hints and walkthrough share raised heading bands. Tool contents use accessible region names beneath their shared tab strip. Panels flex to fill available space while permitting their contents to shrink. The terminal uses the terminal background.
 
-The execution panel groups its current state and refresh action in the header. Refresh queries server state. TCP addresses occupy the body when present, while ready file problems begin directly with the submission form. The form receives a divider only when body content precedes it. The tool pane has one fixed tab strip; selected-tool actions occupy its right edge, outside the tablist. Content fills the remaining bounded area.
+The submission bar groups its fixed feedback slot and environment refresh action above the form. Refresh queries server state. TCP addresses occupy the terminal tab actions when present. The tool pane has one fixed tab strip; selected-tool actions occupy its right edge, outside the tablist. Content fills the remaining bounded area above submission.
 
 Source: [UIPanel.vue](packages/ui/src/UIPanel.vue), [PlayPanel.vue](features/play/src/PlayPanel.vue).
 
@@ -294,13 +284,13 @@ Source: [ProblemList.vue](features/catalog/src/ProblemList.vue), [App.vue](apps/
 
 ### Status
 
-Inline text communicates muted, info, success or danger tone. Labels describe actual client or execution state. Alert text uses danger. Supporting status text uses (0.8rem). Terminal preparation is announced over the viewport and through the busy refresh control; failures and shell exit remain readable above the viewport.
+Inline text communicates muted, info, success or danger tone. Labels describe actual client or execution state. Alert text uses danger. Supporting status text uses (0.8rem). Terminal preparation is announced over the viewport and through the busy refresh control; failures and shell exit appear in overlays within the viewport.
 
 Source: [UIStatus.vue](packages/ui/src/UIStatus.vue), [UIIconButton.vue](packages/ui/src/UIIconButton.vue).
 
 ### Terminal
 
-`UITerminal` owns xterm and its fit addon inside the UI package. It maps shared tokens to the terminal theme, enables screen reader mode and resizes after fonts load or column changes. Its public resize event contains only `cols` and `rows`. Selecting a problem prepares and connects its environment automatically. The tab strip's terminal refresh action reattaches to the existing shell, retaining files, working directory and jobs. Server snapshots restore output. After shell exit it creates a new shell. Preparation disables repeated refresh and uses an overlay to preserve the viewport geometry. Leaving starts the ten-minute inactivity timer; returning cancels it. At the ten-environment limit, an inline recovery list offers explicit cleanup of a retained environment.
+`UITerminal` owns xterm and its fit addon inside the UI package. It maps shared tokens to the terminal theme, enables screen reader mode and resizes after fonts load or column changes. Its public resize event contains only `cols` and `rows`. Problem presence prepares the environment independently. A declared Terminal tool starts its shell on first activation. The tab strip's terminal refresh action reattaches to the existing shell, retaining files, working directory and jobs. Server snapshots restore output. After shell exit it creates a new shell. Preparation disables repeated refresh and uses an overlay to preserve the viewport geometry. Leaving starts the ten-minute inactivity timer; returning cancels it. At the ten-environment limit, an inline recovery list offers explicit cleanup of a retained environment.
 
 Source: [UITerminal.vue](packages/ui/src/UITerminal.vue), [UIIconButton.vue](packages/ui/src/UIIconButton.vue), [TerminalPanel.vue](features/terminal/src/TerminalPanel.vue).
 
@@ -308,7 +298,7 @@ Source: [UITerminal.vue](packages/ui/src/UITerminal.vue), [UIIconButton.vue](pac
 
 `UIMarkdown` renders source through md4x's WASM parser and an allowlisted Vue AST renderer. Source headings fit below the panel title. Inline code uses the accent and raised surface; code blocks use the terminal background. Tables scroll inside their own region. Quotes use a thin active stroke, and task markers are read-only. Links use the shared accent and keyboard focus. Images display alternative text. Loading is announced; failure offers retry and escaped source.
 
-`UIReveal` uses native details/summary semantics with shared border, spacing and compact keyboard focus. Individually numbered hints and answer-labeled walkthroughs open inside the reading pane. Closed spoilers have no content DOM. `UICode` displays escaped selectable source, preserves indentation and blank lines, and scrolls in both dimensions with a maximum height of (32rem). Both Markdown fences and material previews use Shiki with a shared blue-black theme. Fences supply their language; material filenames supply their extension. Keywords use syntax magenta, functions use syntax cyan, strings use success, numbers use warning, types use accent and comments use muted. Grammars and the JavaScript regex engine load on demand. Vue renders tokens as text spans with fixed CSS classes under the existing CSP. Unknown languages, initialization failure and large sources remain readable as escaped text. The catalog feature fetches revealed content on demand and keeps it across close/reopen within the selected problem. Text previews stop at (1 MiB); binary and larger materials direct players to the prepared terminal.
+`UIReveal` uses native details/summary semantics with shared border, spacing and compact keyboard focus. Individually numbered hints and answer-labeled walkthroughs open inside the reading pane. Closed spoilers have no content DOM. `UICode` displays escaped selectable source, preserves indentation and blank lines, and scrolls in both dimensions with a maximum height of (32rem). Both Markdown fences and material previews use Shiki with a shared blue-black theme. Fences supply their language; material filenames supply their extension. Keywords use syntax magenta, functions use syntax cyan, strings use success, numbers use warning, types use accent and comments use muted. Grammars and the JavaScript regex engine load on demand. Vue renders tokens as text spans with fixed CSS classes under the existing CSP. Unknown languages, initialization failure and large sources remain readable as escaped text. The catalog feature fetches revealed content on demand and keeps it across close/reopen within the selected problem. Text previews stop at (1 MiB); binary and larger materials remain available through download.
 
 The Files tool displays the selected file immediately on first entry. A single file has a compact path label; multiple files use a named selector. Source fills the available height with independent scrolling. The selected file's download icon lives at the right edge of the common tab strip. File sizes remain internal metadata for preview limits. The catalog feature owns file selection, fetching, retry and cache through a public handle. Terminal refresh, file download, web refresh and the new-tab link share the same compact square hit box, control radius and icon size. Busy icons retain their dimensions.
 

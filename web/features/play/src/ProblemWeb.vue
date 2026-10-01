@@ -75,7 +75,7 @@ defineExpose(handle);
 <template>
   <section class="web-panel" aria-label="문제 웹">
     <UISelect v-if="endpoints.length > 1" id="web-service" label="웹 서비스" v-model="selected" :options="endpoints.map(endpoint => ({ value: endpoint.url, label: endpoint.name }))" />
-    <form v-if="current" class="web-address-bar" @submit.prevent="navigate">
+    <form class="web-address-bar" @submit.prevent="navigate">
       <div class="web-navigation" role="group" aria-label="웹 탐색">
         <UIIconButton label="뒤로 가기" icon="back" :disabled="!handle.canBack || handle.busy" @click="handle.back()" />
         <UIIconButton label="앞으로 가기" icon="forward" :disabled="!handle.canForward || handle.busy" @click="handle.forward()" />
@@ -83,15 +83,14 @@ defineExpose(handle);
       </div>
       <UITextField id="web-address" label="문제 웹 경로" label-hidden size="compact" v-model="address" :disabled="!sessions[selected]" />
     </form>
-    <p v-if="errors[selected] || state?.error" role="alert">{{ errors[selected] || state?.error }}</p>
     <div v-if="current" class="web-viewport" :aria-busy="!!pending[selected]">
+      <p v-if="errors[selected] || state?.error" class="web-notice" role="alert">{{ errors[selected] || state?.error }}</p>
       <template v-for="endpoint in endpoints" :key="endpoint.url">
         <UIWebFrame v-if="sessions[endpoint.url]" :ref="value => { if (value) frames[endpoint.url] = value as unknown as UIWebFrameHandle; else delete frames[endpoint.url]; }" :hidden="endpoint.url !== selected" :src="sessions[endpoint.url]!.url" :target="sessions[endpoint.url]!.target" :title="`${endpoint.name} 문제 사이트`" @navigation="states[endpoint.url] = $event" />
       </template>
       <p v-if="pending[selected]" class="web-loading" role="status">문제 웹을 여는 중…</p>
     </div>
-    <p v-else-if="status?.state === 'unavailable'" role="alert">실행 환경에 문제가 있습니다. 문제에서 나간 뒤 10분 후 다시 열면 환경을 새로 준비합니다.</p>
-    <p v-else>터미널을 연결하면 문제 웹이 준비됩니다.</p>
+    <div v-else class="web-viewport"><p class="web-loading" role="status">{{ status?.state === 'unavailable' ? '문제 웹을 준비하지 못했습니다. 환경 상태를 확인하세요.' : '문제 웹 준비 중…' }}</p></div>
   </section>
 </template>
 
@@ -100,10 +99,11 @@ defineExpose(handle);
 .web-address-bar { flex: none; min-width: 0; display: flex; align-items: center; gap: var(--ui-space-1); }
 .web-navigation { flex: none; display: flex; align-items: center; gap: var(--ui-space-1); }
 .web-address-bar > :deep(.ui-field) { flex: 1; min-width: 0; }
-.web-viewport { flex: 1; min-width: 0; min-height: 0; border: 1px solid var(--ui-border); border-radius: var(--ui-radius-surface); overflow: hidden; }
+.web-viewport { position: relative; flex: 1; min-width: 0; min-height: 0; border: 1px solid var(--ui-border); border-radius: var(--ui-radius-surface); overflow: hidden; }
 .web-viewport :deep(.ui-web-frame) { border-radius: max(0px, calc(var(--ui-radius-surface) - 1px)); }
 .web-viewport :deep(.ui-web-frame[hidden]) { display: none; }
 p { color: var(--ui-muted); }
-.web-loading { padding: var(--ui-space-2); }
+.web-loading { position: absolute; inset: 0; display: grid; place-content: center; padding: var(--ui-space-2); background: var(--ui-surface); }
+.web-notice { position: absolute; z-index: 1; inset-inline: var(--ui-space-2); top: var(--ui-space-2); padding: var(--ui-space-2); border: 1px solid var(--ui-danger); border-radius: var(--ui-radius-control); background: var(--ui-surface-raised); }
 p[role='alert'] { color: var(--ui-danger); }
 </style>

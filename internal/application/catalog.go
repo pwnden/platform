@@ -41,6 +41,7 @@ type ProblemDetail struct {
 	Files       []ProblemFile
 	HintCount   int
 	Walkthrough bool
+	Tools       []string
 }
 
 type Download struct {
@@ -146,7 +147,7 @@ func (s *Service) Detail(ctx context.Context, slug string) (ProblemDetail, error
 	if err != nil {
 		return ProblemDetail{}, loadError(ctx, "detail", slug, err)
 	}
-	result := ProblemDetail{Problem: problem(c), Files: make([]ProblemFile, 0, len(files))}
+	result := ProblemDetail{Problem: problem(c), Files: make([]ProblemFile, 0, len(files)), Tools: c.PlayerTools()}
 	for _, file := range files {
 		result.Files = append(result.Files, file.ProblemFile)
 	}

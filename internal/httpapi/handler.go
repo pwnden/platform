@@ -161,7 +161,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case len(parts) == 1:
 		action = "detail"
-	case len(parts) == 2 && (parts[1] == "run" || parts[1] == "submissions" || parts[1] == "status" || parts[1] == "browser"):
+	case len(parts) == 2 && (parts[1] == "run" || parts[1] == "submissions" || parts[1] == "status" || parts[1] == "browser" || parts[1] == "workspace"):
 		action = parts[1]
 	case len(parts) == 3 && parts[1] == "files" && fileID.MatchString(parts[2]):
 		action = "download"
@@ -211,6 +211,12 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var flag string
+	if action == "workspace" {
+		if method(w, r, "GET") && emptyBody(w, r) {
+			h.workspace(w, r, slug)
+		}
+		return
+	}
 	if action == "browser" {
 		if !method(w, r, "POST") {
 			return

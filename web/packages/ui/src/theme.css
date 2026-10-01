@@ -151,12 +151,16 @@ a:not(.ui-button):active { color: var(--ui-accent); background: var(--ui-accent-
   transition: border-color var(--ui-state-duration) var(--ui-state-easing), background-color var(--ui-state-duration) var(--ui-state-easing);
 }
 .ui-input--compact { height: var(--ui-control-size-compact); padding: var(--ui-inset-compact); font-size: 0.85rem; line-height: 1.19rem; }
+.ui-input--success { border-color: var(--ui-success); color: var(--ui-success); }
+.ui-input--danger { border-color: var(--ui-danger); }
+.ui-input[readonly] { background: var(--ui-surface-raised); }
 .ui-input::placeholder { color: var(--ui-muted); }
 @media (hover: hover) { .ui-input:hover:enabled, .ui-input:has(select:enabled):hover { border-color: var(--ui-accent); } }
 .ui-input:focus { border-color: var(--ui-accent); }
 .ui-input:active:enabled, .ui-input:has(select:enabled):active { background: var(--ui-surface-raised); }
 .ui-input:disabled { opacity: 0.5; cursor: not-allowed; }
 .ui-input[aria-invalid='true'] { border-color: var(--ui-danger); }
+.ui-input--success[readonly] { border-color: var(--ui-success); }
 .ui-input:has(select:disabled) { opacity: 0.5; cursor: not-allowed; }
 .ui-input:has(select:focus) { border-color: var(--ui-accent); }
 .ui-input:has(select:focus-visible) { outline: var(--ui-focus-width) solid var(--ui-focus-color); outline-offset: var(--ui-focus-offset); }

@@ -107,20 +107,14 @@ height as its neighboring workspace headers. Its title stays on one line with a
 full-title tooltip; the category appears in a right-aligned `UIBadge`, with a
 screen-reader category prefix. The body scrolls independently below it.
 
-The execution panel groups status and an icon-only refresh action in the header.
-Refresh queries the current server state. The panel shows TCP addresses and the
-flag form; the terminal header owns connection and environment termination.
-Connecting prepares the environment automatically. HTTP entry points appear
-in the right-side web tool.
-The flag field and confirmation form are a separate group below a divider.
-File problems proceed directly to submission. Both form controls share the
-default height; narrow containers stack them at full width.
-Refresh retains the existing body, flag input and submission result
-while the header icon rotates inside its fixed box. The flag field remains
-editable; submitting and duplicate refresh requests wait for the observation.
-Reduced-motion preferences keep the refresh icon static. Failed observation
-clears stale endpoints and exposes recovery; a confirmed state change updates
-the displayed content.
+The submission bar stays outside the scrolling tool pane at its lower edge.
+Its caption contains a fixed feedback slot and an icon-only environment refresh.
+The flag field and submit button retain their dimensions across loading, error
+and completion. Narrow panes stack the controls based on available width.
+Rejected answers remain editable. An accepted answer stays in the readonly
+field, with success color and a check icon on the completed button; it remains
+selectable for copying. Submission success remains confirmed when a later
+status request fails. TCP endpoints appear beside the terminal tab actions.
 
 Shared interaction styles live in `packages/ui/src/theme.css`. Buttons, fields,
 links, disclosures, code scroll regions and split handles share focus tokens and
@@ -143,14 +137,15 @@ in adjacent columns. At 76rem the tool pane follows the reading column; at 48rem
 the list moves above the content and the full-width document scrolls vertically.
 The terminal frame constrains xterm independently of its measured row height.
 
-The tool pane defaults to Terminal. Files appears for declared distribution
-materials; Web appears once a published local HTTP entry point is observed and
-remains available for recovery after environment termination. `UITabs` owns
-Sectile keyboard navigation, linked tab/panel semantics, selected styling and
-inactive-panel exclusion. Panels stay mounted. Switching tools preserves the
-terminal attachment, source previews and each opened web document. It does not
-start the environment inactivity timer. Hidden browser pages and problem changes
-follow the existing terminal lifecycle.
+The tool pane displays the challenges-owned `[player].tools` declaration in
+its given order; the first tool opens by default. Contract 4 requires this
+declaration. Note Vault exposes Web, while Rotor Lock exposes Files and Terminal.
+Older catalogs derive the minimal tool set from HTTP/TCP endpoints and files.
+`UITabs` owns keyboard navigation, linked tab/panel semantics and hidden panels.
+Visited tools stay mounted. Terminal is mounted only on its first activation;
+opening a web-only problem creates no shell. Tool switches preserve source
+previews, terminal state and each opened web document.
+
 The tab strip shares one content divider. Full-height tab targets use equal
 workspace insets and a selected bottom indicator. Hover and pressed states affect
 the strip surface; keyboard focus outlines the label separately from selection.
@@ -158,12 +153,13 @@ Selected-tool icon actions occupy the strip's right edge, outside the tablist's
 arrow-key navigation. Terminal refresh, file download and the new-tab link share
 the compact square control class and radius with the web address bar's navigation.
 
-`ProblemDetail` loads metadata once and emits the detail to the app. The app
-passes declared files to `ProblemFiles` and observed run status to `ProblemWeb`;
-features remain independent. Terminal preparation and reattachment refresh status
-after an existing request finishes, so an early observation cannot hide a newly
-prepared web service. Hidden terminals keep their dimensions and do not take focus
-when an attachment finishes preparing.
+`ProblemDetail` loads metadata once and emits declared files and tools to the
+app. The app composes independent catalog, play and terminal features.
+`PlayPanel` opens an authenticated workspace stream for problem presence,
+independent of the selected tool. It prepares the environment, receives its
+status and releases the view on hidden pages or unmount. The last view or
+terminal attachment leaving starts the ten-minute inactivity timer.
+Unknown state disables submission and removes stale web entry points.
 
 `ProblemWeb` selects platform-provided `http://127.0.0.1:<port>` web origins.
 Documents load on first use, retain state when switching tools or endpoints, and
@@ -285,12 +281,9 @@ including detail, declared file downloads and observed run status. Descriptions
 are rendered as Markdown through the UI-owned AST renderer. Download
 ports return plain `Uint8Array`; the catalog feature creates the browser Blob URL
 and revokes it after initiating the download. The bearer token stays in the fetch
-header. Play loads status on selection, refreshes it after submission and terminal
-lifecycle events, and provides
-a manual refresh. Failed observation clears stale endpoints; unavailable
-resources direct the player to the terminal header's environment termination
-and reconnect controls. Those controls remain available after failed
-observation; unknown state disables submission.
+header. Play prepares and retains the selected problem through its workspace view stream.
+Submission and manual observation remain separate operations. Tool viewports keep
+loading and errors inside overlays; the submission caption retains its geometry.
 The API client uses a fixed same-origin
 `/api/v1` base, keeps the fragment token in memory and uses a bearer header. It follows the server's
 snake_case DTOs and tolerates extra response fields. Flags are checked on Go;

@@ -3,7 +3,7 @@ import { TextField } from '@sectile/vue/text';
 import type { UITextFieldProps } from './props';
 
 defineOptions({ inheritAttrs: false });
-withDefaults(defineProps<UITextFieldProps>(), { size: 'default' });
+withDefaults(defineProps<UITextFieldProps>(), { size: 'default', tone: 'default' });
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
 </script>
 
@@ -14,9 +14,10 @@ const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
       v-bind="$attrs"
       :id="id"
       class="ui-input"
-      :class="{ 'ui-input--compact': size === 'compact' }"
+      :class="{ 'ui-input--compact': size === 'compact', 'ui-input--success': tone === 'success', 'ui-input--danger': tone === 'danger' }"
       :model-value="modelValue"
       :disabled="disabled"
+      :readonly="readonly"
       :required="required"
       autocomplete="off"
       :spellcheck="false"

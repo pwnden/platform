@@ -1,7 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { createRenderer, h, nextTick } from 'vue';
 import type { Catalog } from '../domains/catalog/src/index';
-import type { Player, RunStatus } from '../domains/play/src/index';
+import type { Player, RunStatus, Workspaces } from '../domains/play/src/index';
 import ProblemDetail from '../features/catalog/src/ProblemDetail.vue';
 import ProblemFiles from '../features/catalog/src/ProblemFiles.vue';
 import ProblemList from '../features/catalog/src/ProblemList.vue';
@@ -17,6 +17,10 @@ import * as syntax from '../packages/ui/src/syntax';
 
 function browserSession(target: string) { return { target, url: target + '/__pwnden_browser/' + 'a'.repeat(64) }; }
 const unusedBrowser = vi.fn();
+function workspace(status: RunStatus): Workspaces {
+  return { connect: vi.fn(() => ({ ready: Promise.resolve(status), close: vi.fn() })), list: vi.fn(async () => []), stop: vi.fn() };
+}
+
 
 // Exercise feature lifecycle and real tool tabs on a small host renderer.
 vi.mock('../packages/ui/src/index.ts', async () => {
@@ -73,55 +77,34 @@ it('automatically connects and releases pending and ready attachments on unmount
   expect(close).toHaveBeenCalledTimes(2);
 });
 
-it('automatically enters Note Vault and preserves its attachment across column resize', async () => {
+it('opens only the declared web tool for Note Vault and retains its view during resize', async () => {
   const problem = { slug: 'note-vault', title: 'Note Vault', category: 'web', kind: 'service' as const };
-  let status: RunStatus = { ...problem, state: 'stopped', endpoints: [] };
-  const session = { input: vi.fn(), resize: vi.fn(), close: vi.fn() };
-  const close = vi.fn();
+  const status: RunStatus = { ...problem, state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:43123' }] };
+  const environments = workspace(status);
   const client = {
-    catalog: { list: vi.fn(async () => [problem]), detail: vi.fn(async () => ({ ...problem, description: '설명', files: [], hintCount: 0, walkthrough: false })), download: vi.fn(), guidance: vi.fn() },
-    player: {
-      browser: unusedBrowser,
-      status: vi.fn(async () => status), run: vi.fn(async () => { status = { ...status, state: 'running' }; return { ...status, fileCount: 0 }; }),
-      stop: vi.fn(async () => { status = { ...status, state: 'stopped' }; }), submit: vi.fn(),
-    },
-    terminals: { connect: vi.fn(() => { status = { ...status, state: 'running' }; return { ready: Promise.resolve(session), close }; }), list: vi.fn(), stop: vi.fn(async () => { status = { ...status, state: 'stopped' }; }) },
+    catalog: { list: vi.fn(async () => [problem]), detail: vi.fn(async () => ({ ...problem, tools: ['web'] as const, description: '설명', files: [], hintCount: 0, walkthrough: false })), download: vi.fn(), guidance: vi.fn() },
+    player: { browser: vi.fn(async () => browserSession(status.endpoints[0]!.url)), status: vi.fn(async () => status), run: vi.fn(), stop: vi.fn(), submit: vi.fn() },
+    terminals: { connect: vi.fn(), list: vi.fn(), stop: vi.fn() },
+    workspaces: environments,
   };
   const root = node('root');
-  renderer.render(h(App, { client }), root);
-  await settle();
-  await click(flatten(root).find(item => item.type === 'button' && text(item).includes('Note Vault'))!);
-  await settle();
-  expect(client.terminals.connect).toHaveBeenCalledOnce();
-  expect(client.player.run).not.toHaveBeenCalled();
-  expect(button(root, '터미널 새로고침')).toBeDefined();
+  renderer.render(h(App, { client }), root); await settle();
+  await click(flatten(root).find(item => item.type === 'button' && text(item).includes('Note Vault'))!); await settle();
+  expect(flatten(root).filter(item => item.props.role === 'tab').map(text)).toEqual(['웹']);
+  expect(button(root, '웹').props['aria-selected']).toBe('true');
+  expect(client.terminals.connect).not.toHaveBeenCalled();
+  const frame = flatten(root).find(item => item.type === 'iframe')!;
+  expect(frame).toBeDefined();
   const heading = flatten(root).find(item => item.props.class === 'problem-header')!;
   expect(text(heading)).toBe('Note Vault분야: 웹');
   expect(flatten(heading).find(item => item.props.class === 'ui-badge')?.props.title).toBe('분야: 웹');
-  expect(text(flatten(heading).find(item => item.props.class === 'ui-sr-only')!)).toBe('분야: ');
-  for (const split of flatten(root).filter(item => item.type === 'split')) {
-    (split.props['onUpdate:modelValue'] as (value: number) => void)(30);
-  }
+  for (const split of flatten(root).filter(item => item.type === 'split')) (split.props['onUpdate:modelValue'] as (value: number) => void)(30);
   await settle();
-  expect(client.terminals.connect).toHaveBeenCalledOnce();
-  expect(close).not.toHaveBeenCalled();
-  const terminal = flatten(root).find(item => item.type === 'terminal')!;
-  expect(terminal.props.enabled).toBe(true);
-  (terminal.props.onInput as (bytes: Uint8Array) => void)(new Uint8Array([112, 119, 100, 13]));
-  expect(session.input).toHaveBeenCalledWith(new Uint8Array([112, 119, 100, 13]));
-  (terminal.props.onResize as (size: { cols: number; rows: number }) => void)({ cols: 100, rows: 30 });
-  expect(session.resize).toHaveBeenLastCalledWith({ cols: 100, rows: 30 });
-  expect(button(root, '문제 실행')).toBeUndefined();
-  expect(button(root, '문제 중지')).toBeUndefined();
-  expect(button(root, '문제 환경 종료')).toBeUndefined();
-  expect(button(root, '터미널 연결')).toBeUndefined();
-  expect(text(root)).not.toContain('풀이 터미널');
-  await click(button(root, '터미널 새로고침')); await settle();
-  expect(client.terminals.stop).not.toHaveBeenCalled();
-  expect(client.player.stop).not.toHaveBeenCalled();
-  expect(close).toHaveBeenCalledOnce();
-  expect(client.terminals.connect).toHaveBeenCalledTimes(2);
-  expect(terminal.props.enabled).toBe(true);
+  expect(flatten(root).find(item => item.type === 'iframe')).toBe(frame);
+  expect(environments.connect).toHaveBeenCalledOnce();
+  expect(client.terminals.connect).not.toHaveBeenCalled();
+  const submission = flatten(root).find(item => item.props['aria-label'] === '플래그 제출')!;
+  expect(submission.parent?.props.class).toBe('tool-workspace');
   renderer.render(null, root);
 });
 
@@ -137,9 +120,10 @@ it('keeps terminal, source and web state across tool tabs and resets tools on pr
   const client = {
     catalog: {
       list: vi.fn(async () => problems),
-      detail: vi.fn(async (slug: string) => ({ ...problems.find(problem => problem.slug === slug)!, description: '설명', files: [{ id, name: 'checker.py', size: 30 }], hintCount: 0, walkthrough: false })),
+      detail: vi.fn(async (slug: string) => ({ ...problems.find(problem => problem.slug === slug)!, description: '설명', tools: (slug === 'note-vault' ? ['terminal', 'files', 'web'] : ['files', 'terminal']) as ('terminal' | 'files' | 'web')[], files: [{ id, name: 'checker.py', size: 30 }], hintCount: 0, walkthrough: false })),
       download: vi.fn(async () => new TextEncoder().encode('<script>plain source</script>')), guidance: vi.fn(),
     },
+    workspaces: { connect: vi.fn((slug: string) => ({ ready: Promise.resolve(slug === 'note-vault' ? state : { slug, kind: 'file' as const, state: 'ready' as const, endpoints: [] }), close: vi.fn() })), list: vi.fn(async () => []), stop: vi.fn() },
     player: { browser: vi.fn(async () => browserSession(state.endpoints[0]!.url)), status: vi.fn(async (slug: string) => slug === 'note-vault' ? state : { slug, kind: 'file', state: 'ready', endpoints: [] }), run: vi.fn(), stop: vi.fn(), submit: vi.fn() },
     terminals: {
       connect: vi.fn(() => ({ ready: Promise.resolve(session), close })), list: vi.fn(),
@@ -188,15 +172,15 @@ it('keeps terminal, source and web state across tool tabs and resets tools on pr
   expect(flatten(root).some(item => item.type === 'iframe')).toBe(false);
   expect(button(root, '웹')).toBeDefined();
   state = { ...state, state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:43124' }] };
-  await click(button(root, '터미널 새로고침')); await settle();
+  await click(button(root, '실행 상태 새로고침')); await settle();
   await click(button(root, '웹')); await settle();
   expect(flatten(root).find(item => item.type === 'iframe')?.props.src).toBe(browserSession('http://127.0.0.1:43124').url);
   await click(flatten(root).find(item => item.type === 'button' && text(item).includes('Rotor Lock'))!); await settle();
-  expect(flatten(root).filter(item => item.props.role === 'tab').map(text)).toEqual(['터미널', '파일']);
-  expect(button(root, '터미널').props['aria-selected']).toBe('true');
+  expect(flatten(root).filter(item => item.props.role === 'tab').map(text)).toEqual(['파일', '터미널']);
+  expect(button(root, '파일').props['aria-selected']).toBe('true');
   expect(flatten(root).some(item => item.type === 'iframe')).toBe(false);
-  expect(client.catalog.download).toHaveBeenCalledOnce();
-  expect(button(root, '터미널 새로고침')).toBeDefined();
+  expect(client.catalog.download).toHaveBeenCalledTimes(2);
+  expect(button(root, '터미널 새로고침')).toBeUndefined();
   renderer.render(null, root);
 });
 
@@ -298,26 +282,25 @@ it('prepares web lazily, retries once and ignores a response for a removed endpo
   renderer.render(null, root);
 });
 
-it('observes a newly prepared web service after the initial status request finishes', async () => {
+it('opens the declared web tab while environment preparation is pending without starting a shell', async () => {
   const problem = { slug: 'note-vault', title: 'Note Vault', category: 'web', kind: 'service' as const };
   let resolve: (status: RunStatus) => void = () => {};
-  const status = vi.fn().mockImplementationOnce(() => new Promise<RunStatus>(done => { resolve = done; }))
-    .mockResolvedValue({ slug: problem.slug, kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:43123' }] });
-  const session = { input: vi.fn(), resize: vi.fn(), close: vi.fn() };
+  const ready = new Promise<RunStatus>(done => { resolve = done; });
   const client = {
-    catalog: { list: vi.fn(async () => [problem]), detail: vi.fn(async () => ({ ...problem, description: '', files: [], hintCount: 0, walkthrough: false })), download: vi.fn(), guidance: vi.fn() },
-    player: { browser: vi.fn(async () => browserSession('http://127.0.0.1:43123')), status, run: vi.fn(), stop: vi.fn(), submit: vi.fn() },
-    terminals: { connect: vi.fn(() => ({ ready: Promise.resolve(session), close: vi.fn() })), list: vi.fn(), stop: vi.fn() },
+    catalog: { list: vi.fn(async () => [problem]), detail: vi.fn(async () => ({ ...problem, tools: ['web'] as const, description: '', files: [], hintCount: 0, walkthrough: false })), download: vi.fn(), guidance: vi.fn() },
+    player: { browser: vi.fn(async () => browserSession('http://127.0.0.1:43123')), status: vi.fn(), run: vi.fn(), stop: vi.fn(), submit: vi.fn() },
+    terminals: { connect: vi.fn(), list: vi.fn(), stop: vi.fn() },
+    workspaces: { connect: vi.fn(() => ({ ready, close: vi.fn() })), list: vi.fn(async () => []), stop: vi.fn() },
   };
   const root = node('root');
   renderer.render(h(App, { client }), root); await settle();
   await click(flatten(root).find(item => item.type === 'button' && text(item).includes('Note Vault'))!); await settle();
-  expect(status).toHaveBeenCalledOnce();
-  resolve({ slug: problem.slug, kind: 'service', state: 'stopped', endpoints: [] }); await settle();
-  expect(status).toHaveBeenCalledTimes(2);
-  expect(button(root, '웹')).toBeDefined();
-  await click(button(root, '웹')); await settle();
+  expect(button(root, '웹').props['aria-selected']).toBe('true');
+  const form = flatten(root).find(item => item.props.class === 'web-address-bar');
+  resolve({ slug: problem.slug, kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:43123' }] }); await settle();
+  expect(flatten(root).find(item => item.props.class === 'web-address-bar')).toBe(form);
   expect(flatten(root).find(item => item.type === 'iframe')?.props.src).toBe(browserSession('http://127.0.0.1:43123').url);
+  expect(client.terminals.connect).not.toHaveBeenCalled();
   renderer.render(null, root);
 });
 
@@ -525,7 +508,7 @@ it('loads spoiler documents on demand, retries failures and caches reopened hint
   const id = 'd'.repeat(64);
   const catalog: Catalog = {
     list: vi.fn(),
-    detail: vi.fn(async () => ({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', description: 'Find the key', files: [{ id, name: 'checker.py', size: 30 }], hintCount: 2, walkthrough: true })),
+    detail: vi.fn(async () => ({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', tools: ['files', 'terminal'] as const, description: 'Find the key', files: [{ id, name: 'checker.py', size: 30 }], hintCount: 2, walkthrough: true })),
     download: vi.fn(async () => new TextEncoder().encode('<script>plain source</script>')),
     guidance: vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce('first clue').mockResolvedValueOnce('full answer'),
   };
@@ -556,11 +539,11 @@ it('loads spoiler documents on demand, retries failures and caches reopened hint
   renderer.render(null, root);
 });
 
-it('routes binary and large materials to the prepared terminal without fetching a large preview', async () => {
+it('offers downloads for binary and large materials without fetching a large preview', async () => {
   const small = 'a'.repeat(64), large = 'b'.repeat(64);
   const catalog: Catalog = {
     list: vi.fn(),
-    detail: vi.fn(async () => ({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', description: 'Find the key', files: [{ id: small, name: 'binary', size: 2 }, { id: large, name: 'large', size: (1 << 20) + 1 }], hintCount: 0, walkthrough: false })),
+    detail: vi.fn(async () => ({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', tools: ['files', 'terminal'] as const, description: 'Find the key', files: [{ id: small, name: 'binary', size: 2 }, { id: large, name: 'large', size: (1 << 20) + 1 }], hintCount: 0, walkthrough: false })),
     download: vi.fn(async () => new Uint8Array([0, 255])), guidance: vi.fn(),
   };
   const root = node('root');
@@ -568,147 +551,110 @@ it('routes binary and large materials to the prepared terminal without fetching 
   await settle();
   expect(text(root)).toContain('텍스트로 표시할 수 없는 자료');
   (flatten(root).find(item => item.type === 'select')!.props['onUpdate:modelValue'] as (id: string) => void)(large); await settle();
-  expect(text(root)).toContain('큰 자료는 터미널 탭');
+  expect(text(root)).toContain('미리보기 범위를 초과');
   expect(catalog.download).toHaveBeenCalledOnce();
   renderer.render(null, root);
 });
 
-it('observes service endpoints without duplicating terminal environment controls', async () => {
-  let state: RunStatus = { slug: 'test', kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:8000' }] };
-  const player: Player = { browser: unusedBrowser,
-    status: vi.fn(async () => state),
-    run: vi.fn(), stop: vi.fn(),
-    submit: vi.fn(async () => ({ slug: 'test', accepted: false })),
-  };
+it.each(['file', 'service'] as const)('keeps accepted %s answers readonly and preserves submission geometry', async kind => {
+  const status: RunStatus = { slug: 'test', kind, state: kind === 'file' ? 'ready' : 'running', endpoints: [] };
+  const player: Player = { browser: unusedBrowser, status: vi.fn(async () => status), run: vi.fn(), stop: vi.fn(), submit: vi.fn().mockResolvedValueOnce({ slug: 'test', accepted: false }).mockResolvedValueOnce({ slug: 'test', accepted: true }) };
   const root = node('root');
-  renderer.render(h(PlayPanel, { player, slug: 'test', kind: 'service' }), root);
-  await settle();
-  expect(text(root)).toContain('실행 중');
-  expect(flatten(root).some(item => item.type === 'a')).toBe(false);
-  expect(button(root, '문제 실행')).toBeUndefined();
-  expect(button(root, '문제 중지')).toBeUndefined();
-  state = { ...state, state: 'stopped', endpoints: [] };
-  await click(button(root, '실행 상태 새로고침')); await settle();
-  expect(text(root)).toContain('오른쪽 터미널을 연결하면');
-  expect(flatten(root).some(item => item.type === 'a')).toBe(false);
-  expect(flatten(root).some(item => item.props.class === 'actions')).toBe(false);
-  state = { ...state, state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:9000' }] };
-  await click(button(root, '실행 상태 새로고침')); await settle();
-  expect(text(root)).toContain('실행 중');
-  expect(player.status).toHaveBeenCalledTimes(3);
-  expect(player.run).not.toHaveBeenCalled();
-  expect(player.stop).not.toHaveBeenCalled();
-  renderer.render(null, root);
-});
-
-it('directs unavailable service recovery to the terminal environment controls', async () => {
-  const player: Player = { browser: unusedBrowser,
-    status: vi.fn().mockResolvedValueOnce({ slug: 'test', kind: 'service', state: 'stopped', endpoints: [] })
-      .mockResolvedValueOnce({ slug: 'test', kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:8000' }] })
-      .mockResolvedValueOnce({ slug: 'test', kind: 'service', state: 'unavailable', endpoints: [] }),
-    run: vi.fn(), stop: vi.fn(), submit: vi.fn(),
-  };
-  const root = node('root');
-  renderer.render(h(PlayPanel, { player, slug: 'test', kind: 'service' }), root);
-  await settle();
-  await click(button(root, '실행 상태 새로고침')); await settle();
-  expect(text(root)).toContain('실행 중');
-  await click(button(root, '실행 상태 새로고침')); await settle();
-  expect(text(root)).toContain('문제에서 나간 뒤 10분 후 다시 열면 환경을 새로 준비합니다.');
-  expect(button(root, '문제 실행')).toBeUndefined();
-  expect(button(root, '문제 중지')).toBeUndefined();
-  expect(player.run).not.toHaveBeenCalled();
-  expect(player.stop).not.toHaveBeenCalled();
-  renderer.render(null, root);
-});
-
-it('shows file problems without service controls', async () => {
-  const player: Player = { browser: unusedBrowser, status: vi.fn(async () => ({ slug: 'test', kind: 'file', state: 'ready', endpoints: [] })), run: vi.fn(), stop: vi.fn(), submit: vi.fn() };
-  const root = node('root');
-  renderer.render(h(PlayPanel, { player, slug: 'test', kind: 'file' }), root);
-  await settle();
-  expect(text(root)).toContain('준비됨');
-  expect(button(root, '문제 실행')).toBeUndefined();
-  const refresh = button(root, '실행 상태 새로고침');
-  expect(refresh.parent?.props.class).toBe('ui-panel-actions');
-  expect(text(refresh.parent!)).toContain('준비됨');
-  expect(flatten(root).some(item => item.props.class === 'actions')).toBe(false);
-  await click(refresh); await settle();
-  expect(player.status).toHaveBeenCalledTimes(2);
-  expect(player.run).not.toHaveBeenCalled();
-  expect(player.stop).not.toHaveBeenCalled();
-  renderer.render(null, root);
-});
-
-it('clears stale endpoints on failed refresh and ignores a response after unmount', async () => {
-  let resolve: (value: RunStatus) => void = () => {};
-  const player: Player = { browser: unusedBrowser,
-    status: vi.fn().mockResolvedValueOnce({ slug: 'test', kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:8000' }] })
-      .mockRejectedValueOnce(new Error('offline')).mockImplementationOnce(() => new Promise(value => { resolve = value; })),
-    run: vi.fn(), stop: vi.fn(), submit: vi.fn(),
-  };
-  const root = node('root');
-  renderer.render(h(PlayPanel, { player, slug: 'test', kind: 'service' }), root);
-  await settle();
-  await click(button(root, '실행 상태 새로고침')); await settle();
-  expect(text(root)).toContain('실행 상태를 확인하지 못했습니다.');
-  expect(flatten(root).some(item => item.type === 'a')).toBe(false);
-  expect(button(root, '문제 중지')).toBeUndefined();
-  expect(button(root, '문제 실행')).toBeUndefined();
-  const previousText = text(root);
-  const pending = click(button(root, '실행 상태 새로고침'));
-  await settle();
-  expect(text(root)).toBe(previousText);
-  renderer.render(null, root);
-  resolve({ slug: 'test', kind: 'service', state: 'running', endpoints: [] });
-  await pending; await settle();
-  expect(root.children).toHaveLength(0);
-});
-
-it.each(['file', 'service'] as const)('keeps the %s submission and body stable during status refresh', async kind => {
-  const state: RunStatus = { slug: 'test', kind, state: kind === 'file' ? 'ready' : 'running', endpoints: kind === 'file' ? [] : [{ name: 'web', url: 'http://127.0.0.1:8000' }] };
-  let resolve: (value: RunStatus) => void = () => {};
-  const player: Player = { browser: unusedBrowser,
-    status: vi.fn(async () => state), run: vi.fn(), stop: vi.fn(),
-    submit: vi.fn(async () => ({ slug: 'test', accepted: true })),
-  };
-  const root = node('root');
-  renderer.render(h(PlayPanel, { player, slug: 'test', kind }), root);
-  await settle();
-  const input = flatten(root).find(item => item.type === 'input')!;
+  renderer.render(h(PlayPanel, { player, workspaces: workspace(status), slug: 'test', kind }), root); await settle();
+  const field = flatten(root).find(item => item.type === 'input')!;
   const form = flatten(root).find(item => item.type === 'form')!;
-  const setFlag = input.props['onUpdate:modelValue'] as (value: string) => void;
-  setFlag('pwnden{answer}'); await settle();
+  const feedback = flatten(root).find(item => item.props.id === 'submission-feedback')!;
+  const structure = flatten(root).map(item => item.type);
+  (field.props['onUpdate:modelValue'] as (value: string) => void)('pwnden{wrong}'); await settle();
+  await (form.props.onSubmit as (event: Event) => Promise<unknown>)(new Event('submit')); await settle();
+  expect(field.props.modelValue).toBe('pwnden{wrong}');
+  expect(field.props.readonly).toBe(false);
+  expect(flatten(root).map(item => item.type)).toEqual(structure);
+  (field.props['onUpdate:modelValue'] as (value: string) => void)('pwnden{correct}'); await settle();
+  await (form.props.onSubmit as (event: Event) => Promise<unknown>)(new Event('submit')); await settle();
+  expect(field.props.modelValue).toBe('pwnden{correct}');
+  expect(field.props.readonly).toBe(true);
+  expect(field.props.tone).toBe('success');
+  expect(text(root)).toContain('해결 완료');
+  expect(flatten(root).find(item => item.type === 'button' && item.props.type === 'submit')?.props.disabled).toBe(true);
+  expect(flatten(root).map(item => item.type)).toEqual(structure);
+  expect(flatten(root).find(item => item.props.id === 'submission-feedback')).toBe(feedback);
+  player.status = vi.fn().mockRejectedValue(new Error('offline'));
+  await click(button(root, '실행 상태 새로고침')); await settle();
+  expect(field.props.modelValue).toBe('pwnden{correct}');
+  expect(field.props.readonly).toBe(true);
+  expect(text(root)).toContain('해결 완료');
+  expect(flatten(root).map(item => item.type)).toEqual(structure);
   await (form.props.onSubmit as (event: Event) => Promise<unknown>)(new Event('submit'));
-  await settle();
-  expect(text(root)).toContain('정답입니다.');
-  setFlag('pwnden{next}'); await settle();
-  const previousText = text(root);
-  const previousStructure = flatten(root).map(item => item.type);
-  player.status = vi.fn(() => new Promise<RunStatus>(done => { resolve = done; }));
-  const refresh = button(root, '실행 상태 새로고침');
-  const pending = click(refresh); await settle();
-  expect(text(root)).toBe(previousText);
-  expect(flatten(root).map(item => item.type)).toEqual(previousStructure);
-  expect(flatten(root).find(item => item.type === 'form')).toBe(form);
-  expect(input.props.modelValue).toBe('pwnden{next}');
-  expect(input.props.disabled).toBe(false);
-  expect(refresh.props.busy).toBe(true);
-  expect(button(root, '정답 확인').props.disabled).toBe(true);
-  void click(refresh); await settle();
-  expect(player.status).toHaveBeenCalledOnce();
-  resolve(state); await pending; await settle();
-  expect(text(root)).toBe(previousText);
-  expect(flatten(root).map(item => item.type)).toEqual(previousStructure);
-  expect(input.props.modelValue).toBe('pwnden{next}');
-  expect(button(root, '정답 확인').props.disabled).toBe(false);
+  expect(player.submit).toHaveBeenCalledTimes(2);
+  renderer.render(null, root);
+});
+
+it('serializes submissions and preserves the editable flag after a failed request', async () => {
+  const status: RunStatus = { slug: 'test', kind: 'file', state: 'ready', endpoints: [] };
+  let reject: (reason: Error) => void = () => {};
+  const player: Player = { browser: unusedBrowser, status: vi.fn(), run: vi.fn(), stop: vi.fn(), submit: vi.fn(() => new Promise((_ok, fail) => { reject = fail; })) };
+  const root = node('root');
+  renderer.render(h(PlayPanel, { player, workspaces: workspace(status), slug: 'test', kind: 'file' }), root); await settle();
+  const field = flatten(root).find(item => item.type === 'input')!;
+  const form = flatten(root).find(item => item.type === 'form')!;
+  (field.props['onUpdate:modelValue'] as (value: string) => void)('pwnden{retry}'); await settle();
+  const structure = flatten(root).map(item => item.type);
+  const submit = form.props.onSubmit as (event: Event) => Promise<unknown>;
+  const request = submit(new Event('submit'));
+  void submit(new Event('submit')); await settle();
+  expect(player.submit).toHaveBeenCalledOnce();
+  expect(field.props.disabled).toBe(true);
+  expect(flatten(root).map(item => item.type)).toEqual(structure);
+  reject(new Error('offline')); await request; await settle();
+  expect(field.props.modelValue).toBe('pwnden{retry}');
+  expect(field.props.readonly).toBe(false);
+  expect(field.props.disabled).toBe(false);
+  expect(text(root)).toContain('제출하지 못했습니다.');
+  expect(flatten(root).map(item => item.type)).toEqual(structure);
+  renderer.render(null, root);
+});
+
+it('retains a visible environment independently of tools and releases presence on hidden pages', async () => {
+  const events = new EventTarget();
+  const document = { visibilityState: 'visible', addEventListener: events.addEventListener.bind(events), removeEventListener: events.removeEventListener.bind(events) };
+  vi.stubGlobal('document', document);
+  const status: RunStatus = { slug: 'test', kind: 'service', state: 'running', endpoints: [] };
+  const environments = workspace(status);
+  const close = vi.fn();
+  environments.connect = vi.fn(() => ({ ready: Promise.resolve(status), close }));
+  const root = node('root');
+  const player: Player = { browser: unusedBrowser, status: vi.fn(), run: vi.fn(), stop: vi.fn(), submit: vi.fn() };
+  renderer.render(h(PlayPanel, { player, workspaces: environments, slug: 'test', kind: 'service' }), root); await settle();
+  document.visibilityState = 'hidden'; events.dispatchEvent(new Event('visibilitychange')); await settle();
+  expect(close).toHaveBeenCalledOnce();
+  document.visibilityState = 'visible'; events.dispatchEvent(new Event('visibilitychange')); await settle();
+  expect(environments.connect).toHaveBeenCalledTimes(2);
+  renderer.render(null, root);
+  expect(close).toHaveBeenCalledTimes(2);
+});
+
+it('offers environment limit recovery without requiring the terminal tool', async () => {
+  const status: RunStatus = { slug: 'test', kind: 'service', state: 'running', endpoints: [] };
+  const environments: Workspaces = {
+    connect: vi.fn().mockImplementationOnce((_slug, failed) => { failed('workspace_full'); return { ready: Promise.reject(new Error('workspace_full')), close: vi.fn() }; }).mockReturnValue({ ready: Promise.resolve(status), close: vi.fn() }),
+    list: vi.fn(async () => [{ slug: 'other', title: '다른 문제', connected: false, expiresAt: null }]), stop: vi.fn(),
+  };
+  const player: Player = { browser: unusedBrowser, status: vi.fn(), run: vi.fn(), stop: vi.fn(), submit: vi.fn() };
+  const root = node('root');
+  renderer.render(h(PlayPanel, { player, workspaces: environments, slug: 'test', kind: 'service' }), root); await settle();
+  expect(text(root)).toContain('다른 문제');
+  expect(flatten(root).find(item => item.props['aria-label'] === '유지 환경 정리')).toBeDefined();
+  await click(button(root, '정리')); await settle();
+  expect(environments.stop).toHaveBeenCalledWith('other');
+  expect(environments.connect).toHaveBeenCalledTimes(2);
   renderer.render(null, root);
 });
 
 it('downloads only the selected declared file from the materials panel', async () => {
   const id = 'a'.repeat(64);
   const catalog: Catalog = {
-    list: vi.fn(), detail: vi.fn(async () => ({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', description: '<script>alert(1)</script>', files: [{ id, name: 'files/data.bin', size: 3 }], hintCount: 0, walkthrough: false })),
+    list: vi.fn(), detail: vi.fn(async () => ({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', tools: ['files', 'terminal'] as const, description: '<script>alert(1)</script>', files: [{ id, name: 'files/data.bin', size: 3 }], hintCount: 0, walkthrough: false })),
     download: vi.fn(async () => new Uint8Array([0, 1, 255])),
     guidance: vi.fn(),
   };
@@ -737,7 +683,7 @@ it('automatically displays source, retries failures and caches it across tool vi
   let resolve: (bytes: Uint8Array) => void = () => {};
   const catalog: Catalog = {
     list: vi.fn(), guidance: vi.fn(),
-    detail: vi.fn(async () => ({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', description: '', files: [{ id, name: 'files/checker.py', size: 883 }], hintCount: 0, walkthrough: false })),
+    detail: vi.fn(async () => ({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', tools: ['files', 'terminal'] as const, description: '', files: [{ id, name: 'files/checker.py', size: 883 }], hintCount: 0, walkthrough: false })),
     download: vi.fn().mockRejectedValueOnce(new Error('offline')).mockImplementationOnce(() => new Promise<Uint8Array>(done => { resolve = done; })),
   };
   const root = node('root');

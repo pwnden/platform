@@ -1,104 +1,122 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
-import type { Player, RunStatus } from '@pwnden/play';
-import { UIButton, UITextField, UIPanel, UIStatus } from '@pwnden/ui';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
+import type { Player, RunStatus, Workspaces, WorkspaceConnection, WorkspaceInfo } from '@pwnden/play';
+import { UIButton, UITextField, UIIconButton } from '@pwnden/ui';
 import type { PlayPanelHandle } from './props';
 
-const props = defineProps<{ player: Player; slug: string; kind: RunStatus['kind'] }>();
+const props = defineProps<{ player: Player; workspaces: Workspaces; slug: string; kind: RunStatus['kind'] }>();
 const emit = defineEmits<{ busy: [value: boolean]; status: [value: RunStatus | undefined] }>();
-const pending = ref<'submit' | 'status'>();
+const pending = ref(false);
+const preparing = ref(false);
 const status = ref<RunStatus>();
 const flag = ref('');
+const result = ref<'idle' | 'accepted' | 'rejected' | 'error'>('idle');
 const message = ref('');
-const failed = ref(false);
+const environmentError = ref('');
+const retained = ref<readonly WorkspaceInfo[]>([]);
+const ending = ref(false);
 let active = true;
-let inFlight: Promise<RunStatus | undefined> | undefined;
-onUnmounted(() => { active = false; });
-
-function perform(operation: 'submit' | 'status') {
-  if (inFlight) return inFlight;
-  const request = execute(operation);
-  inFlight = request;
-  void request.finally(() => { if (inFlight === request) inFlight = undefined; });
-  return request;
-}
-async function execute(operation: 'submit' | 'status') {
-  pending.value = operation;
-  emit('busy', true);
-  if (operation === 'submit') { message.value = ''; failed.value = false; }
+let connection: WorkspaceConnection | undefined;
+let generation = 0;
+const visible = () => typeof document === 'undefined' || document.visibilityState !== 'hidden';
+const accepted = computed(() => result.value === 'accepted');
+const ready = computed(() => !preparing.value && !!status.value && (status.value.state === 'running' || status.value.state === 'ready'));
+const feedback = computed(() => pending.value ? '확인 중…' : message.value || environmentError.value || (preparing.value ? '풀이 환경 준비 중…' : ''));
+function disconnect() { generation++; connection?.close(); connection = undefined; }
+async function prepare() {
+  if (!active || !visible() || connection) return;
+  const current = ++generation;
+  preparing.value = true; environmentError.value = ''; retained.value = [];
   try {
-    if (operation === 'submit') {
-      const result = await props.player.submit(props.slug, flag.value);
-      if (active) { flag.value = ''; message.value = result.accepted ? '정답입니다.' : '정답이 아닙니다. 다시 시도하세요.'; }
-    }
-    const result = await props.player.status(props.slug);
-    if (active) {
-      status.value = result;
-      if (operation === 'status' && failed.value) { failed.value = false; message.value = ''; }
-    }
-  } catch {
-    // Observe the current state after a failed submission without inventing it.
-    if (operation !== 'status') {
-      try {
-        const result = await props.player.status(props.slug);
-        if (active) status.value = result;
-      } catch { if (active) status.value = undefined; }
-    } else if (active) status.value = undefined;
-    if (active) { failed.value = true; message.value = '요청을 완료하지 못했습니다. 서버 연결을 확인하고 실행 상태를 새로고침하세요.'; }
-  } finally {
-    if (active) { pending.value = undefined; emit('busy', false); emit('status', status.value); }
-  }
-  return status.value;
+    connection = props.workspaces.connect(props.slug, code => {
+      if (!active || current !== generation) return;
+      status.value = undefined; emit('status', undefined);
+      const reasons: Record<string, string> = {
+        workspace_full: '환경 10개가 유지 중입니다. 환경 하나를 정리한 뒤 다시 준비하세요.',
+        unauthorized: '서버가 출력한 전체 주소로 다시 접속하세요.',
+        network_error: '서버 연결을 확인한 뒤 환경 새로고침을 눌러주세요.',
+        not_running: '풀이 환경이 종료되었습니다. 환경 새로고침을 눌러주세요.',
+      };
+      environmentError.value = reasons[code] ?? '환경 준비에 실패했습니다. 환경 새로고침을 눌러주세요.';
+      if (code === 'workspace_full') void loadRetained(current);
+    });
+    const observed = await connection.ready;
+    if (active && current === generation) { status.value = observed; emit('status', observed); }
+  } catch { if (active && current === generation && !environmentError.value) environmentError.value = '환경을 준비하지 못했습니다. 환경 새로고침을 눌러주세요.'; }
+  finally { if (active && current === generation) preparing.value = false; }
 }
-onMounted(() => perform('status'));
-const handle: PlayPanelHandle = {
-  async refresh() {
-    if (inFlight) await inFlight;
-    if (active) await perform('status');
-  },
-};
-defineExpose(handle);
+async function loadRetained(current: number) {
+  try { const items = await props.workspaces.list(); if (active && current === generation) retained.value = items; }
+  catch { if (active && current === generation) environmentError.value = '유지 환경 목록을 불러오지 못했습니다. 환경 새로고침을 눌러주세요.'; }
+}
+async function endEnvironment(slug: string) {
+  if (ending.value) return;
+  ending.value = true;
+  try { await props.workspaces.stop(slug); if (active) { disconnect(); await prepare(); } }
+  catch { if (active) environmentError.value = '환경을 정리하지 못했습니다. 다시 시도하세요.'; }
+  finally { if (active) ending.value = false; }
+}
+async function refresh() {
+  if (preparing.value || pending.value) return;
+  if (!status.value) { disconnect(); await prepare(); return; }
+  preparing.value = true;
+  const current = generation;
+  try { const observed = await props.player.status(props.slug); if (active && current === generation) { status.value = observed; environmentError.value = ''; emit('status', observed); } }
+  catch { if (active && current === generation) { status.value = undefined; environmentError.value = '실행 상태를 확인하지 못했습니다. 환경 새로고침을 눌러주세요.'; emit('status', undefined); } }
+  finally { if (active && current === generation) preparing.value = false; }
+}
+async function submit() {
+  if (pending.value || accepted.value || !ready.value || !flag.value.trim()) return;
+  pending.value = true; emit('busy', true); message.value = '';
+  try {
+    const answer = await props.player.submit(props.slug, flag.value);
+    if (active) { result.value = answer.accepted ? 'accepted' : 'rejected'; message.value = answer.accepted ? '해결 완료' : '플래그를 다시 확인하세요.'; }
+  } catch { if (active) { result.value = 'error'; message.value = '제출하지 못했습니다. 다시 시도하세요.'; } }
+  finally { if (active) { pending.value = false; emit('busy', false); } }
+}
+function visibility() { if (visible()) void prepare(); else disconnect(); }
+onMounted(() => { if (typeof document !== 'undefined') document.addEventListener('visibilitychange', visibility); void prepare(); });
+onUnmounted(() => { active = false; if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', visibility); disconnect(); });
+defineExpose({ refresh } satisfies PlayPanelHandle);
 </script>
 
 <template>
-  <UIPanel title="실행 및 제출" headingID="play-heading" :heading-level="3" :aria-busy="!!pending" class="play-panel">
-    <template #actions>
-      <UIStatus :tone="status?.state === 'running' || status?.state === 'ready' ? 'info' : status?.state === 'unavailable' ? 'danger' : 'muted'">{{ status?.state === 'running' ? '실행 중' : status?.state === 'ready' ? '준비됨' : status?.state === 'stopped' ? '중지됨' : status?.state === 'unavailable' ? '확인 필요' : '상태 확인' }}</UIStatus>
-      <UIButton variant="ghost" size="compact" class="refresh" :busy="!!pending" aria-label="실행 상태 새로고침" :title="pending === 'status' ? '실행 상태 확인 중' : '실행 상태 새로고침'" @click="perform('status')">
-        <svg :class="{ 'refresh-progress': pending === 'status' }" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 7v5h-5M4 17v-5h5m10.3-4a8 8 0 0 0-13.9-3M4.7 16a8 8 0 0 0 13.9 3" /></svg>
-      </UIButton>
-    </template>
-    <p v-if="!status && failed">실행 상태를 확인하지 못했습니다.</p>
-    <p v-else-if="status?.state === 'stopped'">오른쪽 터미널을 연결하면 풀이 환경이 준비됩니다.</p>
-    <p v-else-if="status?.state === 'unavailable'" role="alert">실행 환경에 문제가 있습니다. 문제에서 나간 뒤 10분 후 다시 열면 환경을 새로 준비합니다.</p>
-    <div v-if="kind === 'service' && status?.endpoints.some(endpoint => endpoint.url.startsWith('tcp://'))" class="actions">
-      <template v-for="endpoint in status?.endpoints" :key="endpoint.name">
-        <code v-if="endpoint.url.startsWith('tcp://')" class="endpoint-address">{{ endpoint.url }}</code>
-      </template>
+  <section class="submission-bar" :class="{ 'submission-bar--accepted': accepted }" aria-label="플래그 제출" :aria-busy="pending || preparing">
+    <div class="submission-caption">
+      <label for="flag">플래그</label>
+      <p id="submission-feedback" class="submission-feedback" :class="{ 'submission-feedback--error': result === 'rejected' || result === 'error' || !!environmentError }" role="status" aria-live="polite" :title="feedback">{{ feedback }}</p>
+      <UIIconButton label="실행 상태 새로고침" icon="refresh" :busy="preparing" :disabled="pending" @click="refresh" />
     </div>
-    <p v-if="message" :role="failed ? 'alert' : 'status'">{{ message }}</p>
-    <form @submit.prevent="perform('submit')">
-      <UITextField id="flag" v-model="flag" label="플래그 제출" placeholder="찾은 플래그를 입력하세요" :disabled="pending === 'submit'" required />
-      <UIButton variant="primary" type="submit" :disabled="!!pending || !flag.trim() || !status || (status.state !== 'ready' && status.state !== 'running')">정답 확인</UIButton>
+    <form @submit.prevent="submit">
+      <UITextField id="flag" v-model="flag" label="플래그 제출" label-hidden placeholder="찾은 플래그" :readonly="accepted" :tone="accepted ? 'success' : result === 'rejected' ? 'danger' : 'default'" :aria-invalid="result === 'rejected' || undefined" aria-describedby="submission-feedback" :disabled="pending" required />
+      <UIButton class="submit-button" variant="primary" type="submit" :busy="pending" :disabled="accepted || !ready || !flag.trim()">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" :class="{ 'submit-progress': pending }"><path v-if="pending" d="M20 7v5h-5M4 17v-5h5m10.3-4a8 8 0 0 0-13.9-3M4.7 16a8 8 0 0 0 13.9 3" /><path v-else-if="accepted" d="m5 12 4 4L19 6" /><path v-else d="m5 12 14 0m-6-6 6 6-6 6" /></svg>
+        {{ accepted ? '완료' : '제출' }}
+      </UIButton>
     </form>
-  </UIPanel>
+    <div v-if="retained.length" class="environment-recovery" role="region" aria-label="유지 환경 정리">
+      <ul><li v-for="environment in retained" :key="environment.slug"><span>{{ environment.title }}</span><UIButton variant="danger" size="compact" :disabled="ending" @click="endEnvironment(environment.slug)">정리</UIButton></li></ul>
+    </div>
+  </section>
 </template>
 
 <style scoped>
-.actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-space-1); }
-.play-panel { --ui-panel-inset: var(--ui-space-2); container-type: inline-size; border-bottom: 1px solid var(--ui-border); }
-.play-panel :deep(.ui-panel-heading) { background: var(--ui-surface-raised); }
-.play-panel :deep(.ui-panel-body) { display: flex; flex-direction: column; gap: var(--ui-space-2); }
-p { color: var(--ui-muted); font-size: 0.9rem; }
-p[role='alert'] { color: var(--ui-danger); }
-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: var(--ui-space-1); }
-form:not(:first-child)::before { content: ''; grid-column: 1 / -1; border-top: 1px solid var(--ui-border); }
-.ui-field { width: 100%; }
-.endpoint-address { min-width: 0; overflow-wrap: anywhere; white-space: normal; }
-.refresh { width: var(--ui-control-size-compact); padding: 0; }
-.refresh svg { flex: none; width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
-.refresh-progress { animation: refresh-progress 1s linear infinite; }
-@keyframes refresh-progress { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .refresh-progress { animation: none; } }
-@container (max-width: 24rem) { form { grid-template-columns: minmax(0, 1fr); } form > .ui-button { width: 100%; } }
+.submission-bar { position: relative; flex: none; min-width: 0; padding: var(--ui-space-2); border-top: 1px solid var(--ui-border); background: var(--ui-surface); display: grid; gap: var(--ui-space-1); container-type: inline-size; transition: border-color var(--ui-state-duration) var(--ui-state-easing), background-color var(--ui-state-duration) var(--ui-state-easing); }
+.submission-bar--accepted { border-color: var(--ui-success); }
+.submission-caption { display: flex; align-items: center; gap: var(--ui-space-1); height: var(--ui-control-size-compact); min-width: 0; }
+.submission-caption label { flex: none; font-size: 0.85rem; color: var(--ui-muted); }
+.submission-feedback { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ui-muted); font-size: 0.85rem; }
+.submission-feedback--error { color: var(--ui-danger); }
+.submission-bar--accepted .submission-feedback { color: var(--ui-success); }
+form { display: grid; grid-template-columns: minmax(0, 1fr) 6rem; align-items: center; gap: var(--ui-space-1); min-width: 0; }
+.submit-button { width: 100%; }
+@container (max-width: 20rem) { form { grid-template-columns: minmax(0, 1fr); } }
+.submit-button svg { flex: none; width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.submission-bar--accepted .submit-button { color: var(--ui-success); border-color: var(--ui-success); opacity: 1; }
+.submit-progress { animation: submit-progress 1s linear infinite; }
+@keyframes submit-progress { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .submit-progress { animation: none; } }
+.environment-recovery { position: absolute; bottom: 100%; inset-inline: var(--ui-space-2); z-index: 3; max-height: 16rem; overflow: auto; padding: var(--ui-space-2); border: 1px solid var(--ui-border-active); border-radius: var(--ui-radius-surface); background: var(--ui-surface-raised); }
+.environment-recovery ul { padding: 0; margin: 0; list-style: none; display: grid; gap: var(--ui-space-1); }
+.environment-recovery li { display: flex; align-items: center; justify-content: space-between; gap: var(--ui-space-1); }
 </style>

@@ -9,6 +9,26 @@ import (
 	"testing"
 )
 
+func TestPlayerToolsForDeclaredAndLegacyCatalogs(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		challenge Challenge
+		want      string
+	}{
+		{"declared order", Challenge{Schema: 4, Player: Player{Tools: []string{"terminal", "files"}}}, "terminal,files"},
+		{"legacy web", Challenge{Schema: 3, Endpoints: []Endpoint{{Protocol: "http"}}}, "web"},
+		{"legacy mixed services", Challenge{Schema: 3, Endpoints: []Endpoint{{Protocol: "http"}, {Protocol: "tcp"}}}, "web,terminal"},
+		{"legacy file", Challenge{Schema: 2, Files: []string{"data"}}, "files,terminal"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			loaded := Loaded{Challenge: tc.challenge}
+			if got := strings.Join(loaded.PlayerTools(), ","); got != tc.want {
+				t.Fatalf("tools = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestLoadFileChallenge(t *testing.T) {
 	root := t.TempDir()
 	writeContract(t, root, "version = 1\nsolve_network = 'default'\nsolve_timeout_seconds = 60\nattack_rejected_exit = 3\n")
@@ -112,16 +132,16 @@ func TestLoadRejectsUnsupportedVersionBeforeExecutionFieldDecoding(t *testing.T)
 				t.Fatal(err)
 			}
 			definition := "version = 1\nsolve_network = 'default'\nsolve_timeout_seconds = 60\nattack_rejected_exit = 3\n"
-			metadata := "schema = 4\n[solve]\nimage = 123\n"
+			metadata := "schema = 5\n[solve]\nimage = 123\n"
 			if repository {
-				definition = "version = 4\nsolve_network = 123\n"
-				metadata = "schema = 4\n"
+				definition = "version = 5\nsolve_network = 123\n"
+				metadata = "schema = 5\n"
 			}
 			writeContract(t, root, definition)
 			if err := os.WriteFile(filepath.Join(dir, "challenge.toml"), []byte(metadata), 0600); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := Load(root, "sample"); err == nil || !strings.Contains(err.Error(), "contract version 4") {
+			if _, err := Load(root, "sample"); err == nil || !strings.Contains(err.Error(), "contract version 5") {
 				t.Fatalf("unsupported contract not rejected first: %v", err)
 			}
 		})

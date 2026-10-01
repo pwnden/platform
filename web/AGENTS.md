@@ -22,3 +22,5 @@ derive their inner radius from the outer radius and the complete inset.
 
 Loading transitions retain control dimensions and sibling positions. Keep labels
 stable and express progress within an existing icon box when the control has one.
+Result and error feedback uses retained slots or overlays. Accepted flag values
+stay readonly and selectable; submission geometry stays constant across states.

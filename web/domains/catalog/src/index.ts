@@ -1,4 +1,5 @@
 export type ProblemKind = 'file' | 'service';
+export type ProblemTool = 'web' | 'files' | 'terminal';
 
 export interface Problem {
   readonly slug: string;
@@ -21,6 +22,7 @@ export interface ProblemFile {
 }
 
 export interface ProblemDetail extends Problem {
+  readonly tools: readonly ProblemTool[];
   readonly description: string;
   readonly files: readonly ProblemFile[];
   readonly hintCount: number;

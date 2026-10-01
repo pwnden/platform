@@ -47,6 +47,7 @@ type ProblemDetail struct {
 	Files       []ProblemFile `json:"files"`
 	HintCount   int           `json:"hint_count"`
 	Walkthrough bool          `json:"walkthrough"`
+	Tools       []string      `json:"tools"`
 }
 
 type Guidance struct {
@@ -108,6 +109,7 @@ func ProblemsFrom(result []application.Problem) ProblemList {
 func DetailFrom(result application.ProblemDetail) ProblemDetail {
 	response := ProblemDetail{Problem: Problem{result.Slug, result.Title, result.Category, result.Kind}, Description: result.Description, Files: make([]ProblemFile, 0, len(result.Files))}
 	response.HintCount, response.Walkthrough = result.HintCount, result.Walkthrough
+	response.Tools = append([]string{}, result.Tools...)
 	for _, file := range result.Files {
 		response.Files = append(response.Files, ProblemFile{file.ID, file.Name, file.Size})
 	}

@@ -1,30 +1,28 @@
 # Browser terminal
 
-Selecting a problem prepares its services and toolbox, then automatically connects
-the terminal. Reentering within ten inactive minutes attaches to the same shell:
-working directory, environment variables, history, temporary files and background
-jobs remain available. A hidden tab, problem switch, refresh or lost connection
-detaches the browser. Returning cancels expiry; leaving starts another ten minutes.
-Visible attachments stay active even without keyboard input.
-Switching between the Terminal, Files and Web tools within the selected problem
-keeps the terminal mounted and attached. Its dimensions remain available while
-hidden, and it is measured again when shown. Tool switches preserve the existing
-inactivity policy for the selected problem.
+Selecting a problem prepares its environment through the independent workspace
+view stream. The challenges-owned tool declaration determines whether Terminal
+is displayed. Opening its tab for the first time starts the shell automatically.
+Reentering within ten inactive minutes attaches to the same shell: working
+directory, environment variables, history, temporary files and background jobs
+remain available. A hidden page or problem switch releases problem presence and
+terminal attachment; returning cancels expiry. Tool switches within the selected
+problem keep visited tools mounted. Web-only problems create no terminal.
 
 The common tool tab strip contains one **터미널 새로고침** icon at its right
 edge. Refresh closes only the browser attachment and reconnects to the existing
 shell. Files, directory, history and background jobs remain available; the server
 restores output. After shell exit, refresh prepares a new shell. During preparation,
 the icon is busy and disabled; a viewport overlay announces progress while
-preserving the terminal geometry. Failures and shell exit appear above the screen.
+preserving the terminal geometry. Failures and shell exit appear as overlays inside the screen.
 Cleanup follows the existing ten-minute inactivity policy and server shutdown.
 An unavailable service is recovered after leaving the problem and allowing its
 inactivity cleanup to finish.
 
-Up to ten problem environments are retained per server. Each environment includes
-its service containers and one toolbox; the limit counts problems, not containers.
-At capacity, existing work remains intact. The terminal shows the retained
-environments and lets the player end one before retrying.
+Up to ten problem environments are retained per server. An environment includes
+its service containers and, when used, one toolbox; the limit counts problems, not containers.
+At capacity, existing work remains intact. The fixed submission bar offers a retained-environment recovery overlay even
+when the problem has no Terminal tool.
 
 ## Input and isolation
 
@@ -100,8 +98,8 @@ slug and dimensions. See [network isolation](network-isolation.md).
 
 The application workspace manager owns the Docker stream and shell independently
 of WebSocket requests. One browser attachment receives input per problem; another
-tab receives `terminal_busy`. The connection also records presence after shell
-exit, keeping a visible service problem active.
+tab receives `terminal_busy`. The independent workspace stream records problem presence without a shell;
+terminal attachments also retain their environment for compatibility.
 
 `exit` and empty-line Ctrl+D report the exit code and remove the toolbox.
 Services remain while their problem is visible. Reconnect creates a fresh shell.

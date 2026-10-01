@@ -23,6 +23,24 @@ export interface Player {
   submit(slug: string, flag: string): Promise<Submission>;
 }
 
+export interface WorkspaceConnection {
+  readonly ready: Promise<RunStatus>;
+  close(): void;
+}
+
+export interface Workspaces {
+  connect(slug: string, failed: (code: string) => void): WorkspaceConnection;
+  list(): Promise<readonly WorkspaceInfo[]>;
+  stop(slug: string): Promise<void>;
+}
+
+export interface WorkspaceInfo {
+  readonly slug: string;
+  readonly title: string;
+  readonly connected: boolean;
+  readonly expiresAt: string | null;
+}
+
 export interface BrowserSession {
   readonly url: string;
   readonly target: string;

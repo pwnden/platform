@@ -39,6 +39,7 @@ type workspace struct {
 	service  bool
 	terminal *terminalProcess
 	attached *TerminalAttachment
+	viewers  int
 	timer    *time.Timer
 	expires  *time.Time
 	cancel   context.CancelFunc
@@ -100,12 +101,16 @@ func (m *Workspaces) idleLocked(e *workspace) {
 	if e.timer != nil {
 		e.timer.Stop()
 	}
+	if e.viewers > 0 || e.attached != nil {
+		e.expires = nil
+		return
+	}
 	at := time.Now().Add(m.idle)
 	e.expires = &at
 	e.timer = time.AfterFunc(m.idle, func() {
 		e.mu.Lock()
 		defer e.mu.Unlock()
-		if m.entry(e.slug) == e && e.attached == nil && e.expires == &at {
+		if m.entry(e.slug) == e && e.attached == nil && e.viewers == 0 && e.expires == &at {
 			m.stopLocked(e)
 		}
 	})
@@ -151,7 +156,7 @@ func (m *Workspaces) List() []WorkspaceInfo {
 	for _, e := range entries {
 		e.mu.Lock()
 		if m.entry(e.slug) == e {
-			result = append(result, WorkspaceInfo{e.slug, e.attached != nil, e.expires})
+			result = append(result, WorkspaceInfo{e.slug, e.attached != nil || e.viewers > 0, e.expires})
 		}
 		e.mu.Unlock()
 	}
@@ -227,7 +232,7 @@ func (m *Workspaces) EndTerminal(slug string) error {
 		e.cancel()
 		e.cancel = nil
 	}
-	if !e.service {
+	if !e.service && e.viewers == 0 {
 		return m.remove(e)
 	}
 	return nil
@@ -290,7 +295,7 @@ func (m *Workspaces) Attach(slug string, cols, rows int) (*TerminalAttachment, e
 			<-process.done
 			e.mu.Lock()
 			defer e.mu.Unlock()
-			if m.entry(slug) == e && e.terminal == process && !e.service {
+			if m.entry(slug) == e && e.terminal == process && !e.service && e.viewers == 0 {
 				if err := process.stop(); err != nil {
 					m.failure(err)
 				} else {
@@ -316,7 +321,7 @@ func (m *Workspaces) Attach(slug string, cols, rows int) (*TerminalAttachment, e
 		if m.entry(slug) == e && e.attached == a {
 			a.process.detach(a)
 			e.attached = nil
-			if a.process.finished() && !e.service {
+			if a.process.finished() && !e.service && e.viewers == 0 {
 				if err := a.process.stop(); err != nil {
 					m.failure(err)
 				} else {

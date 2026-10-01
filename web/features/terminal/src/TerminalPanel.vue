@@ -122,14 +122,14 @@ onUnmounted(() => {
 
 <template>
   <section class="terminal-panel" aria-label="문제 풀이 터미널" :aria-busy="state === 'connecting'">
-    <p v-if="message" :role="failed ? 'alert' : 'status'">{{ message }}</p>
+    <div class="terminal-screen">
     <ul v-if="retained.length" class="retained">
       <li v-for="environment in retained" :key="environment.slug">
         <span>{{ environment.title }} · {{ environment.connected ? '사용 중' : '자동 정리 대기' }}</span>
         <UIButton variant="danger" size="compact" :disabled="ending" @click="endEnvironment(environment.slug)">종료</UIButton>
       </li>
     </ul>
-    <div class="terminal-screen">
+      <p v-if="message" class="terminal-notice" :role="failed ? 'alert' : 'status'">{{ message }}</p>
       <UITerminal ref="screen" label="문제 풀이 셸" class="terminal-renderer" :enabled="state === 'ready'" @input="input" @resize="resize" />
       <p v-if="state === 'connecting'" class="terminal-progress" role="status">풀이 환경에 연결하는 중…</p>
     </div>
@@ -141,6 +141,7 @@ onUnmounted(() => {
 .terminal-screen { position: relative; flex: 1; min-height: 6rem; min-width: 0; }
 .terminal-screen :deep(.ui-terminal) { position: absolute; inset: 0; min-height: 0; padding: 0; }
 .terminal-progress { position: absolute; inset: 0; display: grid; place-content: center; pointer-events: none; color: var(--ui-muted); }
-.retained { padding: 0; margin: 0; list-style: none; display: grid; gap: var(--ui-space-1); }
+.terminal-notice { position: absolute; top: 0; inset-inline: 0; z-index: 1; padding: var(--ui-space-2); background: var(--ui-surface-raised); color: var(--ui-muted); }
+.retained { position: absolute; inset: 0; z-index: 2; padding: var(--ui-space-2); margin: 0; list-style: none; display: grid; align-content: start; gap: var(--ui-space-1); background: var(--ui-surface); overflow: auto; }
 .retained li { display: flex; align-items: center; justify-content: space-between; gap: var(--ui-space-1); }
 </style>

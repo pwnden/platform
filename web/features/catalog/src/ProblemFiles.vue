@@ -23,7 +23,7 @@ async function reveal(file: ProblemFile) {
   state.pending = true; state.failed = false;
   try {
     if (file.size > previewLimit) {
-      state.notice = '큰 자료는 터미널 탭에서 살펴보세요. 자료는 작업 공간에 준비돼 있습니다.';
+      state.notice = '미리보기 범위를 초과하는 자료입니다. 상단 다운로드 버튼으로 받을 수 있습니다.';
       return;
     }
     const bytes = await props.catalog.download(props.slug, file.id, previewLimit);
@@ -32,7 +32,7 @@ async function reveal(file: ProblemFile) {
       const source = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
       if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/.test(source)) throw new Error('binary');
       state.content = source;
-    } catch { state.notice = '텍스트로 표시할 수 없는 자료입니다. 터미널 탭에서 분석할 수 있습니다.'; }
+    } catch { state.notice = '텍스트로 표시할 수 없는 자료입니다. 상단 다운로드 버튼으로 받을 수 있습니다.'; }
   } catch { if (active) state.failed = true; }
   finally { if (active) state.pending = false; }
 }
@@ -69,21 +69,26 @@ defineExpose(handle);
   <section class="materials-panel" aria-label="분석 자료">
     <UISelect v-if="files.length > 1" id="material-file" label="파일" v-model="selected" :options="files.map(file => ({ value: file.id, label: file.name }))" />
     <p v-else-if="current" class="filename" :title="current.name">{{ current.name }}</p>
+    <div class="material-viewport">
     <template v-if="current">
-      <p v-if="reading(current.id).pending" role="status">자료를 불러오는 중…</p>
+      <p v-if="reading(current.id).pending" class="material-notice" role="status">자료를 불러오는 중…</p>
       <UICode v-if="reading(current.id).content !== undefined" class="material-source" :source="reading(current.id).content!" :label="current.name" />
-      <p v-if="reading(current.id).notice">{{ reading(current.id).notice }}</p>
-      <div v-if="reading(current.id).failed" role="alert">
+      <p v-if="reading(current.id).notice" class="material-notice">{{ reading(current.id).notice }}</p>
+      <div v-if="reading(current.id).failed" class="material-notice" role="alert">
         <p>자료를 불러오지 못했습니다.</p>
         <UIButton size="compact" @click="reveal(current)">자료 다시 불러오기</UIButton>
       </div>
     </template>
-    <p v-if="downloadFailed" role="alert">파일을 다운로드하지 못했습니다. 서버 연결을 확인하고 다시 시도하세요.</p>
+    <p v-if="downloadFailed" class="material-notice download-notice" role="alert">파일을 다운로드하지 못했습니다. 서버 연결을 확인하고 다시 시도하세요.</p>
+    </div>
   </section>
 </template>
 
 <style scoped>
 .materials-panel { box-sizing: border-box; height: 100%; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: var(--ui-space-2); padding: var(--ui-space-2); overflow-y: auto; }
 .filename { flex: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ui-muted); font-family: var(--ui-font-mono); font-size: 0.85rem; }
+.material-viewport { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .material-source { flex: 1; min-height: 0; max-height: none; }
+.material-notice { position: absolute; inset: 0; z-index: 1; padding: var(--ui-space-2); background: var(--ui-surface); overflow: auto; }
+.download-notice { bottom: auto; border: 1px solid var(--ui-danger); border-radius: var(--ui-radius-control); background: var(--ui-surface-raised); }
 </style>

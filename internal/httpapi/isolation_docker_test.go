@@ -56,10 +56,23 @@ func TestIsolatedNoteVaultDocker(t *testing.T) {
 			t.Error("cleanup", err)
 		}
 	}()
-	result, err := h.workspaces.Run(ctx, "note-vault")
+	view, err := h.workspaces.View(ctx, "note-vault")
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer view.Close()
+	result := view.Status
+	if result.State != "running" || !h.workspaces.List()[0].Connected || h.workspaces.List()[0].ExpiresAt != nil {
+		t.Fatal("web-only problem presence failed")
+	}
+	if e := h.workspaces.List(); len(e) != 1 {
+		t.Fatal("workspace count", e)
+	}
+	detail, err := backend.Detail(ctx, "note-vault")
+	if err != nil || len(detail.Tools) != 1 || detail.Tools[0] != "web" {
+		t.Fatal("web-only tool declaration", detail.Tools, err)
+	}
+	t.Log("Web-only environment prepared and retained without terminal attachment")
 	if len(result.Endpoints) != 1 || result.Endpoints[0].Published || !result.Endpoints[0].Proxied {
 		t.Fatal("problem endpoint bypasses isolation", result)
 	}
@@ -124,6 +137,10 @@ print('internal HTTP passed')
 	c, err := challenge.Load(repo, "note-vault")
 	if err != nil {
 		t.Fatal(err)
+	}
+	terminals, err := exec.CommandContext(ctx, "docker", "ps", "--all", "--filter", "label=pwnden.kind=terminal", "--filter", "label=pwnden.project="+runtime.Project(c), "--format", "{{.ID}}").Output()
+	if err != nil || strings.TrimSpace(string(terminals)) != "" {
+		t.Fatal("web-only solve created a terminal", err)
 	}
 	host, hostPort, peer := networkControls(t, ctx, c)
 	probe += fmt.Sprintf(`

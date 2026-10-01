@@ -1,8 +1,9 @@
-import type { Catalog, Problem, ProblemDetail } from '@pwnden/catalog';
-import type { Endpoint, Player, Run, RunStatus, Submission } from '@pwnden/play';
+import type { Catalog, Problem, ProblemDetail, ProblemTool } from '@pwnden/catalog';
+import type { Endpoint, Player, Run, RunStatus, Submission, Workspaces } from '@pwnden/play';
 import type { Terminals } from '@pwnden/terminal';
 import { connectTerminal } from './terminal';
 import type { TerminalTransport } from './terminal';
+import { connectWorkspace } from './workspace';
 
 export class APIError extends Error {
   constructor(readonly code: string, readonly status: number) {
@@ -15,6 +16,7 @@ export interface APIClient {
   readonly catalog: Catalog;
   readonly player: Player;
   readonly terminals: Terminals;
+  readonly workspaces: Workspaces;
 }
 
 export interface APIOptions {
@@ -117,6 +119,26 @@ export function createAPI(options: APIOptions): APIClient {
   }
 
   return {
+    workspaces: {
+      async list() {
+        const payload = await request('/workspaces');
+        return array(payload.workspaces).map(value => {
+          const item = object(value);
+          if (typeof item.connected !== 'boolean' || (item.expires_at !== null && typeof item.expires_at !== 'string')) throw new APIError('invalid_response', 0);
+          return { slug: string(item.slug), title: string(item.title), connected: item.connected, expiresAt: item.expires_at as string | null };
+        });
+      },
+      async stop(slug) {
+        const item = await request(`${route(slug)}/run`, 'DELETE');
+        if (item.slug !== slug) throw new APIError('invalid_response', 0);
+      },
+      connect(slug, failed) {
+        return connectWorkspace(`/api/v1${route(slug)}/workspace`, options.token, requestFetch, code => {
+          if (code === 'unauthorized') options.onUnauthorized?.();
+          failed(code);
+        });
+      },
+    },
     terminals: {
       async list() {
         const payload = await request('/workspaces');
@@ -155,6 +177,10 @@ export function createAPI(options: APIOptions): APIClient {
         return {
           slug, title: string(item.title), category: string(item.category), kind: kind(item.kind),
           description: string(item.description),
+          tools: array(item.tools).map(tool => {
+            if (tool !== 'web' && tool !== 'files' && tool !== 'terminal') throw new APIError('invalid_response', 0);
+            return tool as ProblemTool;
+          }),
           hintCount, walkthrough: item.walkthrough,
           files: array(item.files).map(value => {
             const file = object(value);

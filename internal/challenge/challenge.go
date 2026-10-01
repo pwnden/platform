@@ -13,7 +13,7 @@ import (
 
 var slugPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 
-const SupportedContractVersion = 3
+const SupportedContractVersion = 4
 
 // Installed snapshots remain readable with the consumer's current isolation.
 func supportedVersion(version int) bool { return version >= 1 && version <= SupportedContractVersion }
@@ -53,6 +53,39 @@ type Challenge struct {
 	Solve     Solve      `toml:"solve"`
 	Patched   *Patched   `toml:"patched"`
 	Content   Content    `toml:"content"`
+	Player    Player     `toml:"player"`
+}
+
+type Player struct {
+	Tools []string `toml:"tools"`
+}
+
+// PlayerTools consumes author-selected tools; older catalogs derive a minimal set.
+func (c *Loaded) PlayerTools() []string {
+	if c.Schema >= 4 {
+		return append([]string{}, c.Player.Tools...)
+	}
+	tools := []string{}
+	web := false
+	tcp := false
+	for _, endpoint := range c.Endpoints {
+		if endpoint.Protocol == "http" {
+			web = true
+		}
+		if endpoint.Protocol == "tcp" {
+			tcp = true
+		}
+	}
+	if web {
+		tools = append(tools, "web")
+	}
+	if len(c.Files) > 0 {
+		tools = append(tools, "files")
+	}
+	if !web || tcp {
+		tools = append(tools, "terminal")
+	}
+	return tools
 }
 
 type Content struct {

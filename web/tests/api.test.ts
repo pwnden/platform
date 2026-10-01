@@ -33,7 +33,7 @@ it('maps details, binary downloads and restored run status without exposing inte
   const id = 'b'.repeat(64);
   const calls: string[] = [];
   const replies = [
-    response({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', description: '<script>text</script>', files: [{ id, name: 'files/data.bin', size: 3 }], hint_count: 3, walkthrough: true, private: 'hidden' }),
+    response({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', tools: ['files', 'terminal'], description: '<script>text</script>', files: [{ id, name: 'files/data.bin', size: 3 }], hint_count: 3, walkthrough: true, private: 'hidden' }),
     new Response(new Uint8Array([0, 1, 255]), { headers: { 'Content-Type': 'application/octet-stream' } }),
     response({ slug: 'test', kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:8000' }], flag: 'hidden' }),
   ];
@@ -43,7 +43,7 @@ it('maps details, binary downloads and restored run status without exposing inte
     expect(options?.redirect).toBe('error');
     return replies.shift()!;
   } });
-  expect(await client.catalog.detail('test')).toEqual({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', description: '<script>text</script>', files: [{ id, name: 'files/data.bin', size: 3 }], hintCount: 3, walkthrough: true });
+  expect(await client.catalog.detail('test')).toEqual({ slug: 'test', title: 'Test', category: 'rev', kind: 'file', tools: ['files', 'terminal'], description: '<script>text</script>', files: [{ id, name: 'files/data.bin', size: 3 }], hintCount: 3, walkthrough: true });
   expect(await client.catalog.download('test', id)).toEqual(new Uint8Array([0, 1, 255]));
   expect(await client.player.status('test')).toEqual({ slug: 'test', kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:8000' }] });
   expect(calls).toEqual(['/api/v1/problems/test', `/api/v1/problems/test/files/${id}`, '/api/v1/problems/test/status']);
