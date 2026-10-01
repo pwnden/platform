@@ -241,15 +241,15 @@ Source: [ProblemList.vue](features/catalog/src/ProblemList.vue), [App.vue](apps/
 
 ### Status
 
-Inline text communicates muted, info, success or danger tone. Labels describe actual client or execution state. Alert text uses danger. Supporting status text uses (0.8rem). `UIConnectionStatus` uses an authored plug SVG to distinguish connected, connecting, disconnected and error states through shape and semantic color. Its accessible label and tooltip name the state. Connecting animates the current mark; reduced-motion preferences stop it.
+Inline text communicates muted, info, success or danger tone. Labels describe actual client or execution state. Alert text uses danger. Supporting status text uses (0.8rem). The terminal connection state is shown beside its switch as an explicit label with semantic color.
 
-Source: [UIStatus.vue](packages/ui/src/UIStatus.vue), [UIConnectionStatus.vue](packages/ui/src/UIConnectionStatus.vue).
+Source: [UIStatus.vue](packages/ui/src/UIStatus.vue), [UITerminalControls.vue](packages/ui/src/UITerminalControls.vue).
 
 ### Terminal
 
-`UITerminal` owns xterm and its fit addon inside the UI package. It maps shared tokens to the terminal theme, enables screen reader mode and resizes after fonts load or column changes. Its public resize event contains only `cols` and `rows`. Selecting a problem prepares and connects its environment automatically. `UITerminalControls` keeps connection status, disconnect/reconnect or preparation cancellation, and environment stop together in the panel header. Below a pane width of (20rem), connection buttons retain accessible names and tooltips while their visible labels give way to icons. The status and controls stay together when the heading wraps. Disconnect retains the environment for the existing ten-minute inactivity window and waits for explicit reconnect; environment stop removes it. The renderer preserves output after shell exit. Failure and exit messages appear above the terminal; successful connection is conveyed in the header. The cleanup footnote stays below the viewport.
+`UITerminal` owns xterm and its fit addon inside the UI package. It maps shared tokens to the terminal theme, enables screen reader mode and resizes after fonts load or column changes. Its public resize event contains only `cols` and `rows`. Selecting a problem prepares and connects its environment automatically. `UITerminalControls` places a rectangular connection switch, its explicit status label and a labeled environment-stop button in the panel header. The switch has a square thumb and represents connection intent: connected and preparing states are on; preparing is labeled with `aria-busy` and can be cancelled by switching off. Disconnected and error states are off. `UISwitch` owns the Sectile wrapper, shared hover/pressed/focus styles and reduced-motion behavior. Controls wrap as complete labeled units within narrow panes. Switching off retains the environment for the existing ten-minute inactivity window and waits for switching on; environment stop immediately removes it. Switching on after environment stop prepares a fresh environment. The renderer preserves output after shell exit. Failure and exit messages appear above the terminal; successful connection is conveyed in the header. The cleanup footnote stays below the viewport.
 
-Source: [UITerminal.vue](packages/ui/src/UITerminal.vue), [UITerminalControls.vue](packages/ui/src/UITerminalControls.vue), [TerminalPanel.vue](features/terminal/src/TerminalPanel.vue).
+Source: [UITerminal.vue](packages/ui/src/UITerminal.vue), [UISwitch.vue](packages/ui/src/UISwitch.vue), [UITerminalControls.vue](packages/ui/src/UITerminalControls.vue), [TerminalPanel.vue](features/terminal/src/TerminalPanel.vue).
 
 ### Markdown
 

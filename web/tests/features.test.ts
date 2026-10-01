@@ -146,15 +146,17 @@ it('disconnects through the header without stopping the environment and waits fo
   await settle();
   const header = flatten(root).find(item => item.type === 'header')!;
   expect(text(header)).toContain('연결됨');
-  expect(text(header)).toContain('연결 해제');
-  await click(button(root, '연결 해제')); await settle();
+  expect(button(root, '터미널 연결').props.role).toBe('switch');
+  expect(button(root, '터미널 연결').props['aria-checked']).toBe('true');
+  await click(button(root, '터미널 연결')); await settle();
+  expect(button(root, '터미널 연결').props['aria-checked']).toBe('false');
   expect(close).toHaveBeenCalledOnce();
   expect(terminals.stop).not.toHaveBeenCalled();
   expect(flatten(root).find(item => item.type === 'terminal')!.props.enabled).toBe(false);
   document.visibilityState = 'hidden'; target.dispatchEvent(new Event('visibilitychange'));
   document.visibilityState = 'visible'; target.dispatchEvent(new Event('visibilitychange')); await settle();
   expect(terminals.connect).toHaveBeenCalledOnce();
-  await click(button(root, '터미널 다시 연결')); await settle();
+  await click(button(root, '터미널 연결')); await settle();
   expect(terminals.connect).toHaveBeenCalledTimes(2);
   expect(text(root)).toContain('연결됨');
   await click(button(root, '문제 환경 종료')); await settle();
@@ -173,7 +175,8 @@ it('cancels pending preparation and releases a late ready session without changi
   const root = node('root');
   renderer.render(h(TerminalPanel, { terminals, slug: 'test' }), root);
   await settle();
-  await click(button(root, '연결 취소')); await settle();
+  expect(button(root, '터미널 연결').props['aria-busy']).toBe(true);
+  await click(button(root, '터미널 연결')); await settle();
   expect(close).toHaveBeenCalledOnce();
   resolve(session); await settle();
   expect(session.close).toHaveBeenCalledOnce();
@@ -197,7 +200,7 @@ it('drops an old capacity list when a new connection is already ready', async ()
   renderer.render(h(TerminalPanel, { terminals, slug: 'test' }), root);
   await settle();
   terminals.connect.mockImplementationOnce(() => ({ ready: Promise.resolve(session), close: vi.fn() }));
-  await click(button(root, '터미널 다시 연결')); await settle();
+  await click(button(root, '터미널 연결')); await settle();
   resolveList([{ slug: 'old', title: '오래된 유지 환경', connected: false, expiresAt: null }]); await settle();
   expect(text(root)).toContain('연결됨');
   expect(text(root)).not.toContain('오래된 유지 환경');
@@ -247,7 +250,7 @@ const renderer = createRenderer<Node, Node>({
 const text = (item: Node): string => (item.type === 'comment' ? '' : item.text) + item.children.map(text).join('');
 const flatten = (item: Node): Node[] => [item, ...item.children.flatMap(flatten)];
 const button = (root: Node, label: string) => flatten(root).find(item => item.type === 'button' && (text(item) === label || item.props['aria-label'] === label))!;
-const click = (item: Node) => (item.props.onClick as () => unknown)();
+const click = (item: Node) => (item.props.onClick as (event: Event) => unknown)(new Event('click'));
 async function settle() { for (let i = 0; i < 8; i++) { await Promise.resolve(); await nextTick(); } }
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 

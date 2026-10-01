@@ -66,10 +66,12 @@ The design contract lives in [DESIGN.md](../web/DESIGN.md), with product context
 in [PRODUCT.md](../web/PRODUCT.md). `@pwnden/ui` owns the shared palette,
 body and monospace font stacks, focus treatment, spacing and component variants.
 `UIPanel` provides a labelled section with an optional actions slot; `UIStatus`
-renders a textual status. `UIConnectionStatus` conveys terminal state through a
-plug symbol, semantic color and an accessible label. `UITerminalControls` keeps
-that state beside disconnect/reconnect, preparation cancellation and environment
-stop in the panel header. Features supply actual state and connection behavior.
+renders a textual status. `UISwitch` wraps Sectile's native switch semantics with
+a rectangular track and square thumb. It exposes a controlled boolean value,
+stable accessible label and a pending state. Pending state remains operable;
+callers use `disabled` when changes are unavailable. `UITerminalControls` uses it
+for terminal connection beside a visibly labeled environment-stop button.
+Features supply actual state and connection behavior.
 
 Shared interaction styles live in `packages/ui/src/theme.css`. Buttons, fields,
 links, disclosures, code scroll regions and split handles share focus tokens and

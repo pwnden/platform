@@ -33,21 +33,28 @@ it('omits hidden spoilers and renders material source as escaped selectable code
   expect(source).toContain('tabindex="0"');
 });
 
-it('groups the accessible visual connection state and connection controls together in every state', async () => {
-  for (const [state, label, action] of [
-    ['connected', '연결됨', '연결 해제'], ['connecting', '준비·연결 중', '연결 취소'],
-    ['disconnected', '연결 해제됨', '터미널 다시 연결'], ['error', '연결 오류', '터미널 다시 연결'],
+it('uses a named connection switch and a separately labeled environment stop in every state', async () => {
+  for (const [state, label, checked, action] of [
+    ['connected', '연결됨', true, '연결 해제'], ['connecting', '준비·연결 중', true, '연결 취소'],
+    ['disconnected', '연결 해제됨', false, '터미널 다시 연결'], ['error', '연결 오류', false, '터미널 다시 연결'],
   ] as const) {
     const html = await renderToString(createSSRApp({ render: () => h(UITerminalControls, { state }) }));
     expect(html).toContain('role="group" aria-label="터미널 연결 제어"');
-    expect(html).toContain(`ui-connection-status--${state}`);
-    expect(html).toContain(`role="status" title="${label}"`);
-    expect(html).toContain(`aria-label="${action}"`);
+    expect(html).toContain('role="switch"');
+    expect(html).toContain(`aria-checked="${checked}"`);
+    expect(html).toContain('aria-label="터미널 연결"');
+    expect(html).toContain(`title="${action}"`);
+    expect(html).toContain(`role="status"`);
+    expect(html).toContain(label);
+    expect(html.includes('aria-busy="true"')).toBe(state === 'connecting');
     expect(html).toContain('aria-label="문제 환경 종료"');
+    expect(html).toContain('환경 종료</span>');
     expect(html).toContain('aria-hidden="true" focusable="false"');
   }
   const disabled = await renderToString(createSSRApp({ render: () => h(UITerminalControls, { state: 'disconnected', busy: true }) }));
   expect(disabled.match(/ disabled/g)).toHaveLength(2);
+  const paused = await renderToString(createSSRApp({ render: () => h(UITerminalControls, { state: 'disconnected', disabled: true }) }));
+  expect(paused.match(/ disabled/g)).toHaveLength(1);
 });
 
 it('keeps disclosure and download as separate named buttons with stable preview relationships', async () => {

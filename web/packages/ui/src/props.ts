@@ -52,6 +52,13 @@ export interface UITerminalControlsProps extends UIConnectionStatusProps {
   readonly busy?: boolean;
 }
 
+export interface UISwitchProps {
+  readonly label: string;
+  readonly modelValue: boolean;
+  readonly disabled?: boolean;
+  readonly busy?: boolean;
+}
+
 export interface UIStatusProps {
   readonly tone?: 'muted' | 'info' | 'success' | 'danger';
 }
