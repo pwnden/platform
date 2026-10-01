@@ -12,6 +12,9 @@ import (
 type Code string
 
 const (
+	WorkspaceFull        Code = "workspace_full"
+	TerminalBusy         Code = "terminal_busy"
+	WorkspaceBusy        Code = "workspace_busy"
 	InvalidArgument      Code = "invalid_argument"
 	NotFound             Code = "not_found"
 	IncompatibleContract Code = "incompatible_contract"

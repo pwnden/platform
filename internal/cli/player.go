@@ -52,6 +52,11 @@ func execute(ctx context.Context, invocation Invocation) error {
 	if err != nil {
 		return err
 	}
+	release, err := service.LockWorkspace()
+	if err != nil {
+		return err
+	}
+	defer release()
 	result, err := service.Execute(ctx, args[0], args[2:])
 	if err != nil {
 		return err

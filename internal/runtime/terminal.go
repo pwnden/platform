@@ -3,11 +3,13 @@ package runtime
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -96,7 +98,7 @@ func OpenTerminal(ctx context.Context, c *challenge.Loaded, project string, cols
 		Cmd: []string{"--noprofile", "--norc", "-c", "stty iutf8 || exit; exec /bin/bash --noprofile --norc -i"},
 		Tty: true, OpenStdin: true, StdinOnce: true, AttachStdin: true, AttachStdout: true, AttachStderr: true,
 		WorkingDir: "/challenge", Env: []string{"TERM=xterm-256color", "LANG=C.UTF-8", "LC_ALL=C.UTF-8", "INPUTRC=/dev/null", "HISTFILE=/dev/null"},
-		Labels: map[string]string{"pwnden.kind": "terminal", "pwnden.problem": c.Slug, "pwnden.project": Project(c)},
+		Labels: map[string]string{"pwnden.kind": "terminal", "pwnden.problem": c.Slug, "pwnden.project": Project(c), "pwnden.repository": repositoryID(c.RepoRoot)},
 	}
 	if c.Solve.Writable && os.Geteuid() >= 0 && os.Getegid() >= 0 {
 		config.User = fmt.Sprintf("%d:%d", os.Geteuid(), os.Getegid())
@@ -165,3 +167,26 @@ func (t *Terminal) Close() error {
 }
 
 var _ io.ReadWriteCloser = (*Terminal)(nil)
+
+func repositoryID(root string) string { return fmt.Sprintf("%x", sha256.Sum256([]byte(root))) }
+
+// CleanupTerminals targets one repository and problem, including containers
+// whose create response was interrupted before their ID reached the server.
+func CleanupTerminals(ctx context.Context, c *challenge.Loaded) error {
+	result, _, err := command(ctx, c.Dir, nil, "docker", "ps", "-aq", "--filter", "label=pwnden.kind=terminal", "--filter", "label=pwnden.repository="+repositoryID(c.RepoRoot), "--filter", "label=pwnden.problem="+c.Slug)
+	if err != nil {
+		return err
+	}
+	for _, id := range strings.Fields(result) {
+		if len(id) < 12 || len(id) > 64 {
+			return errors.New("invalid terminal container ID")
+		}
+		if _, err := hex.DecodeString(id); err != nil {
+			return errors.New("invalid terminal container ID")
+		}
+		if _, _, err := command(ctx, c.Dir, nil, "docker", "rm", "-f", "-v", id); err != nil {
+			return err
+		}
+	}
+	return nil
+}

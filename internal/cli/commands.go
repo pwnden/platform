@@ -97,6 +97,11 @@ func run(ctx context.Context, invocation Invocation) (err error) {
 	if err != nil {
 		return err
 	}
+	release, err := service.LockWorkspace()
+	if err != nil {
+		return err
+	}
+	defer release()
 	result, err := service.Run(ctx, slug)
 	if err != nil {
 		return err
@@ -133,6 +138,11 @@ func verify(ctx context.Context, invocation Invocation) error {
 	if err != nil {
 		return err
 	}
+	release, err := service.LockWorkspace()
+	if err != nil {
+		return err
+	}
+	defer release()
 	result, err := service.Verify(ctx, slug)
 	if err != nil {
 		return err
@@ -151,6 +161,11 @@ func stop(ctx context.Context, invocation Invocation) error {
 	if err != nil {
 		return err
 	}
+	release, err := service.LockWorkspace()
+	if err != nil {
+		return err
+	}
+	defer release()
 	result, err := service.Stop(ctx, slug)
 	if err != nil {
 		return err

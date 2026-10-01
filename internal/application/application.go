@@ -68,7 +68,8 @@ type StopInfo struct {
 
 // Service binds operations to one challenges checkout. Construction performs no IO.
 type Service struct {
-	repo string
+	repo    string
+	journal *workspaceJournal
 }
 
 func New(repo string) (*Service, error) {
