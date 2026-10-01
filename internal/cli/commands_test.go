@@ -111,11 +111,11 @@ func TestRunOutputFailureCleansUp(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	testutil.Docker(t,
+	testutil.Docker(t, testutil.WithIsolatedNetwork(runtime.Project(c), "network-id",
 		testutil.Reply{Match: []string{"config"}, Out: fmt.Sprintf(`{"services":{"app":{}},"networks":{"default":{"name":%q}}}`, runtime.Project(c)+"_default")},
 		testutil.Reply{Match: []string{"up"}},
 		testutil.Reply{Match: []string{"down"}},
-	)
+	)...)
 	r, err := New(DefaultCommands()...)
 	if err != nil {
 		t.Fatal(err)

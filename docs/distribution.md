@@ -56,11 +56,11 @@ Use `./pwnden catalog --help` for command help. Native packages retain their bun
 
 ## Native packages
 
-A native platform package contains the executable, `catalog.tar.gz`, and `distribution.json`. The frontend is embedded in the executable. Keep those files together for the first setup. Host Go, Git, Node, pnpm, Python, and a separate problem checkout are unnecessary. Docker with Linux containers and the Compose plugin are prerequisites.
+A native platform package contains the executable, `catalog.tar.gz`, and `distribution.json`. The frontend is embedded in the executable. Keep those files together for the first setup. Host Go, Git, Node, pnpm, Python, and a separate problem checkout are unnecessary. Docker Engine 28 or newer with Linux containers and the Compose plugin are prerequisites.
 
 ## Setup and managed content
 
-`pwnden setup` checks Docker and Compose, verifies the bundled archive against a SHA-256 embedded in the executable, extracts the fixed problem snapshot, checks contract compatibility and the existing execution policy, and downloads/builds the declared images. It prepares vulnerable and patch images and toolboxes without starting problem services.
+`pwnden setup` checks Docker and Compose, verifies the bundled archive against a SHA-256 embedded in the executable, extracts the fixed problem snapshot, checks contract compatibility and the execution policy, and downloads/builds the declared images. It prepares vulnerable and patch images, toolboxes and the pinned platform connector image without starting problem services. [Network isolation](network-isolation.md) applies at runtime to every supported catalog version.
 
 Installation data lives under the OS user configuration directory's `pwnden` folder. The active installation receipt identifies a content revision and archive digest. Commands resolve the managed problem directory from that receipt. Users choose problem names; paths and repository acquisition are managed by the platform.
 

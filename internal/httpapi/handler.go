@@ -264,6 +264,11 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			applicationError(w, err)
 			return
 		}
+		result.Endpoints, err = h.exposeEndpoints(ctx, slug, result.Endpoints)
+		if err != nil {
+			applicationError(w, err)
+			return
+		}
 		writeJSON(w, 200, StatusFrom(result))
 	case action == "submissions":
 		result, err := h.backend.Submit(ctx, slug, flag)
@@ -286,6 +291,12 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	default:
 		result, err := h.workspaces.Run(ctx, slug)
 		if err != nil {
+			applicationError(w, err)
+			return
+		}
+		result.Endpoints, err = h.exposeEndpoints(ctx, slug, result.Endpoints)
+		if err != nil {
+			err = errors.Join(err, h.stopUndelivered(ctx, slug))
 			applicationError(w, err)
 			return
 		}

@@ -16,13 +16,14 @@ func TestPlayerResponsesDoNotExposeExecutionInternals(t *testing.T) {
 		Endpoints: []application.Endpoint{
 			{Name: "web", URL: "http://127.0.0.1:1234", Published: true},
 			{Name: "tcp", URL: "tcp://127.0.0.1:1235", Published: true},
+			{Name: "shell", URL: "tcp://app:9000", Instance: "private-run-identity"},
 			{Name: "database", URL: "http://172.20.0.2:5432", Published: false},
 		}}
 	data, err := json.Marshal(RunFrom(result))
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := `{"slug":"example","kind":"service","file_count":0,"endpoints":[{"name":"web","url":"http://127.0.0.1:1234"},{"name":"tcp","url":"tcp://127.0.0.1:1235"}]}`
+	expected := `{"slug":"example","kind":"service","file_count":0,"endpoints":[{"name":"web","url":"http://127.0.0.1:1234"},{"name":"tcp","url":"tcp://127.0.0.1:1235"},{"name":"shell","url":"tcp://app:9000"}]}`
 	if string(data) != expected {
 		t.Fatalf("unexpected public run response: %s", data)
 	}

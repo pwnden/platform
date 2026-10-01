@@ -29,6 +29,9 @@ func RunStatus(ctx context.Context, c *challenge.Loaded) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if err := checkLiveNetworks(ctx, c, state.Project); err != nil {
+		return "", err
+	}
 	out, stderr, err := command(ctx, c.Dir, []string{"FLAG=" + state.Flag}, "docker",
 		composeArgs(c, state.Project, []string{c.Compose}, "ps", "--all", "--format", "json")...)
 	if err != nil {

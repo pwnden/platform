@@ -74,9 +74,10 @@ type Volume struct {
 }
 
 type Network struct {
-	Name     string `json:"name"`
-	External bool   `json:"external"`
-	Driver   string `json:"driver"`
+	Name       string            `json:"name"`
+	External   bool              `json:"external"`
+	Driver     string            `json:"driver"`
+	DriverOpts map[string]string `json:"driver_opts"`
 }
 
 type Resource struct {
@@ -119,24 +120,32 @@ func composeConfig(ctx context.Context, c *challenge.Loaded, flag string, patche
 	if c.Compose == "" {
 		return nil, nil
 	}
-	project := Project(c)
-	files := []string{c.Compose}
-	if patched {
-		if c.Patched == nil {
-			return nil, errors.New("challenge has no patched compose")
-		}
-		project += "-patched"
-		files = append(files, c.Patched.Compose)
-	}
-	out, stderr, err := command(ctx, c.Dir, []string{"FLAG=" + flag}, "docker", composeArgs(c, project, files, "config", "--format", "json")...)
+	out, err := resolvedConfig(ctx, c, flag, patched)
 	if err != nil {
-		return nil, fmt.Errorf("docker compose config: %w: %s", err, stderr)
+		return nil, err
 	}
 	var cfg Config
 	if err := json.Unmarshal([]byte(out), &cfg); err != nil {
 		return nil, fmt.Errorf("decode compose config: %w", err)
 	}
 	return &cfg, nil
+}
+
+func resolvedConfig(ctx context.Context, c *challenge.Loaded, flag string, patched bool) (string, error) {
+	project := Project(c)
+	files := []string{c.Compose}
+	if patched {
+		if c.Patched == nil {
+			return "", errors.New("challenge has no patched compose")
+		}
+		project += "-patched"
+		files = append(files, c.Patched.Compose)
+	}
+	out, stderr, err := command(ctx, c.Dir, []string{"FLAG=" + flag}, "docker", composeArgs(c, project, files, "config", "--format", "json")...)
+	if err != nil {
+		return "", fmt.Errorf("docker compose config: %w: %s", err, stderr)
+	}
+	return out, nil
 }
 
 func checkConfig(c *challenge.Loaded, cfg *Config, project string) error {
@@ -148,6 +157,13 @@ func checkConfig(c *challenge.Loaded, cfg *Config, project string) error {
 	}
 	if err := checkResources(cfg, project); err != nil {
 		return err
+	}
+	for name, network := range cfg.Networks {
+		for key, value := range network.DriverOpts {
+			if (key != gatewayIPv4 && key != gatewayIPv6) || value != "isolated" {
+				return fmt.Errorf("network %q requests unsupported driver option %q", name, key)
+			}
+		}
 	}
 	for name, service := range cfg.Services {
 		if service.Privileged || service.UseAPISocket || len(service.Devices) != 0 || len(service.CapAdd) != 0 || service.PID == "host" || service.IPC == "host" || (service.NetworkMode != "" && service.NetworkMode != "none") || len(service.Provider) != 0 || len(service.VolumesFrom) != 0 || len(service.Credential) != 0 {
@@ -341,9 +357,9 @@ func Run(ctx context.Context, c *challenge.Loaded) error {
 		return err
 	}
 	project := Project(c)
-	_, stderr, err := command(ctx, c.Dir, []string{"FLAG=" + flag}, "docker", composeArgs(c, project, []string{c.Compose}, "up", "-d", "--build", "--wait")...)
+	err = startIsolated(ctx, c, flag, false)
 	if err != nil {
-		return errors.Join(fmt.Errorf("docker compose up: %w: %s", err, stderr), Down(context.Background(), c, project, flag, false))
+		return errors.Join(err, Down(context.Background(), c, project, flag, false))
 	}
 	if err := SaveState(c, State{Project: project, Flag: flag}); err != nil {
 		return errors.Join(err, Down(context.Background(), c, project, flag, false))
@@ -431,9 +447,9 @@ func StartPatched(ctx context.Context, c *challenge.Loaded, flag string) (string
 		return "", err
 	}
 	project := Project(c) + "-patched"
-	_, stderr, err := command(ctx, c.Dir, []string{"FLAG=" + flag}, "docker", composeArgs(c, project, []string{c.Compose, c.Patched.Compose}, "up", "-d", "--build", "--wait")...)
+	err := startIsolated(ctx, c, flag, true)
 	if err != nil {
-		return "", errors.Join(fmt.Errorf("patched docker compose up: %w: %s", err, stderr), Down(context.Background(), c, project, flag, true))
+		return "", errors.Join(err, Down(context.Background(), c, project, flag, true))
 	}
 	return project, nil
 }
@@ -537,7 +553,7 @@ func toolboxMount(source string, writable bool) string {
 }
 
 func networkID(ctx context.Context, c *challenge.Loaded, project string) (string, error) {
-	filters := []string{"network", "ls", "--filter", "label=com.docker.compose.project=" + project, "--filter", "label=com.docker.compose.network=" + c.Solve.Network, "--format", "{{.ID}}"}
+	filters := []string{"network", "ls", "--no-trunc", "--filter", "label=com.docker.compose.project=" + project, "--filter", "label=com.docker.compose.network=" + c.Solve.Network, "--format", "{{.ID}}"}
 	out, stderr, err := command(ctx, c.Dir, nil, "docker", filters...)
 	if err != nil {
 		return "", fmt.Errorf("find solve network: %w: %s", err, stderr)
@@ -545,6 +561,9 @@ func networkID(ctx context.Context, c *challenge.Loaded, project string) (string
 	ids := strings.Fields(out)
 	if len(ids) != 1 {
 		return "", fmt.Errorf("expected one solve network %q for %s, found %d", c.Solve.Network, project, len(ids))
+	}
+	if err := checkLiveNetworks(ctx, c, project); err != nil {
+		return "", err
 	}
 	return ids[0], nil
 }

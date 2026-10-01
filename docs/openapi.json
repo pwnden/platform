@@ -12,8 +12,8 @@
       "parameters": [{"$ref": "#/components/parameters/Slug"}],
       "post": {
         "operationId": "openProblemBrowser",
-        "summary": "Open the common browser for a running published HTTP endpoint",
-        "description": "Bearer-authenticated JSON name only, up to 4096 bytes. The platform selects the destination from current published endpoints and returns an isolated loopback browser wrapper. Repeated opens reuse the endpoint wrapper. Workspace expiry and server shutdown close listeners. Problem documents and security headers are preserved.",
+        "summary": "Open the common browser for a running declared HTTP endpoint",
+        "description": "Bearer-authenticated JSON name only, up to 4096 bytes. The platform selects a declared HTTP service in the current isolated environment and returns its owned loopback browser wrapper. Fixed-destination Docker streams provide ingress. Repeated opens reuse the endpoint wrapper. Workspace expiry and server shutdown close listeners. Problem documents and security headers are preserved.",
         "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "additionalProperties": false, "required": ["name"], "properties": {"name": {"type": "string", "minLength": 1}}}}}},
         "responses": {
           "200": {"description": "Common browser prepared", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Browser"}}}},

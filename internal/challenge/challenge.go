@@ -13,10 +13,10 @@ import (
 
 var slugPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 
-const SupportedContractVersion = 2
+const SupportedContractVersion = 3
 
-// Version 1 installations remain readable during the catalog rollout.
-func supportedVersion(version int) bool { return version == 1 || version == SupportedContractVersion }
+// Installed snapshots remain readable with the consumer's current isolation.
+func supportedVersion(version int) bool { return version >= 1 && version <= SupportedContractVersion }
 
 var ErrInvalidSlug = errors.New("invalid challenge slug")
 
@@ -28,9 +28,9 @@ type VersionError struct {
 
 func (e *VersionError) Error() string {
 	if e.Repository != 0 {
-		return fmt.Sprintf("unsupported challenge contract version %d; repository uses %d and platform supports 1 and %d", e.Version, e.Repository, SupportedContractVersion)
+		return fmt.Sprintf("unsupported challenge contract version %d; repository uses %d and platform supports 1 through %d", e.Version, e.Repository, SupportedContractVersion)
 	}
-	return fmt.Sprintf("unsupported repository contract version %d; platform supports 1 and %d", e.Version, SupportedContractVersion)
+	return fmt.Sprintf("unsupported repository contract version %d; platform supports 1 through %d", e.Version, SupportedContractVersion)
 }
 
 // Contract contains the machine-readable values of the owner-published contract.

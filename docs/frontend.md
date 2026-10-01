@@ -165,7 +165,7 @@ after an existing request finishes, so an early observation cannot hide a newly
 prepared web service. Hidden terminals keep their dimensions and do not take focus
 when an attachment finishes preparing.
 
-`ProblemWeb` selects runtime-published `http://127.0.0.1:<port>` endpoints.
+`ProblemWeb` selects platform-provided `http://127.0.0.1:<port>` web origins.
 Documents load on first use, retain state when switching tools or endpoints, and
 reload only on an explicit web refresh. Environment termination or unknown state
 removes old frames. A restarted endpoint loads its new address. Multiple HTTP
@@ -175,13 +175,16 @@ address field edits paths and query strings within the selected problem origin.
 Reload refreshes the current page and retains its history. These actions preserve
 service state. `UILink` keeps `noopener noreferrer` on the new-tab link.
 
-The platform provides a separate loopback browsing proxy per published endpoint,
+The platform provides a separate loopback browsing proxy per declared HTTP endpoint,
 with a trusted wrapper and a sandboxed inner problem frame. The wrapper reads the
 inner frame's native Navigation API and validates commands from the player using
 the exact parent origin and window. The player validates the wrapper origin,
 window and session channel; displayed URLs remain within the selected problem.
 No problem-side bridge or document injection is required. Common browsing is
 platform-owned, so authors use existing HTTP declarations and exercise resources.
+The proxy reaches the isolated service through a fixed-destination Docker exec
+stream with a platform-owned connector; problem containers have no published
+ports or external network. See [network isolation](network-isolation.md).
 The proxy streams problem content and preserves methods, bodies, paths, queries,
 cookies and security headers, while mapping target-origin redirects. Requests use
 the browser-visible Host so generated absolute links and Origin checks agree.

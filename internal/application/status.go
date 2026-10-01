@@ -37,7 +37,7 @@ func (s *Service) Status(ctx context.Context, slug string) (RunStatus, error) {
 			return RunStatus{}, operationError(ctx, "status", slug, ExecutionFailed, err)
 		}
 		for _, address := range addresses {
-			result.Endpoints = append(result.Endpoints, Endpoint{Name: address.Name, URL: address.URL, Published: address.Published})
+			result.Endpoints = append(result.Endpoints, Endpoint{Name: address.Name, URL: address.URL, Published: address.Published, Proxied: address.Proxied, Instance: address.Instance})
 		}
 	}
 	return result, nil

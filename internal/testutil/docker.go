@@ -4,6 +4,7 @@ package testutil
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,10 +13,11 @@ import (
 )
 
 type Reply struct {
-	Match    []string
-	Out, Err string
-	Code     int
-	DelayMS  int
+	Match         []string
+	Out, Err      string
+	Code          int
+	DelayMS       int
+	InputContains []string
 }
 
 func Main(m *testing.M) {
@@ -44,6 +46,18 @@ func Main(m *testing.M) {
 			if i != len(reply.Match) {
 				continue
 			}
+			if len(reply.InputContains) > 0 {
+				input, err := io.ReadAll(os.Stdin)
+				if err != nil {
+					panic(err)
+				}
+				for _, value := range reply.InputContains {
+					if !strings.Contains(string(input), value) {
+						fmt.Fprintln(os.Stderr, "expected isolated compose input missing", value)
+						os.Exit(125)
+					}
+				}
+			}
 			time.Sleep(time.Duration(reply.DelayMS) * time.Millisecond)
 			fmt.Fprint(os.Stdout, reply.Out)
 			fmt.Fprint(os.Stderr, reply.Err)
@@ -53,6 +67,22 @@ func Main(m *testing.M) {
 		os.Exit(125)
 	}
 	os.Exit(m.Run())
+}
+
+// WithIsolatedNetwork supplies a real-shaped daemon response for a scoped,
+// isolated network. Tests for unsafe networks supply their own explicit reply.
+func WithIsolatedNetwork(project, id string, replies ...Reply) []Reply {
+	network := map[string]any{
+		"ID": id, "Name": project + "_default", "Driver": "bridge", "Internal": true,
+		"Labels":  map[string]string{"com.docker.compose.project": project, "com.docker.compose.network": "default"},
+		"Options": map[string]string{"com.docker.network.bridge.gateway_mode_ipv4": "isolated", "com.docker.network.bridge.gateway_mode_ipv6": "isolated"},
+	}
+	data, _ := json.Marshal([]any{network})
+	return append([]Reply{
+		{Match: []string{"version", "{{.Server.Version}}"}, Out: "29.4.1"},
+		{Match: []string{"network", "ls", "label=com.docker.compose.project=" + project}, Out: id},
+		{Match: []string{"network", "inspect", id}, Out: string(data)},
+	}, replies...)
 }
 
 func Docker(t *testing.T, replies ...Reply) func() [][]string {

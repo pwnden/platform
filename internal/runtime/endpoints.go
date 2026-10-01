@@ -2,10 +2,10 @@ package runtime
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"net"
 	"strconv"
-	"strings"
 
 	"github.com/pwnden/platform/internal/challenge"
 )
@@ -14,9 +14,12 @@ type EndpointAddress struct {
 	Name      string
 	URL       string
 	Published bool
+	Proxied   bool
+	Instance  string
 }
 
-// EndpointAddresses resolves Docker-assigned host ports without assuming a host OS.
+// EndpointAddresses describes private services. The local server supplies HTTP
+// ingress through Docker streams, without publishing any problem container port.
 func EndpointAddresses(ctx context.Context, c *challenge.Loaded) ([]EndpointAddress, error) {
 	if len(c.Endpoints) == 0 {
 		return nil, nil
@@ -25,47 +28,21 @@ func EndpointAddresses(ctx context.Context, c *challenge.Loaded) ([]EndpointAddr
 	if err != nil {
 		return nil, err
 	}
-	cfg, err := Validate(ctx, c, state.Flag, false)
+	_, err = Validate(ctx, c, state.Flag, false)
 	if err != nil {
 		return nil, err
 	}
+	if err := checkLiveNetworks(ctx, c, state.Project); err != nil {
+		return nil, err
+	}
+	instance := fmt.Sprintf("%x", sha256.Sum256([]byte(state.Project+"\x00"+state.Flag)))
 	addresses := make([]EndpointAddress, 0, len(c.Endpoints))
 	for _, endpoint := range c.Endpoints {
 		address := net.JoinHostPort(endpoint.Service, strconv.Itoa(endpoint.Port))
-		published := false
-		for _, port := range cfg.Services[endpoint.Service].Ports {
-			if port.Target == endpoint.Port && (port.Protocol == "tcp" || port.Protocol == "") {
-				published = true
-				break
-			}
-		}
-		if published {
-			out, stderr, err := command(ctx, c.Dir, []string{"FLAG=" + state.Flag}, "docker",
-				composeArgs(c, state.Project, []string{c.Compose}, "port", "--protocol", "tcp",
-					endpoint.Service, strconv.Itoa(endpoint.Port))...)
-			if err != nil {
-				return nil, fmt.Errorf("endpoint %q: %w: %s", endpoint.Name, err, stderr)
-			}
-			address = strings.TrimSpace(out)
-			if err := checkPublishedAddress(address); err != nil {
-				return nil, fmt.Errorf("endpoint %q: %w", endpoint.Name, err)
-			}
-		}
 		addresses = append(addresses, EndpointAddress{
-			Name: endpoint.Name, URL: endpoint.Protocol + "://" + address, Published: published,
+			Name: endpoint.Name, URL: endpoint.Protocol + "://" + address,
+			Proxied: endpoint.Protocol == "http", Instance: instance,
 		})
 	}
 	return addresses, nil
-}
-
-func checkPublishedAddress(address string) error {
-	host, port, err := net.SplitHostPort(address)
-	if err == nil {
-		var number int
-		number, err = strconv.Atoi(port)
-		if err == nil && net.ParseIP(host) != nil && number > 0 && number <= 65535 {
-			return nil
-		}
-	}
-	return fmt.Errorf("Docker did not return a published IP and port: %q", address)
 }

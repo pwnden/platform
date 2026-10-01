@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/pwnden/platform/internal/application"
 )
@@ -121,7 +122,7 @@ func StatusFrom(result application.RunStatus) Status {
 func RunFrom(result application.RunInfo) Run {
 	response := Run{Slug: result.Slug, Kind: result.Kind, FileCount: result.FileCount, Endpoints: make([]Endpoint, 0)}
 	for _, endpoint := range result.Endpoints {
-		if endpoint.Published {
+		if endpoint.Published || (endpoint.Instance != "" && strings.HasPrefix(endpoint.URL, "tcp://")) {
 			response.Endpoints = append(response.Endpoints, Endpoint{endpoint.Name, endpoint.URL})
 		}
 	}

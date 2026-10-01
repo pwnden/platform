@@ -7,11 +7,28 @@ docker build --file Dockerfile.web --target assets --output type=local,dest=inte
 python3 tools/verify.py --challenges ../challenges
 ```
 
-The host needs Python 3.11 or newer, the Go version declared in `go.mod`, Docker with Linux containers, and the Compose plugin. The first command builds embedded frontend assets with pinned tools inside Docker. The verifier builds this checkout's CLI once, discovers the supplied problem manifests, and runs `validate`, `run`, `verify`, and `stop` for each one.
+The host needs Python 3.11 or newer, the Go version declared in `go.mod`, Docker Engine 28 or newer with Linux containers, and the Compose plugin. The first command builds embedded frontend assets with pinned tools inside Docker. The verifier builds this checkout's CLI once, discovers the supplied problem manifests, and runs `validate`, `run`, `verify`, and `stop` for each one.
 
-The CLI implements [problem contract version 2](https://github.com/pwnden/challenges/blob/main/docs/contract.md), retains version 1 execution compatibility, checks each problem's version, and reads execution defaults and the attack rejection exit code from the challenges checkout's `contract.toml`. Problem format and learning-content validation belong to the challenges repository. The CLI checks real paths and Docker resource policy before execution, verifies flags and patch behavior, and cleans up its projects.
+The CLI implements [problem contract version 3](https://github.com/pwnden/challenges/blob/main/docs/contract.md), retains version 1 and 2 execution compatibility with the current isolation policy, checks each problem's version, and reads execution defaults and the attack rejection exit code from the challenges checkout's `contract.toml`. Problem format and learning-content validation belong to the challenges repository. The CLI checks real paths and Docker resource policy before execution, verifies flags and patch behavior, and cleans up its projects.
 
 Start with the problems stopped before running the complete check. After a successful start, the verifier stops the problem even if verification fails. On interruption it signals the active CLI, waits for its cleanup, and stops the problem it started. A failed start performs its own cleanup; a pre-existing run remains owned by its original caller.
+
+## Actual network isolation
+
+On Linux/WSL with a locally accessible Docker bridge, run:
+
+```sh
+PWNDEN_TEST_CHALLENGES="$(realpath ../challenges)" go test ./internal/httpapi -run '^TestIsolatedNoteVaultDocker$' -count=1 -v
+```
+
+The test copies Note Vault into a temporary catalog and uses a separate cache.
+It checks Internet IPv4, IPv6 and DNS destinations, a reachable host listener
+and a reachable service on another network, from both command execution and an
+interactive PTY. Same-problem HTTP remains reachable. The full browser ingress
+path preserves login cookies, flag recovery and submission; vulnerable and
+patched verification and container/network teardown must pass. Positive controls
+establish that host and peer destinations exist before checking their denial.
+The test leaves the player's running projects untouched. See [network isolation](network-isolation.md).
 
 ## GitHub Actions
 
@@ -25,7 +42,7 @@ After problem verification, the workflow builds a native Linux platform package 
 
 The HTTP catalog check compares the API response with all manifests in the
 installed catalog. The same smoke also solves Note Vault through the common
-browser proxy and compares its flag with the direct endpoint, checking wrapper
+browser proxy and compares its flag with the common HTTP ingress endpoint, checking wrapper
 isolation and authenticated preparation. It exercises HTTP; native iframe
 history and visual interaction require a Browser Plugin check.
 

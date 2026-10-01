@@ -80,6 +80,7 @@ func setupFixture(t *testing.T, service bool) (*SetupService, *challenge.Loaded)
 func setupReplies(c *challenge.Loaded) []testutil.Reply {
 	return []testutil.Reply{
 		{Match: []string{"info"}, Out: "linux\n"},
+		{Match: []string{"version", "{{.Server.Version}}"}, Out: "29.4.1"},
 		{Match: []string{"compose", "version"}, Out: "5.1.3\n"},
 		{Match: []string{"config"}, Out: config(c)},
 		{Match: []string{"pull", "--ignore-buildable"}},
@@ -141,6 +142,7 @@ func TestSetupFailurePublishesNoInstallation(t *testing.T) {
 	s, c := setupFixture(t, false)
 	testutil.Docker(t,
 		testutil.Reply{Match: []string{"info"}, Out: "linux"},
+		testutil.Reply{Match: []string{"version", "{{.Server.Version}}"}, Out: "29.4.1"},
 		testutil.Reply{Match: []string{"compose", "version"}},
 		testutil.Reply{Match: []string{"image", "inspect"}, Code: 1},
 		testutil.Reply{Match: []string{"pull"}, Code: 125, Err: "offline"},

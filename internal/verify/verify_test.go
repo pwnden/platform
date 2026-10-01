@@ -38,7 +38,7 @@ func TestPatchedAttackOutcomes(t *testing.T) {
 			config := func(project string) string {
 				return fmt.Sprintf(`{"services":{"app":{}},"networks":{"default":{"name":%q}}}`, project+"_default")
 			}
-			testutil.Docker(t,
+			testutil.Docker(t, testutil.WithIsolatedNetwork(project, "base-network", testutil.WithIsolatedNetwork(project+"-patched", "patched-network",
 				testutil.Reply{Match: []string{project + "-patched", "config"}, Out: config(project + "-patched")},
 				testutil.Reply{Match: []string{project, "config"}, Out: config(project)},
 				testutil.Reply{Match: []string{"up"}}, testutil.Reply{Match: []string{"down"}},
@@ -48,7 +48,7 @@ func TestPatchedAttackOutcomes(t *testing.T) {
 				testutil.Reply{Match: []string{"run", "patched-network", "attack"}, Out: test.output, Code: test.code, DelayMS: test.delay},
 				testutil.Reply{Match: []string{"run", "base-network", "attack"}, Out: "pwnden{test}"},
 				testutil.Reply{Match: []string{"run", "check"}}, testutil.Reply{Match: []string{"rm"}},
-			)
+			)...)...)
 			if err := runtime.SaveState(c, runtime.State{Project: project, Flag: "pwnden{test}"}); err != nil {
 				t.Fatal(err)
 			}

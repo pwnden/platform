@@ -45,6 +45,8 @@ type Endpoint struct {
 	Name      string
 	URL       string
 	Published bool
+	Proxied   bool
+	Instance  string
 }
 
 type RunInfo struct {
@@ -140,7 +142,7 @@ func (s *Service) Run(ctx context.Context, slug string) (RunInfo, error) {
 		result.Project = runtime.Project(c)
 		result.Endpoints = make([]Endpoint, 0, len(addresses))
 		for _, address := range addresses {
-			result.Endpoints = append(result.Endpoints, Endpoint{Name: address.Name, URL: address.URL, Published: address.Published})
+			result.Endpoints = append(result.Endpoints, Endpoint{Name: address.Name, URL: address.URL, Published: address.Published, Proxied: address.Proxied, Instance: address.Instance})
 		}
 	}
 	return result, nil

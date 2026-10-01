@@ -38,6 +38,7 @@ type Browser struct {
 type browserManager struct {
 	ctx      context.Context
 	status   func(context.Context, string) (application.RunStatus, error)
+	dial     application.EndpointDialer
 	parent   string
 	owned    func() []application.WorkspaceInfo
 	mu       sync.Mutex
@@ -50,6 +51,8 @@ type browserManager struct {
 type browserEntry struct {
 	manager                            *browserManager
 	slug, name, target, origin, prefix string
+	instance                           string
+	isolated                           bool
 	cancel                             context.CancelFunc
 	server                             *http.Server
 	transport                          *http.Transport
@@ -58,7 +61,8 @@ type browserEntry struct {
 }
 
 func newBrowserManager(ctx context.Context, backend Backend, parent string, owned func() []application.WorkspaceInfo) *browserManager {
-	return &browserManager{ctx: ctx, status: backend.Status, parent: parent, owned: owned, entries: make(map[string]*browserEntry)}
+	dial, _ := backend.(application.EndpointDialer)
+	return &browserManager{ctx: ctx, status: backend.Status, dial: dial, parent: parent, owned: owned, entries: make(map[string]*browserEntry)}
 }
 
 func localHTTP(raw string) (*url.URL, bool) {
@@ -76,6 +80,15 @@ func browserTarget(status application.RunStatus, name string) (string, bool) {
 		return "", false
 	}
 	for _, endpoint := range status.Endpoints {
+		if endpoint.Name == name && endpoint.Proxied && endpoint.Instance != "" {
+			u, err := url.Parse(endpoint.URL)
+			if err == nil && u.Scheme == "http" && u.Hostname() != "" && u.User == nil && u.Path == "" && u.RawQuery == "" && !u.ForceQuery && u.Fragment == "" {
+				port, err := strconv.Atoi(u.Port())
+				if err == nil && port > 0 && port <= 65535 {
+					return endpoint.URL, true
+				}
+			}
+		}
 		if endpoint.Name == name && endpoint.Published {
 			if _, ok := localHTTP(endpoint.URL); ok {
 				return strings.TrimSuffix(endpoint.URL, "/"), true
@@ -90,18 +103,28 @@ func (m *browserManager) open(ctx context.Context, slug, name string) (Browser, 
 	if err != nil {
 		return Browser{}, err
 	}
+	return m.openObserved(ctx, slug, name, status)
+}
+
+// The HTTP run/status adapter already holds the problem lock and has a current
+// observation. Reuse it rather than trying to acquire the same lock again.
+func (m *browserManager) openObserved(ctx context.Context, slug, name string, status application.RunStatus) (Browser, error) {
 	target, ok := browserTarget(status, name)
 	if !ok || target == m.parent {
 		return Browser{}, errBrowserUnavailable
 	}
+	instance, isolated := browserInstance(status, name)
+	if isolated && m.dial == nil {
+		return Browser{}, errBrowserUnavailable
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.closed || m.ctx.Err() != nil {
+	if m.closed || m.ctx.Err() != nil || ctx.Err() != nil {
 		return Browser{}, context.Canceled
 	}
 	key := slug + "\x00" + name
 	if entry := m.entries[key]; entry != nil {
-		if entry.target == target && !entry.closed.Load() {
+		if entry.target == target && entry.instance == instance && !entry.closed.Load() {
 			return entry.description(), nil
 		}
 		entry.stop()
@@ -118,11 +141,18 @@ func (m *browserManager) open(ctx context.Context, slug, name string) (Browser, 
 	}
 	base, cancel := context.WithCancel(m.ctx)
 	entry := &browserEntry{manager: m, slug: slug, name: name, target: target,
+		instance: instance, isolated: isolated,
 		origin: "http://" + listener.Addr().String(), prefix: "/__pwnden_browser/" + hex.EncodeToString(secret), cancel: cancel}
 	upstream, _ := url.Parse(target)
 	entry.transport = &http.Transport{Proxy: nil, DisableCompression: true, ResponseHeaderTimeout: 30 * time.Second,
 		DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
-			conn, err := (&net.Dialer{Timeout: 10 * time.Second}).DialContext(ctx, network, address)
+			var conn net.Conn
+			var err error
+			if isolated {
+				conn, err = m.dial.DialEndpoint(ctx, slug, name, instance)
+			} else {
+				conn, err = (&net.Dialer{Timeout: 10 * time.Second}).DialContext(ctx, network, address)
+			}
 			if err != nil {
 				return nil, err
 			}
@@ -177,7 +207,23 @@ type browserConnection struct {
 func (c *browserConnection) Close() error { c.cancel(); return c.Conn.Close() }
 
 func (e *browserEntry) description() Browser {
-	return Browser{e.slug, e.name, e.origin + e.prefix, e.target}
+	return Browser{e.slug, e.name, e.origin + e.prefix, e.visibleTarget()}
+}
+
+func (e *browserEntry) visibleTarget() string {
+	if e.isolated {
+		return e.origin
+	}
+	return e.target
+}
+
+func browserInstance(status application.RunStatus, name string) (string, bool) {
+	for _, endpoint := range status.Endpoints {
+		if endpoint.Name == name {
+			return endpoint.Instance, endpoint.Proxied
+		}
+	}
+	return "", false
 }
 func (e *browserEntry) stop() {
 	if !e.closed.Swap(true) {
@@ -255,7 +301,7 @@ func (e *browserEntry) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case e.prefix:
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			_ = browserDocument.Execute(w, struct{ Prefix, Parent, Target string }{e.prefix, m.parent, e.target})
+			_ = browserDocument.Execute(w, struct{ Prefix, Parent, Target string }{e.prefix, m.parent, e.visibleTarget()})
 		case e.prefix + "/controller.js":
 			w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
 			_, _ = io.WriteString(w, browserController)
@@ -273,9 +319,28 @@ func (e *browserEntry) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	status, err := m.status(ctx, e.slug)
 	cancel()
 	target, ok := browserTarget(status, e.name)
-	if err != nil || !ok || target != e.target {
+	instance, _ := browserInstance(status, e.name)
+	if err != nil || !ok || target != e.target || instance != e.instance {
 		http.Error(w, "Problem environment closed", 410)
 		return
 	}
 	e.proxy.ServeHTTP(w, r)
+}
+
+// Expose only declared HTTP services, on separate loopback origins owned by the
+// local server. HTTP container addresses stay inside the application layer.
+func (h *handler) exposeEndpoints(ctx context.Context, slug string, endpoints []application.Endpoint) ([]application.Endpoint, error) {
+	result := make([]application.Endpoint, 0, len(endpoints))
+	status := application.RunStatus{Slug: slug, Kind: application.KindService, State: "running", Endpoints: endpoints}
+	for _, endpoint := range endpoints {
+		if endpoint.Proxied {
+			browser, err := h.browsers.openObserved(ctx, slug, endpoint.Name, status)
+			if err != nil {
+				return nil, err
+			}
+			endpoint.URL, endpoint.Published = browser.Target, true
+		}
+		result = append(result, endpoint)
+	}
+	return result, nil
 }

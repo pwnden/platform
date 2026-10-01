@@ -4,7 +4,7 @@ Local wargames with prepared problem environments and flag checks.
 
 ## Get started
 
-Install Git and Docker with Linux containers, Compose, and Buildx, then:
+Install Git and Docker Engine 28 or newer with Linux containers, Compose, and Buildx, then:
 
 ```sh
 git clone https://github.com/pwnden/platform.git
@@ -17,7 +17,7 @@ Setup builds the Vue frontend and Go platform inside Docker, acquires the pinned
 
 The pinned problem commit in `catalog.lock` must be published in the official problem repository before a fresh clone can complete setup. Missing commits fail explicitly. Open the full URL printed by `serve` to use the [local Vue player](docs/local-server.md): choose a problem, read its description, download its files, check its execution state, run or stop a service and submit a flag. Go serves the embedded frontend and [web API](docs/web-api.md) from the same local origin.
 
-Note Vault is an introductory web problem: run it in the player, open its published HTTP endpoint, log in as `guest` / `guest` and find the administrator's recovery key, formatted as `pwnden{...}`. You can also use the CLI:
+Note Vault is an introductory web problem: select it in the player, open its web tab, log in as `guest` / `guest` and find the administrator's recovery key, formatted as `pwnden{...}`. You can also use the CLI:
 
 ```sh
 ./pwnden run note-vault
@@ -80,11 +80,11 @@ go run ./cmd/pwnden --repo ../challenges stop <slug>
 
 Run these commands from this repository. `--repo` names the root of the challenges checkout. The [problem contract](https://github.com/pwnden/challenges/blob/main/docs/contract.md) defines the metadata, execution, solution and patch results, and resource lifecycle.
 
-The challenges checkout owns the complete specification in `docs/contract.md` and its machine-readable version, defaults, and result code in `contract.toml`. It validates problem metadata in its own CI. This runner supports contract version 2, including player briefs, ordered hints and walkthroughs; version 1 remains supported for installed snapshots. It checks the repository version and each problem's `schema` before reading execution fields, and reads solution defaults and the attack rejection exit code from the TOML file. Unsupported versions produce a compatibility error. Supporting a new version requires implementing its rules in the runner.
+The challenges checkout owns the complete specification in `docs/contract.md` and its machine-readable version, defaults, and result code in `contract.toml`. It validates problem metadata in its own CI. This runner supports contract version 3, including isolated problem networks and shared browser ingress; versions 1 and 2 remain supported for installed snapshots with the current isolation policy. It checks the repository version and each problem's `schema` before reading execution fields, and reads solution defaults and the attack rejection exit code from the TOML file. Unsupported versions produce a compatibility error. Supporting a new version requires implementing its rules in the runner.
 
 `validate` checks contract compatibility, repository paths, and the resolved Compose execution policy. `run` starts service challenges with a new flag; file challenges have no service to start. `verify` runs the declared solution in its toolbox image, checks the flag, and, when configured, checks the patched version. `stop` removes the challenge's Compose containers, networks, and volumes. The generated flag stays in the local user cache until `stop`; that cache is never mounted into a problem container.
 
-For endpoints with Compose port mappings, `run` prints the actual host address reported by Docker. Challenges can bind `127.0.0.1::8000` to let Docker choose a free local port. Endpoints without published ports are marked `container network` and are accessible through their Compose service names from the solution container.
+Standalone `run` reports private service addresses accessible from the problem terminal. The local player exposes declared HTTP services on separate loopback origins through fixed-destination Docker streams. The platform removes Compose host port mappings and applies internal bridge networks with isolated IPv4 and IPv6 gateway modes. Runtime containers can reach their own problem services; Internet, host services and other problem networks are blocked. File tools use networking mode `none`. See [network isolation](docs/network-isolation.md) for the execution boundary and checks.
 
 The runner checks resolved bind mount sources before `up`. Only paths inside the supplied challenges repository are accepted. It also confines build contexts, Dockerfiles, local build cache paths, file-backed configs, and secrets to that repository. Named volumes and bridge networks are project-scoped. Compose services cannot use automatic Docker API socket access, and the toolbox does not mount a Docker socket. Compose files are authored by the challenge owner.
 

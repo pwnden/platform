@@ -37,10 +37,10 @@ func TestFileStatusAndRecordedServiceObservation(t *testing.T) {
 		{`[{"Service":"app","State":"running","Health":"unhealthy"}]`, "unavailable"},
 	} {
 		t.Run(test.state+test.output, func(t *testing.T) {
-			fake := testutil.Docker(t,
+			fake := testutil.Docker(t, testutil.WithIsolatedNetwork(runtime.Project(c), "network-id",
 				testutil.Reply{Match: []string{"config"}, Out: config(c)},
 				testutil.Reply{Match: []string{"ps"}, Out: test.output},
-				testutil.Reply{Match: []string{"port"}, Out: "127.0.0.1:43123"})
+			)...)
 			t.Setenv("XDG_CACHE_HOME", cache)
 			t.Setenv("LOCALAPPDATA", cache)
 			// Fresh service instances recover the same recorded run.
@@ -62,7 +62,7 @@ func TestFileStatusAndRecordedServiceObservation(t *testing.T) {
 		})
 	}
 	os.Remove(filepath.Join(c.Dir, "file.txt"))
-	testutil.Docker(t, testutil.Reply{Match: []string{"config"}, Out: config(c)}, testutil.Reply{Match: []string{"ps"}, Out: `[]`})
+	testutil.Docker(t, testutil.WithIsolatedNetwork(runtime.Project(c), "network-id", testutil.Reply{Match: []string{"config"}, Out: config(c)}, testutil.Reply{Match: []string{"ps"}, Out: `[]`})...)
 	t.Setenv("XDG_CACHE_HOME", cache)
 	t.Setenv("LOCALAPPDATA", cache)
 	if result, err := s.Status(ctx, c.Slug); err != nil || result.State != "unavailable" {
@@ -86,7 +86,7 @@ func TestStatusErrorsPreserveRun(t *testing.T) {
 		{Match: []string{"ps"}, Err: "private output", Code: 1},
 		{Match: []string{"ps"}, Out: "not JSON"},
 	} {
-		testutil.Docker(t, testutil.Reply{Match: []string{"config"}, Out: config(c)}, reply)
+		testutil.Docker(t, testutil.WithIsolatedNetwork(runtime.Project(c), "network-id", testutil.Reply{Match: []string{"config"}, Out: config(c)}, reply)...)
 		t.Setenv("XDG_CACHE_HOME", cache)
 		t.Setenv("LOCALAPPDATA", cache)
 		_, err := s.Status(context.Background(), c.Slug)

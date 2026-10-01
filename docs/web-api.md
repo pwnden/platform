@@ -13,9 +13,9 @@ The API version is independent of the challenges-owned problem contract. Version
 | `GET /api/v1/problems/{slug}` | `Details.Detail` | `200`, summary, description text and declared file metadata. |
 | `GET /api/v1/problems/{slug}/guidance/{id}` | `Guidance.Guidance` | `200`, declared hint or walkthrough Markdown after explicit activation. |
 | `GET /api/v1/problems/{slug}/files/{id}` | `Files.Download` | `200`, binary attachment for a current declared file ID. |
-| `GET /api/v1/problems/{slug}/status` | `Observer.Status` | `200`, observed run status and current published endpoints. |
+| `GET /api/v1/problems/{slug}/status` | `Observer.Status` | `200`, observed run status and owned local HTTP ingress endpoints. |
 | `POST /api/v1/problems/{slug}/browser` | HTTP adapter browsing session | `200`, `slug`, endpoint `name`, wrapper `url` and original `target` origin. |
-| `POST /api/v1/problems/{slug}/run` | `Runner.Run` | `200`, problem kind, file count and published endpoints. |
+| `POST /api/v1/problems/{slug}/run` | `Runner.Run` | `200`, problem kind, file count and owned local HTTP ingress endpoints. |
 | `DELETE /api/v1/problems/{slug}/run` | `Runner.Stop` | `200`, stopped slug after cleanup. |
 | `POST /api/v1/problems/{slug}/submissions` | `Submit` | `200`, slug and `accepted` boolean. |
 | `GET /api/v1/problems/{slug}/terminal` | `Workspaces.Attach` | `101`, same-origin WebSocket v2 with first-frame authentication; prepares stopped services automatically. |
@@ -29,7 +29,7 @@ Each file has `id`, `name` and byte `size`. Only declared distribution files and
 
 Status contains `slug`, `kind`, `state` and `endpoints`. A file problem is `ready`; an unrecorded service is `stopped`. A recorded service is `running` when every declared service has running containers with healthy or absent health checks; otherwise it is `unavailable` and requires explicit stop before another start. Endpoints appear only while running. Status survives server and page recreation through saved state and actual Docker observation. Failed Docker reads return an error; they do not erase state or clean up a run. The response contains no stored flag or project identifier.
 
-Start and stop accept no body. File starts create no service resources and return an empty endpoint array. A service start preserves an already recorded run and returns a conflict. Endpoints contain `name` and `url` for published entry points, preserving the problem's `http://` or `tcp://` scheme. HTTP URLs are browser links; TCP URLs identify addresses for terminal tools. Private network endpoints and Compose project identifiers stay inside the application layer. Stop is repeatable and reports success only after resource and state cleanup.
+Start and stop accept no body. File starts create no service resources and return an empty endpoint array. A service start preserves an already recorded run and returns a conflict. Endpoints contain `name` and `url`, preserving the problem's `http://` or `tcp://` scheme. HTTP URLs are owned loopback ingress origins; TCP URLs identify declared service addresses for tools inside the problem terminal. HTTP container addresses, run identities and Compose project identifiers stay inside the application layer. Stop is repeatable and reports success only after resource and state cleanup.
 
 Submission accepts exactly one JSON object with a nonempty string `flag`, up to 4096 body bytes. Unknown request fields, trailing JSON values, malformed JSON, query parameters, and unexpected bodies are rejected. The media type must be `application/json` with an optional charset. Leading and trailing whitespace is trimmed by the application. An incorrect answer is `200 {"slug":"...","accepted":false}`. Service submissions require a recorded run. Submission history is a later feature.
 
@@ -39,7 +39,8 @@ The API exposes the player operations above. Author solution verification remain
 
 Browser preparation accepts exactly one nonempty endpoint `name`, with the same
 JSON and 4096-byte body rules as submission. The destination comes from the
-running problem's published loopback HTTP endpoints. Each endpoint gets a
+running problem's declared HTTP services. Fixed-destination Docker streams reach
+the service inside its isolated network. Each endpoint gets a
 separate local proxy origin and a wrapper with native browser history controls;
 the platform token stays on the API origin. Repeated opens reuse that wrapper.
 Every proxied request rechecks current run status under the problem lock; stopped

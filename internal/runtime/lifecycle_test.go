@@ -158,6 +158,7 @@ func TestStopAttemptsBothProjectsAndRetainsState(t *testing.T) {
 func TestRunReportsCleanupFailure(t *testing.T) {
 	c := fixture(t)
 	testutil.Docker(t,
+		testutil.Reply{Match: []string{"version"}, Out: "29.4.1"},
 		testutil.Reply{Match: []string{"config"}, Out: configJSON(c, false)},
 		testutil.Reply{Match: []string{"up"}, Err: "startup failure", Code: 1},
 		testutil.Reply{Match: []string{"down"}, Err: "cleanup failure", Code: 1},

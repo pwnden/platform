@@ -92,7 +92,9 @@ removes that toolbox. Existing player environments remain available.
 The toolbox mounts only the declared repository-contained problem directory,
 honors its writable setting, drops all capabilities and uses
 `no-new-privileges`. File problems use network `none`; service problems use
-their declared solve network. Clients select a slug and dimensions.
+their declared solve network with internal, isolated IPv4 and IPv6 gateway modes.
+Internet, host services and other problem networks are blocked. Clients select a
+slug and dimensions. See [network isolation](network-isolation.md).
 
 ## Ownership and cleanup
 

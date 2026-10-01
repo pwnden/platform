@@ -16,6 +16,9 @@ func CheckEngine(ctx context.Context) error {
 	if strings.TrimSpace(out) != "linux" {
 		return fmt.Errorf("Docker must use Linux containers; reported %q", strings.TrimSpace(out))
 	}
+	if err := checkIsolationEngine(ctx); err != nil {
+		return err
+	}
 	if _, stderr, err := command(ctx, "", nil, "docker", "compose", "version", "--short"); err != nil {
 		return fmt.Errorf("Docker Compose plugin is required: %w: %s", err, stderr)
 	}
@@ -43,6 +46,9 @@ func Prepare(ctx context.Context, c *challenge.Loaded) error {
 					return fmt.Errorf("prepare %s: %w: %s", c.Slug, err, stderr)
 				}
 			}
+		}
+		if err := prepareToolImage(ctx, c, connectorImage); err != nil {
+			return err
 		}
 	}
 	if err := prepareToolImage(ctx, c, c.Solve.Image); err != nil {

@@ -239,7 +239,7 @@ def main():
         browser = api(origin, token, "POST", "/problems/note-vault/browser", {"name": run["endpoints"][0]["name"]})
         wrapper = urlsplit(browser["url"])
         assert browser["target"] == endpoint and wrapper.hostname == "127.0.0.1" and wrapper.port
-        assert f"http://{wrapper.netloc}" not in (origin, endpoint)
+        assert f"http://{wrapper.netloc}" == endpoint and endpoint != origin
         with build_opener(ProxyHandler({})).open(browser["url"], timeout=10) as response:
             assert token not in response.read().decode()
         assert solve_web(f"http://{wrapper.netloc}") == flag, "common browser proxy changed the exercise"

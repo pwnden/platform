@@ -103,32 +103,31 @@ func TestLoadErrors(t *testing.T) {
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatal("original filesystem error lost")
 	}
-	if err := os.WriteFile(filepath.Join(c.RepoRoot, "contract.toml"), []byte("version=3\n"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(c.RepoRoot, "contract.toml"), []byte("version=4\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	_, err = s.Validate(context.Background(), c.Slug)
 	requireCode(t, err, IncompatibleContract)
 	var version *challenge.VersionError
-	if !errors.As(err, &version) || version.Version != 3 {
+	if !errors.As(err, &version) || version.Version != 4 {
 		t.Fatal("original version error lost")
 	}
 }
 
 func TestServiceRunAndStop(t *testing.T) {
 	s, c := fixture(t, true)
-	calls := testutil.Docker(t,
+	calls := testutil.Docker(t, testutil.WithIsolatedNetwork(runtime.Project(c), "network-id",
 		testutil.Reply{Match: []string{"config"}, Out: config(c)},
 		testutil.Reply{Match: []string{"up"}},
-		testutil.Reply{Match: []string{"port"}, Out: "127.0.0.1:32123\n"},
 		testutil.Reply{Match: []string{"down"}},
-	)
+	)...)
 	ctx := context.Background()
 	v, err := s.Validate(ctx, c.Slug)
 	if err != nil || v.Kind != KindService || v.ServiceCount != 1 {
 		t.Fatalf("validate service: %+v %v", v, err)
 	}
 	r, err := s.Run(ctx, c.Slug)
-	if err != nil || r.Project != runtime.Project(c) || len(r.Endpoints) != 1 || r.Endpoints[0].URL != "http://127.0.0.1:32123" || !r.Endpoints[0].Published {
+	if err != nil || r.Project != runtime.Project(c) || len(r.Endpoints) != 1 || r.Endpoints[0].URL != "http://app:8000" || !r.Endpoints[0].Proxied || r.Endpoints[0].Published || r.Endpoints[0].Instance == "" {
 		t.Fatalf("run service: %+v %v", r, err)
 	}
 	_, err = s.Run(ctx, c.Slug)
@@ -158,18 +157,30 @@ func TestServiceRunAndStop(t *testing.T) {
 	}
 }
 
-func TestEndpointFailureRollsBack(t *testing.T) {
+func TestUnsafeNetworkRollsBackStartup(t *testing.T) {
 	s, c := fixture(t, true)
-	testutil.Docker(t,
+	calls := testutil.Docker(t,
+		testutil.Reply{Match: []string{"version"}, Out: "29.4.1"},
 		testutil.Reply{Match: []string{"config"}, Out: config(c)},
 		testutil.Reply{Match: []string{"up"}},
-		testutil.Reply{Match: []string{"port"}, Out: "invalid IP:0"},
+		testutil.Reply{Match: []string{"network", "ls"}, Out: "network-id"},
+		testutil.Reply{Match: []string{"network", "inspect"}, Out: `[{"Name":"unsafe","Driver":"bridge","Internal":false}]`},
 		testutil.Reply{Match: []string{"down"}},
 	)
 	r, err := s.Run(context.Background(), c.Slug)
 	requireCode(t, err, ExecutionFailed)
 	if r.Slug != "" {
 		t.Fatal("partial run result exposed")
+	}
+	inspected, stopped := false, false
+	for _, call := range calls() {
+		inspected = inspected || strings.Contains(strings.Join(call, " "), "network inspect")
+		for _, arg := range call {
+			stopped = stopped || arg == "down"
+		}
+	}
+	if !inspected || !stopped {
+		t.Fatal("unsafe live network did not reach inspection and cleanup", calls())
 	}
 	if _, err := runtime.ReadState(c); !errors.Is(err, runtime.ErrNotRunning) {
 		t.Fatalf("failed run not rolled back: %v", err)
@@ -199,12 +210,12 @@ func TestVerification(t *testing.T) {
 	for _, service := range []bool{false, true} {
 		t.Run(fmt.Sprintf("service=%t", service), func(t *testing.T) {
 			s, c := fixture(t, service)
-			testutil.Docker(t,
+			testutil.Docker(t, testutil.WithIsolatedNetwork(runtime.Project(c), "network-id",
 				testutil.Reply{Match: []string{"config"}, Out: config(c)},
 				testutil.Reply{Match: []string{"image", "inspect"}},
 				testutil.Reply{Match: []string{"network", "ls"}, Out: "network-id"},
 				testutil.Reply{Match: []string{"run"}, Out: "pwnden{test}\n"},
-			)
+			)...)
 			if service {
 				_, err := s.Verify(context.Background(), c.Slug)
 				requireCode(t, err, NotRunning)
@@ -272,6 +283,7 @@ func TestCanceledCallsAndErrorPrecedence(t *testing.T) {
 func TestCanceledStartupCleansUp(t *testing.T) {
 	s, c := fixture(t, true)
 	calls := testutil.Docker(t,
+		testutil.Reply{Match: []string{"version"}, Out: "29.4.1"},
 		testutil.Reply{Match: []string{"config"}, Out: config(c)},
 		testutil.Reply{Match: []string{"up"}, DelayMS: 1500},
 		testutil.Reply{Match: []string{"down"}},
