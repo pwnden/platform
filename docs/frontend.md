@@ -96,6 +96,21 @@ parser. JavaScript eval and inline scripts remain blocked. WASM is bundled into
 a same-origin JavaScript chunk; no CDN, native addon or additional host tool is
 needed at runtime.
 
+## Syntax highlighting
+
+The UI package owns exact dependencies `shiki@4.4.3` and `@shikijs/langs@4.4.3`.
+`UICode` renders both Markdown fences and text material previews. A fence's
+language hint takes priority; material filenames select their language by
+extension. Common security challenge languages load individually on demand,
+using a shared highlighter and the JavaScript regex engine.
+
+The fixed theme maps tokens to CSS classes; Vue escapes their text. Token spans
+use the existing stylesheet and CSP. The engine needs no additional WASM payload.
+See [Shiki's engine documentation](https://shiki.style/guide/regex-engines).
+Inline Markdown code stays plain. Unknown languages, loading failure and sources
+above 131,072 UTF-16 code units retain escaped selectable source. Async results
+are discarded after a source change or component unmount.
+
 ## Verification
 
 From the repository root, Docker runs the same checks as frontend CI:

@@ -20,9 +20,20 @@ it('initializes real WASM and renders headings, nested lists, tables, tasks and 
   expect(html).toContain('type="checkbox" disabled checked aria-label="완료됨"');
   expect(html).toContain('aria-label="미완료"');
   expect(html).toContain('<table><thead><tr><th class="markdown-align-left">A</th><th class="markdown-align-right">B</th>');
-  expect(html).toContain('<pre><code>&lt;script&gt;alert(1)&lt;/script&gt;');
+  expect(html).toContain('class="ui-code"');
+  expect(html).toContain('ui-syntax--');
+  expect(html.replace(/<[^>]*>/g, '')).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
   expect(html).not.toContain('<script');
   expect(html).toContain('aria-busy="false"');
+});
+
+it('highlights fenced code using its language and leaves inline code plain under the existing CSP', async () => {
+  const html = await render('```python\n# 설명\ndef solve():\n    return "pwnden"\n```\n\n`return "pwnden"`');
+  expect(html).toContain('class="ui-syntax--comment"');
+  expect(html).toContain('class="ui-syntax--keyword"');
+  expect(html).toContain('class="ui-syntax--string"');
+  expect(html).toContain('<code>return &quot;pwnden&quot;</code>');
+  expect(html).not.toMatch(/style=|<script|<style/);
 });
 
 it('escapes raw HTML and keeps author components and attributes out of rendered DOM', async () => {

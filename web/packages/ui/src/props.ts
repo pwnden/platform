@@ -32,6 +32,7 @@ export interface UIRevealProps {
 export interface UICodeProps {
   readonly source: string;
   readonly label: string;
+  readonly language?: string;
 }
 
 export interface UIConnectionStatusProps {

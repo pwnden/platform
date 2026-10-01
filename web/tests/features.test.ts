@@ -7,6 +7,8 @@ import ProblemList from '../features/catalog/src/ProblemList.vue';
 import PlayPanel from '../features/play/src/PlayPanel.vue';
 import TerminalPanel from '../features/terminal/src/TerminalPanel.vue';
 import App from '../apps/player/src/App.vue';
+import UICode from '../packages/ui/src/UICode.vue';
+import * as syntax from '../packages/ui/src/syntax';
 
 // Exercise feature lifecycle and async handlers; UI/Sectile have their own tests.
 vi.mock('../packages/ui/src/index.ts', async () => {
@@ -199,6 +201,24 @@ it('drops an old capacity list when a new connection is already ready', async ()
   expect(text(root)).toContain('연결됨');
   expect(text(root)).not.toContain('오래된 유지 환경');
   renderer.render(null, root);
+});
+
+it('keeps the current material source when an old highlight result arrives late', async () => {
+  const pending: ((value: syntax.CodeLines) => void)[] = [];
+  vi.spyOn(syntax, 'highlightCode').mockImplementation(() => new Promise(done => { pending.push(done); }));
+  const root = node('root');
+  renderer.render(h(UICode, { source: 'old', label: 'old.py' }), root);
+  await settle();
+  renderer.render(h(UICode, { source: 'current', label: 'current.py' }), root);
+  await settle();
+  pending[1]!([[{ content: 'current', className: 'ui-syntax--keyword' }]]); await settle();
+  pending[0]!([[{ content: 'old', className: 'ui-syntax--string' }]]); await settle();
+  expect(text(root)).toBe('current');
+  expect(flatten(root).find(item => item.type === 'span')!.props.class).toBe('ui-syntax--keyword');
+  renderer.render(h(UICode, { source: 'last', label: 'last.py' }), root); await settle();
+  renderer.render(null, root);
+  pending[2]!([[{ content: 'last', className: 'ui-syntax--string' }]]); await settle();
+  expect(root.children).toHaveLength(0);
 });
 
 interface Node {

@@ -27,7 +27,7 @@ it('omits hidden spoilers and renders material source as escaped selectable code
   expect(closed).not.toContain('answer spoiler');
   expect(await render(true)).toContain('answer spoiler');
   const source = await renderToString(createSSRApp({ render: () => h(UICode, { label: 'checker.py', source: '<script>run()</script>\n  indent' }) }));
-  expect(source).toContain('&lt;script&gt;run()&lt;/script&gt;');
+  expect(source.replace(/<[^>]*>/g, '')).toContain('&lt;script&gt;run()&lt;/script&gt;\n  indent');
   expect(source).not.toContain('<script>');
   expect(source).toContain('tabindex="0"');
 });

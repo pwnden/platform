@@ -42,6 +42,8 @@
   --ui-danger: #ff9eac;
   --ui-terminal-background: #050a12;
   --ui-terminal-selection: #234367;
+  --ui-syntax-keyword: #c5acff;
+  --ui-syntax-function: #8cdce6;
   --ui-font-mono: 'JetBrains Mono', 'D2Coding', monospace;
   --ui-font-body: 'Pretendard', system-ui, sans-serif;
   --ui-space-1: 0.5rem;

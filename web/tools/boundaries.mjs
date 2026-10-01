@@ -9,7 +9,7 @@ export const policy = {
   '@pwnden/catalog': { directory: 'domains/catalog', dependencies: [] },
   '@pwnden/play': { directory: 'domains/play', dependencies: [] },
   '@pwnden/terminal': { directory: 'domains/terminal', dependencies: [] },
-  '@pwnden/ui': { directory: 'packages/ui', dependencies: ['vue', '@sectile/vue', '@xterm/xterm', '@xterm/addon-fit', 'md4x'] },
+  '@pwnden/ui': { directory: 'packages/ui', dependencies: ['vue', '@sectile/vue', '@xterm/xterm', '@xterm/addon-fit', 'md4x', 'shiki', '@shikijs/langs'] },
   '@pwnden/api': { directory: 'packages/api', dependencies: ['@pwnden/catalog', '@pwnden/play', '@pwnden/terminal'] },
   '@pwnden/catalog-feature': { directory: 'features/catalog', dependencies: ['vue', '@pwnden/catalog', '@pwnden/ui'] },
   '@pwnden/play-feature': { directory: 'features/play', dependencies: ['vue', '@pwnden/play', '@pwnden/ui'] },

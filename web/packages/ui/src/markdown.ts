@@ -1,5 +1,6 @@
 import { h, type VNodeChild } from 'vue';
 import type { ComarkNode } from 'md4x/standalone';
+import UICode from './UICode.vue';
 
 let parser: Promise<typeof import('md4x/standalone')> | undefined;
 
@@ -25,6 +26,13 @@ function linkTarget(value: unknown, prefix: string): string | undefined {
 export function renderMarkdownNode(node: ComarkNode, prefix: string, headingOffset = 3): VNodeChild {
   if (typeof node === 'string') return node;
   const [tag, attributes, ...content] = node;
+  if (tag === 'pre' && content.length === 1 && Array.isArray(content[0]) && content[0][0] === 'code') {
+    const [, , ...code] = content[0];
+    if (code.every(part => typeof part === 'string')) {
+      const language = typeof attributes.language === 'string' ? attributes.language : undefined;
+      return h(UICode, { source: code.join(''), label: '코드', ...(language === undefined ? {} : { language }) });
+    }
+  }
   const children = content.map(child => renderMarkdownNode(child, prefix, headingOffset));
   if (tag === 'a') {
     const href = linkTarget(attributes.href, prefix);
