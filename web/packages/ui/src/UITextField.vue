@@ -9,7 +9,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
 
 <template>
   <div class="ui-field">
-    <label :for="id">{{ label }}</label>
+    <label :for="id" :class="labelHidden ? 'ui-sr-only' : undefined">{{ label }}</label>
     <TextField
       v-bind="$attrs"
       :id="id"

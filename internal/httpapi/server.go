@@ -53,6 +53,7 @@ func serve(ctx context.Context, backend Backend, stdout, stderr io.Writer, front
 	base, cancel := context.WithCancel(ctx)
 	defer cancel()
 	handler := newHandler(base, backend, listener.Addr().String(), token, stderr)
+	defer handler.browsers.close()
 	handler.frontend = frontend
 	server := &http.Server{
 		Handler: handler, ReadHeaderTimeout: 5 * time.Second,
@@ -83,6 +84,7 @@ func serve(ctx context.Context, backend Backend, stdout, stderr io.Writer, front
 	// Shutdown tracks connections. A disconnected handler can still be performing
 	// independent Docker cleanup, so wait for our own admitted handlers as well.
 	handler.active.Wait()
+	handler.browsers.close()
 	workspaceErr := handler.workspaces.Close()
 	if errors.Is(err, http.ErrServerClosed) {
 		err = nil

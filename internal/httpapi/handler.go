@@ -39,10 +39,21 @@ type handler struct {
 	terminals       map[string]*terminalConnection
 	frontend        *Frontend
 	workspaces      *application.Workspaces
+	browsers        *browserManager
 }
 
 func newHandler(base context.Context, backend Backend, host, token string, diagnostics io.Writer) *handler {
-	return &handler{base: base, backend: backend, host: host, token: token, diagnostics: diagnostics, locks: make(map[string]*problemLock), terminals: make(map[string]*terminalConnection), workspaces: application.NewWorkspaces(base, backend)}
+	h := &handler{base: base, backend: backend, host: host, token: token, diagnostics: diagnostics, locks: make(map[string]*problemLock), terminals: make(map[string]*terminalConnection), workspaces: application.NewWorkspaces(base, backend)}
+	h.browsers = newBrowserManager(base, backend, "http://"+host, h.workspaces.List)
+	h.browsers.status = func(ctx context.Context, slug string) (application.RunStatus, error) {
+		release, err := h.acquire(ctx, slug)
+		if err != nil {
+			return application.RunStatus{}, err
+		}
+		defer release()
+		return backend.Status(ctx, slug)
+	}
+	return h
 }
 
 func (h *handler) closeAdmission() {
@@ -150,7 +161,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case len(parts) == 1:
 		action = "detail"
-	case len(parts) == 2 && (parts[1] == "run" || parts[1] == "submissions" || parts[1] == "status"):
+	case len(parts) == 2 && (parts[1] == "run" || parts[1] == "submissions" || parts[1] == "status" || parts[1] == "browser"):
 		action = parts[1]
 	case len(parts) == 3 && parts[1] == "files" && fileID.MatchString(parts[2]):
 		action = "download"
@@ -200,6 +211,28 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var flag string
+	if action == "browser" {
+		if !method(w, r, "POST") {
+			return
+		}
+		name, ok := stringBody(w, r, "name", "Provide one nonempty endpoint name.")
+		if !ok {
+			return
+		}
+		result, err := h.browsers.open(ctx, slug, name)
+		if err != nil {
+			if errors.Is(err, errBrowserUnavailable) {
+				transportError(w, 409, "not_running", "The problem web is unavailable.")
+			} else if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				applicationError(w, contextError(err))
+			} else {
+				applicationError(w, err)
+			}
+			return
+		}
+		writeJSON(w, 200, result)
+		return
+	}
 	if action == "status" {
 		if !method(w, r, "GET") || !emptyBody(w, r) {
 			return
@@ -363,6 +396,10 @@ func emptyBody(w http.ResponseWriter, r *http.Request) bool {
 }
 
 func submissionBody(w http.ResponseWriter, r *http.Request) (string, bool) {
+	return stringBody(w, r, "flag", "Submit one JSON object containing a nonempty flag string.")
+}
+
+func stringBody(w http.ResponseWriter, r *http.Request, field, message string) (string, bool) {
 	media, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if len(r.Header.Values("Content-Type")) != 1 || err != nil || media != "application/json" || len(params) > 1 || (len(params) == 1 && params["charset"] == "") {
 		transportError(w, 415, "unsupported_media_type", "Use application/json with an optional charset.")
@@ -380,8 +417,8 @@ func submissionBody(w http.ResponseWriter, r *http.Request) (string, bool) {
 	valueErr := d.Decode(&flag)
 	close, closeErr := d.Token()
 	_, endErr := d.Token()
-	if !utf8.Valid(content) || err != nil || open != json.Delim('{') || keyErr != nil || key != "flag" || valueErr != nil || closeErr != nil || close != json.Delim('}') || endErr != io.EOF || strings.TrimSpace(flag) == "" {
-		transportError(w, 400, "invalid_request", "Submit one JSON object containing a nonempty flag string.")
+	if !utf8.Valid(content) || err != nil || open != json.Delim('{') || keyErr != nil || key != field || valueErr != nil || closeErr != nil || close != json.Delim('}') || endErr != io.EOF || strings.TrimSpace(flag) == "" {
+		transportError(w, 400, "invalid_request", message)
 		return "", false
 	}
 	return flag, true

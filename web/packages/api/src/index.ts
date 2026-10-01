@@ -202,6 +202,19 @@ export function createAPI(options: APIOptions): APIClient {
       },
     },
     player: {
+      async browser(slug, name) {
+        const body = JSON.stringify({ name });
+        if (!name.trim() || new TextEncoder().encode(body).byteLength > 4096) throw new APIError('invalid_argument', 0);
+        const item = await request(`${route(slug)}/browser`, 'POST', body);
+        const url = string(item.url);
+        const target = string(item.target);
+        const targetPort = /^http:\/\/127\.0\.0\.1:([0-9]{1,5})$/.exec(target)?.[1];
+        const wrapperPort = /^http:\/\/127\.0\.0\.1:([0-9]{1,5})\/__pwnden_browser\/[a-f0-9]{64}$/.exec(url)?.[1];
+        if (item.slug !== slug || item.name !== name || !targetPort || !wrapperPort ||
+          Number(targetPort) < 1 || Number(targetPort) > 65535 || Number(wrapperPort) < 1 || Number(wrapperPort) > 65535 ||
+          Number(targetPort) === Number(wrapperPort)) throw new APIError('invalid_response', 0);
+        return { url, target };
+      },
       async status(slug): Promise<RunStatus> {
         const item = await request(`${route(slug)}/status`);
         const problemKind = kind(item.kind);

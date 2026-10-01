@@ -16,7 +16,7 @@ export interface UILinkProps {
 
 export interface UIIconButtonProps {
   readonly label: string;
-  readonly icon: 'refresh' | 'download';
+  readonly icon: 'refresh' | 'download' | 'back' | 'forward';
   readonly busy?: boolean;
   readonly disabled?: boolean;
 }
@@ -43,6 +43,22 @@ export interface UITabsProps {
 export interface UIWebFrameProps {
   readonly src: string;
   readonly title: string;
+  readonly target?: string;
+}
+
+export interface UIWebNavigation {
+  readonly url: string;
+  readonly canBack: boolean;
+  readonly canForward: boolean;
+  readonly busy: boolean;
+  readonly error: string;
+}
+
+export interface UIWebFrameHandle {
+  back(): void;
+  forward(): void;
+  reload(): void;
+  navigate(url: string): void;
 }
 
 export interface UIMarkdownProps {
@@ -96,6 +112,7 @@ export interface UITextFieldProps {
   readonly modelValue: string;
   readonly disabled?: boolean;
   readonly required?: boolean;
+  readonly labelHidden?: boolean;
 }
 
 export interface UISelectProps {

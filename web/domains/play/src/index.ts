@@ -16,10 +16,16 @@ export interface Submission {
 }
 
 export interface Player {
+  browser(slug: string, name: string): Promise<BrowserSession>;
   status(slug: string): Promise<RunStatus>;
   run(slug: string): Promise<Run>;
   stop(slug: string): Promise<void>;
   submit(slug: string, flag: string): Promise<Submission>;
+}
+
+export interface BrowserSession {
+  readonly url: string;
+  readonly target: string;
 }
 
 export interface RunStatus {

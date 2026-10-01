@@ -24,7 +24,12 @@ After problem verification, the workflow builds a native Linux platform package 
 `tools/smoke_http.py` also exercises the packaged local server with only Docker on its child PATH: embedded HTML/script/style delivery, authenticated catalog, both problem kinds, web problem solving, incorrect and correct submissions, preserved state and rotated credentials after server restart, and repeatable stop. This driver checks HTTP behavior; browser interaction is a separate check. See [local server](local-server.md) for the local command and unit/concurrency coverage.
 
 The HTTP catalog check compares the API response with all manifests in the
-installed catalog, including newly added problems. Rotor Lock and Note Vault
+installed catalog. The same smoke also solves Note Vault through the common
+browser proxy and compares its flag with the direct endpoint, checking wrapper
+isolation and authenticated preparation. It exercises HTTP; native iframe
+history and visual interaction require a Browser Plugin check.
+
+The catalog comparison includes newly added problems. Rotor Lock and Note Vault
 exercise representative file and service flows. New declarations join catalog
 and execution checks automatically. Run `python3 -B tools/test_smoke_http.py` to
 check discovery coverage for additional, missing, unexpected and duplicate

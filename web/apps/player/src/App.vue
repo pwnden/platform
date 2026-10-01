@@ -74,13 +74,15 @@ function select(problem: Problem) {
                 <UIIconButton v-if="tool === 'terminal'" label="터미널 새로고침" icon="refresh" :busy="!!terminal?.busy" :disabled="!terminal" @click="terminal?.refresh()" />
                 <UIIconButton v-else-if="tool === 'files'" :label="materials?.filename ? `${materials.filename} 다운로드` : '파일 다운로드'" icon="download" :busy="!!materials?.busy" :disabled="!materials?.filename" @click="materials?.download()" />
                 <template v-else-if="tool === 'web'">
-                  <UIIconButton label="문제 웹 새로고침" icon="refresh" :disabled="!web?.url" @click="web?.reload()" />
+                  <UIIconButton label="뒤로 가기" icon="back" :disabled="!web?.canBack || web.busy" @click="web?.back()" />
+                  <UIIconButton label="앞으로 가기" icon="forward" :disabled="!web?.canForward || web.busy" @click="web?.forward()" />
+                  <UIIconButton label="문제 웹 새로고침" icon="refresh" :busy="!!web?.busy" :disabled="!web?.canReload" @click="web?.reload()" />
                   <UILink v-if="web?.url" :href="web.url" new-tab icon-only variant="ghost" size="compact" aria-label="문제 웹을 새 탭에서 열기" title="새 탭에서 열기"><span class="ui-sr-only">새 탭에서 열기</span></UILink>
                 </template>
               </template>
               <template #terminal><TerminalPanel ref="terminal" :terminals="client.terminals" :slug="selected.slug" :foreground="tool === 'terminal'" @ready="play?.refresh()" /></template>
               <template #files><ProblemFiles ref="materials" :catalog="client.catalog" :slug="selected.slug" :files="files" :foreground="tool === 'files'" /></template>
-              <template #web><ProblemWeb ref="web" :status="runStatus" :active="tool === 'web'" /></template>
+              <template #web><ProblemWeb ref="web" :player="client.player" :slug="selected.slug" :status="runStatus" :active="tool === 'web'" /></template>
             </UITabs>
           </template>
         </UISplit>

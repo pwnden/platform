@@ -15,6 +15,9 @@ import App from '../apps/player/src/App.vue';
 import UICode from '../packages/ui/src/UICode.vue';
 import * as syntax from '../packages/ui/src/syntax';
 
+function browserSession(target: string) { return { target, url: target + '/__pwnden_browser/' + 'a'.repeat(64) }; }
+const unusedBrowser = vi.fn();
+
 // Exercise feature lifecycle and real tool tabs on a small host renderer.
 vi.mock('../packages/ui/src/index.ts', async () => {
   const { defineComponent, h } = await import('vue');
@@ -27,7 +30,11 @@ vi.mock('../packages/ui/src/index.ts', async () => {
     UITerminalControls: (await import('../packages/ui/src/UITerminalControls.vue')).default,
     UIFile: (await import('../packages/ui/src/UIFile.vue')).default,
     UITabs: (await import('../packages/ui/src/UITabs.vue')).default,
-    UIWebFrame: (await import('../packages/ui/src/UIWebFrame.vue')).default,
+    UIWebFrame: defineComponent({ props: ['src', 'title', 'target'], emits: ['navigation'], setup: (props, { attrs, expose, emit }) => {
+      const controls = { back: vi.fn(), forward: vi.fn(), reload: vi.fn(), navigate: vi.fn() };
+      expose(controls);
+      return () => h('iframe', { ...attrs, ...controls, src: props.src, onWebNavigation: (state: unknown) => emit('navigation', state) });
+    } }),
     UISplit: defineComponent({ setup: (_, { attrs, slots }) => () => h('split', attrs, [slots.before?.(), slots.after?.()]) }),
     UIMarkdown: defineComponent({ props: ['source'], setup: props => () => h('markdown', props.source) }),
     UICode: defineComponent({ props: ['source'], setup: props => () => h('code', props.source) }),
@@ -74,6 +81,7 @@ it('automatically enters Note Vault and preserves its attachment across column r
   const client = {
     catalog: { list: vi.fn(async () => [problem]), detail: vi.fn(async () => ({ ...problem, description: '설명', files: [], hintCount: 0, walkthrough: false })), download: vi.fn(), guidance: vi.fn() },
     player: {
+      browser: unusedBrowser,
       status: vi.fn(async () => status), run: vi.fn(async () => { status = { ...status, state: 'running' }; return { ...status, fileCount: 0 }; }),
       stop: vi.fn(async () => { status = { ...status, state: 'stopped' }; }), submit: vi.fn(),
     },
@@ -132,7 +140,7 @@ it('keeps terminal, source and web state across tool tabs and resets tools on pr
       detail: vi.fn(async (slug: string) => ({ ...problems.find(problem => problem.slug === slug)!, description: '설명', files: [{ id, name: 'checker.py', size: 30 }], hintCount: 0, walkthrough: false })),
       download: vi.fn(async () => new TextEncoder().encode('<script>plain source</script>')), guidance: vi.fn(),
     },
-    player: { status: vi.fn(async (slug: string) => slug === 'note-vault' ? state : { slug, kind: 'file', state: 'ready', endpoints: [] }), run: vi.fn(), stop: vi.fn(), submit: vi.fn() },
+    player: { browser: vi.fn(async () => browserSession(state.endpoints[0]!.url)), status: vi.fn(async (slug: string) => slug === 'note-vault' ? state : { slug, kind: 'file', state: 'ready', endpoints: [] }), run: vi.fn(), stop: vi.fn(), submit: vi.fn() },
     terminals: {
       connect: vi.fn(() => ({ ready: Promise.resolve(session), close })), list: vi.fn(),
       stop: vi.fn(async () => { state = { ...state, state: 'stopped', endpoints: [] }; }),
@@ -159,7 +167,7 @@ it('keeps terminal, source and web state across tool tabs and resets tools on pr
   expect(flatten(root).some(item => item.type === 'script')).toBe(false);
   await click(button(root, '웹')); await settle();
   const frame = flatten(root).find(item => item.type === 'iframe')!;
-  expect(frame.props.src).toBe('http://127.0.0.1:43123');
+  expect(frame.props.src).toBe(browserSession('http://127.0.0.1:43123').url);
   expect(button(root, '문제 웹 새로고침').parent).toBe(actions);
   expect(button(root, 'checker.py 다운로드')).toBeUndefined();
   expect(flatten(root).find(item => item.type === 'a')?.props.rel).toBe('noopener noreferrer');
@@ -182,7 +190,7 @@ it('keeps terminal, source and web state across tool tabs and resets tools on pr
   state = { ...state, state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:43124' }] };
   await click(button(root, '터미널 새로고침')); await settle();
   await click(button(root, '웹')); await settle();
-  expect(flatten(root).find(item => item.type === 'iframe')?.props.src).toBe('http://127.0.0.1:43124');
+  expect(flatten(root).find(item => item.type === 'iframe')?.props.src).toBe(browserSession('http://127.0.0.1:43124').url);
   await click(flatten(root).find(item => item.type === 'button' && text(item).includes('Rotor Lock'))!); await settle();
   expect(flatten(root).filter(item => item.props.role === 'tab').map(text)).toEqual(['터미널', '파일']);
   expect(button(root, '터미널').props['aria-selected']).toBe('true');
@@ -196,24 +204,56 @@ it('retains multiple web documents and reloads only the explicitly selected one'
   const endpoints = [{ name: 'first', url: 'http://127.0.0.1:43123' }, { name: 'second', url: 'http://127.0.0.1:43124' }];
   const state: RunStatus = { slug: 'test', kind: 'service', state: 'running', endpoints };
   const root = node('root');
-  const component = h(ProblemWeb, { status: state, active: true });
+  const player: Player = { browser: vi.fn(async (_slug: string, name: string) => browserSession(endpoints.find(endpoint => endpoint.name === name)!.url)), status: vi.fn(), run: vi.fn(), stop: vi.fn(), submit: vi.fn() };
+  const component = h(ProblemWeb, { player, slug: 'test', status: state, active: true });
   renderer.render(component, root); await settle();
   const web = component.component!.exposed as ProblemWebHandle;
   const first = flatten(root).find(item => item.type === 'iframe')!;
   const selector = flatten(root).find(item => item.type === 'select')!;
   const choose = selector.props['onUpdate:modelValue'] as (url: string) => void;
   choose(endpoints[1]!.url); await settle();
-  const second = flatten(root).find(item => item.type === 'iframe' && item.props.src === endpoints[1]!.url)!;
+  const second = flatten(root).find(item => item.type === 'iframe' && item.props.src === browserSession(endpoints[1]!.url).url)!;
   expect(first.props.hidden).toBe(true);
   expect(second.props.hidden).toBe(false);
   choose(endpoints[0]!.url); await settle();
   expect(flatten(root).find(item => item.type === 'iframe')).toBe(first);
   expect(web!.url).toBe(endpoints[0]!.url);
+  (first.props.onWebNavigation as (state: unknown) => void)({ url: endpoints[0]!.url + '/notes?id=2', canBack: true, canForward: true, busy: false, error: '' });
+  await settle();
+  expect(web!.url).toBe(endpoints[0]!.url + '/notes?id=2');
+  expect(web!.canBack).toBe(true);
+  expect(web!.canForward).toBe(true);
+  web!.back(); web!.forward();
+  expect(first.props.back).toHaveBeenCalledOnce();
+  expect(first.props.forward).toHaveBeenCalledOnce();
   web!.reload(); await settle();
-  expect(flatten(root).find(item => item.type === 'iframe')).not.toBe(first);
-  expect(flatten(root).find(item => item.type === 'iframe' && item.props.src === endpoints[1]!.url)).toBe(second);
-  renderer.render(h(ProblemWeb, { status: undefined, active: true }), root); await settle();
+  expect(flatten(root).find(item => item.type === 'iframe')).toBe(first);
+  expect(first.props.reload).toHaveBeenCalledOnce();
+  expect(second.props.reload).not.toHaveBeenCalled();
+  expect(player.browser).toHaveBeenCalledTimes(2);
+  expect(flatten(root).find(item => item.type === 'iframe' && item.props.src === browserSession(endpoints[1]!.url).url)).toBe(second);
+  renderer.render(h(ProblemWeb, { player, slug: 'test', status: undefined, active: true }), root); await settle();
   expect(flatten(root).some(item => item.type === 'iframe' || item.type === 'a')).toBe(false);
+  renderer.render(null, root);
+});
+
+it('prepares web lazily, retries once and ignores a response for a removed endpoint', async () => {
+  const state: RunStatus = { slug: 'test', kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:43123' }] };
+  let resolve: (value: { url: string; target: string }) => void = () => {};
+  const browser = vi.fn().mockRejectedValueOnce(new Error('offline')).mockImplementationOnce(() => new Promise(done => { resolve = done; }));
+  const player: Player = { browser, status: vi.fn(), run: vi.fn(), stop: vi.fn(), submit: vi.fn() };
+  const root = node('root');
+  const component = h(ProblemWeb, { player, slug: 'test', status: state, active: false });
+  renderer.render(component, root); await settle();
+  expect(browser).not.toHaveBeenCalled();
+  renderer.render(h(ProblemWeb, { player, slug: 'test', status: state, active: true }), root); await settle();
+  expect(text(root)).toContain('새로고침으로 다시 시도');
+  const web = component.component!.exposed as ProblemWebHandle;
+  web.reload(); web.reload(); await settle();
+  expect(browser).toHaveBeenCalledTimes(2);
+  renderer.render(h(ProblemWeb, { player, slug: 'test', active: true }), root); await settle();
+  resolve(browserSession(state.endpoints[0]!.url)); await settle();
+  expect(flatten(root).some(item => item.type === 'iframe')).toBe(false);
   renderer.render(null, root);
 });
 
@@ -225,7 +265,7 @@ it('observes a newly prepared web service after the initial status request finis
   const session = { input: vi.fn(), resize: vi.fn(), close: vi.fn() };
   const client = {
     catalog: { list: vi.fn(async () => [problem]), detail: vi.fn(async () => ({ ...problem, description: '', files: [], hintCount: 0, walkthrough: false })), download: vi.fn(), guidance: vi.fn() },
-    player: { status, run: vi.fn(), stop: vi.fn(), submit: vi.fn() },
+    player: { browser: vi.fn(async () => browserSession('http://127.0.0.1:43123')), status, run: vi.fn(), stop: vi.fn(), submit: vi.fn() },
     terminals: { connect: vi.fn(() => ({ ready: Promise.resolve(session), close: vi.fn() })), list: vi.fn(), stop: vi.fn() },
   };
   const root = node('root');
@@ -236,7 +276,7 @@ it('observes a newly prepared web service after the initial status request finis
   expect(status).toHaveBeenCalledTimes(2);
   expect(button(root, '웹')).toBeDefined();
   await click(button(root, '웹')); await settle();
-  expect(flatten(root).find(item => item.type === 'iframe')?.props.src).toBe('http://127.0.0.1:43123');
+  expect(flatten(root).find(item => item.type === 'iframe')?.props.src).toBe(browserSession('http://127.0.0.1:43123').url);
   renderer.render(null, root);
 });
 
@@ -494,7 +534,7 @@ it('routes binary and large materials to the prepared terminal without fetching 
 
 it('observes service endpoints without duplicating terminal environment controls', async () => {
   let state: RunStatus = { slug: 'test', kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:8000' }] };
-  const player: Player = {
+  const player: Player = { browser: unusedBrowser,
     status: vi.fn(async () => state),
     run: vi.fn(), stop: vi.fn(),
     submit: vi.fn(async () => ({ slug: 'test', accepted: false })),
@@ -521,7 +561,7 @@ it('observes service endpoints without duplicating terminal environment controls
 });
 
 it('directs unavailable service recovery to the terminal environment controls', async () => {
-  const player: Player = {
+  const player: Player = { browser: unusedBrowser,
     status: vi.fn().mockResolvedValueOnce({ slug: 'test', kind: 'service', state: 'stopped', endpoints: [] })
       .mockResolvedValueOnce({ slug: 'test', kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:8000' }] })
       .mockResolvedValueOnce({ slug: 'test', kind: 'service', state: 'unavailable', endpoints: [] }),
@@ -542,7 +582,7 @@ it('directs unavailable service recovery to the terminal environment controls', 
 });
 
 it('shows file problems without service controls', async () => {
-  const player: Player = { status: vi.fn(async () => ({ slug: 'test', kind: 'file', state: 'ready', endpoints: [] })), run: vi.fn(), stop: vi.fn(), submit: vi.fn() };
+  const player: Player = { browser: unusedBrowser, status: vi.fn(async () => ({ slug: 'test', kind: 'file', state: 'ready', endpoints: [] })), run: vi.fn(), stop: vi.fn(), submit: vi.fn() };
   const root = node('root');
   renderer.render(h(PlayPanel, { player, slug: 'test', kind: 'file' }), root);
   await settle();
@@ -561,7 +601,7 @@ it('shows file problems without service controls', async () => {
 
 it('clears stale endpoints on failed refresh and ignores a response after unmount', async () => {
   let resolve: (value: RunStatus) => void = () => {};
-  const player: Player = {
+  const player: Player = { browser: unusedBrowser,
     status: vi.fn().mockResolvedValueOnce({ slug: 'test', kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:8000' }] })
       .mockRejectedValueOnce(new Error('offline')).mockImplementationOnce(() => new Promise(value => { resolve = value; })),
     run: vi.fn(), stop: vi.fn(), submit: vi.fn(),
@@ -587,7 +627,7 @@ it('clears stale endpoints on failed refresh and ignores a response after unmoun
 it.each(['file', 'service'] as const)('keeps the %s submission and body stable during status refresh', async kind => {
   const state: RunStatus = { slug: 'test', kind, state: kind === 'file' ? 'ready' : 'running', endpoints: kind === 'file' ? [] : [{ name: 'web', url: 'http://127.0.0.1:8000' }] };
   let resolve: (value: RunStatus) => void = () => {};
-  const player: Player = {
+  const player: Player = { browser: unusedBrowser,
     status: vi.fn(async () => state), run: vi.fn(), stop: vi.fn(),
     submit: vi.fn(async () => ({ slug: 'test', accepted: true })),
   };

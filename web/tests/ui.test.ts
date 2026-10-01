@@ -187,7 +187,7 @@ it('assigns the page nonce only to terminal styles and keeps native DOM receiver
 
 it('renders the Sectile wrapper with a real label and controlled string value', async () => {
   const html = await renderToString(createSSRApp({ render: () => h(UITextField, { id: 'flag', label: '플래그', modelValue: 'test', required: true }) }));
-  expect(html).toContain('<label for="flag">플래그</label>');
+  expect(html).toMatch(/<label for="flag"(?: class="")?>플래그<\/label>/);
   expect(html).toContain('id="flag"');
   expect(html).toContain('value="test"');
   expect(html).toContain('required');

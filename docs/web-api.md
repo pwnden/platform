@@ -14,6 +14,7 @@ The API version is independent of the challenges-owned problem contract. Version
 | `GET /api/v1/problems/{slug}/guidance/{id}` | `Guidance.Guidance` | `200`, declared hint or walkthrough Markdown after explicit activation. |
 | `GET /api/v1/problems/{slug}/files/{id}` | `Files.Download` | `200`, binary attachment for a current declared file ID. |
 | `GET /api/v1/problems/{slug}/status` | `Observer.Status` | `200`, observed run status and current published endpoints. |
+| `POST /api/v1/problems/{slug}/browser` | HTTP adapter browsing session | `200`, `slug`, endpoint `name`, wrapper `url` and original `target` origin. |
 | `POST /api/v1/problems/{slug}/run` | `Runner.Run` | `200`, problem kind, file count and published endpoints. |
 | `DELETE /api/v1/problems/{slug}/run` | `Runner.Stop` | `200`, stopped slug after cleanup. |
 | `POST /api/v1/problems/{slug}/submissions` | `Submit` | `200`, slug and `accepted` boolean. |
@@ -34,7 +35,22 @@ Submission accepts exactly one JSON object with a nonempty string `flag`, up to 
 
 The API exposes the player operations above. Author solution verification remains a CLI operation. Submission history is a subsequent capability.
 
-## Errors
+## Common problem browser
+
+Browser preparation accepts exactly one nonempty endpoint `name`, with the same
+JSON and 4096-byte body rules as submission. The destination comes from the
+running problem's published loopback HTTP endpoints. Each endpoint gets a
+separate local proxy origin and a wrapper with native browser history controls;
+the platform token stays on the API origin. Repeated opens reuse that wrapper.
+Every proxied request rechecks current run status under the problem lock; stopped
+or changed endpoints return 410. Workspace expiry closes its listeners within
+one second of removal, and server shutdown closes proxies before environment
+cleanup. The proxy preserves request methods, bodies, paths, query strings,
+cookies and response security headers, and maps redirects back to its own origin.
+Problem authors declare HTTP endpoints through the existing challenges contract.
+Shared browsing code is maintained in the platform; see [frontend](frontend.md).
+
+## Error responses
 
 Every unsuccessful response has this shape:
 

@@ -13,3 +13,8 @@ declarations and exercise resources. Keep workspace usage guidance in common
 platform documentation and UI; author content describes the exercise. Preserve
 problem HTTP behavior and the separate origins of the player and target sites
 when extending embedded web tools.
+
+Common web navigation belongs to the platform browsing proxy, controller and UI.
+Derive it from published HTTP endpoints using the existing problem declarations.
+Keep current-page reload, browser history and address editing in the shared web
+tool. Compose selected-tool actions in the common tab strip with shared controls.

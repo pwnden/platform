@@ -12,6 +12,7 @@ export { default as UIMarkdown } from './UIMarkdown.vue';
 export { default as UISplit } from './UISplit.vue';
 export { default as UITabs } from './UITabs.vue';
 export { default as UIWebFrame } from './UIWebFrame.vue';
+export type { UIWebFrameHandle, UIWebNavigation } from './props';
 export { default as UIReveal } from './UIReveal.vue';
 export { default as UIFile } from './UIFile.vue';
 export { default as UICode } from './UICode.vue';

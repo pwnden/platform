@@ -155,8 +155,8 @@ The tab strip shares one content divider. Full-height tab targets use equal
 workspace insets and a selected bottom indicator. Hover and pressed states affect
 the strip surface; keyboard focus outlines the label separately from selection.
 Selected-tool icon actions occupy the strip's right edge, outside the tablist's
-arrow-key navigation. Terminal refresh, file download, web refresh and new-tab
-link share the compact square control class and corner radius.
+arrow-key navigation. Terminal refresh, file download, browser navigation, web
+refresh and the new-tab link share the compact square control class and radius.
 
 `ProblemDetail` loads metadata once and emits the detail to the app. The app
 passes declared files to `ProblemFiles` and observed run status to `ProblemWeb`;
@@ -169,16 +169,38 @@ when an attachment finishes preparing.
 Documents load on first use, retain state when switching tools or endpoints, and
 reload only on an explicit web refresh. Environment termination or unknown state
 removes old frames. A restarted endpoint loads its new address. Multiple HTTP
-services have a labeled selector. The common tab strip offers an icon-only reload and
-native new-tab link for browser developer tools. Neither action changes service
-state. `UILink` keeps `noopener noreferrer` on the new-tab link.
+services have a labeled selector. The common tab strip offers back, forward,
+reload and a native new-tab link for browser developer tools. An accessible
+address field edits paths and query strings within the selected problem origin.
+Reload refreshes the current page and retains its history. These actions preserve
+service state. `UILink` keeps `noopener noreferrer` on the new-tab link.
 
-The iframe loads the problem origin directly, with a title, no referrer and
-sandbox capabilities for scripts, origin-based storage, forms, dialogs, popups
-and downloads. Top-level navigation stays outside those capabilities. Platform
-credentials stay on the platform origin. Production and development share a
+The platform provides a separate loopback browsing proxy per published endpoint,
+with a trusted wrapper and a sandboxed inner problem frame. The wrapper reads the
+inner frame's native Navigation API and validates commands from the player using
+the exact parent origin and window. The player validates the wrapper origin,
+window and session channel; displayed URLs remain within the selected problem.
+No problem-side bridge or document injection is required. Common browsing is
+platform-owned, so authors use existing HTTP declarations and exercise resources.
+The proxy streams problem content and preserves methods, bodies, paths, queries,
+cookies and security headers, while mapping target-origin redirects. Requests use
+the browser-visible Host so generated absolute links and Origin checks agree.
+Every proxied request rechecks the current endpoint; workspace expiry and server
+shutdown close listeners and upstream connections. Login cookies use the same
+loopback hostname and retain the existing browser SameSite relationship.
+
+The iframe has a title, no referrer and sandbox capabilities for scripts,
+origin-based storage, forms, dialogs, popups and downloads. Top-level navigation
+stays outside those capabilities. Platform credentials stay on the platform
+origin. Production and development share a
 `frame-src http://127.0.0.1:*` policy; the UI accepts only observed local entry
 points, and the platform retains `frame-ancestors 'none'`.
+
+Native history controls require the Navigation API in current browsers. The
+wrapper reports unsupported navigation or inaccessible frames and retains the
+new-tab path for developer tools. Target frame restrictions remain effective;
+the platform preserves their security headers. This tool does not reproduce a
+browser's full developer tools or external-site browsing.
 
 JetBrains Mono and D2Coding WOFF2 files are bundled in the UI package, served
 from the same origin and embedded into the Go executable. Font sources and
