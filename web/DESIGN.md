@@ -219,10 +219,13 @@ and respects reduced-motion preferences. A completed state change or observation
 failure updates the content; unknown state disables submission and removes stale
 entry points.
 
-The right-side tools use `UITabs`, with compact control-height triggers in a
-workspace-height header. Terminal is the default. Files appears for declared
+The right-side tools use `UITabs`, with a continuous navigation strip at the
+workspace-header height. Each tab fills the strip height and uses the workspace
+inset equally on all sides. Terminal is the default. Files appears for declared
 materials; Web appears after a local HTTP endpoint is observed. The selected tab
-uses accent fill and stroke, with keyboard focus kept distinct. Sectile owns
+uses accent text and a bottom indicator along the shared content edge. Hover and
+press affect the tab surface; keyboard focus outlines its label separately from
+selection. Navigation uses the flush radius and the label uses the inline radius. Sectile owns
 arrow-key navigation and linked tab/panel semantics. Inactive panels are inert,
 hidden from assistive technology and visually excluded while their components
 remain mounted.

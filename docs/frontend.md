@@ -157,6 +157,9 @@ inactive-panel exclusion. Panels stay mounted. Switching tools preserves the
 terminal attachment, source previews and each opened web document. It does not
 start the environment inactivity timer. Hidden browser pages and problem changes
 follow the existing terminal lifecycle.
+The tab strip shares one content divider. Full-height tab targets use equal
+workspace insets and a selected bottom indicator. Hover and pressed states affect
+the strip surface; keyboard focus outlines the label separately from selection.
 
 `ProblemDetail` loads metadata once and emits the detail to the app. The app
 passes declared files to `ProblemFiles` and observed run status to `ProblemWeb`;
