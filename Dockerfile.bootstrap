@@ -20,6 +20,17 @@ RUN suffix=""; case "$PWNDEN_TARGET" in windows/*) suffix=".exe" ;; esac; \
 FROM scratch AS entry
 COPY --from=entry-build /output/ /
 
+FROM toolchain AS catalog-fetch
+ARG PWNDEN_CATALOG_REF=refs/heads/main
+RUN git init --quiet --bare /catalog.git && \
+    git -C /catalog.git fetch --quiet --depth=1 --no-tags -- \
+      https://github.com/pwnden/challenges.git "$PWNDEN_CATALOG_REF" && \
+    mkdir /output && \
+    git -C /catalog.git rev-parse --verify 'FETCH_HEAD^{commit}' > /output/catalog.lock
+
+FROM scratch AS catalog-export
+COPY --from=catalog-fetch /output/ /
+
 FROM toolchain AS source
 COPY go.mod go.sum ./
 RUN go mod download

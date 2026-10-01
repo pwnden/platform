@@ -38,6 +38,22 @@ python3 -B tools/smoke_package.py --checkout .
 
 The first check covers activation, retry, failed build/preparation recovery and output boundaries with a Docker double. The second requires the published official commit and a real Docker daemon; it runs checkout setup and player workflows with Go, Git, Node, pnpm, and host Python absent from the application's PATH.
 
+## Selecting the published catalog
+
+Maintainers select the problem revision through the checkout entry:
+
+```sh
+./pwnden catalog update
+```
+
+The command fetches the published `pwnden/challenges` main branch and atomically updates `catalog.lock` to its full commit. To select a particular published commit, including an older revision, use `./pwnden catalog update --revision <full-40-character-commit>`. On native Windows the same arguments go to `./pwnden.ps1`.
+
+Git runs in the existing pinned Docker toolchain; this operation needs no host Git, Go, Node, pnpm, Python or local challenges checkout. It builds only the catalog export target, without building the application or frontend. A fresh Git fetch runs on every update, so Docker cache reuse cannot hide changes to main. Failed acquisition, malformed output, cancellation or a detected edit to the lock during acquisition preserves the current file. Temporary exports are removed. An already selected commit leaves the file untouched.
+
+Commit the resulting `catalog.lock` change with the platform. After receiving that platform revision, players run `./pwnden setup`, then `./pwnden serve`. Catalog selection and installation are separate operations: updating the lock leaves the active installation and running problems unchanged. Publish a challenges commit before selecting it; an unpublished commit fails explicitly. The normal update has a three-minute acquisition deadline. Invoke checkout operations sequentially.
+
+Use `./pwnden catalog --help` for command help. Native packages retain their bundled revision; catalog selection belongs to the source checkout. `python3 -B tools/smoke_catalog.py` checks the real Docker entry with a temporary checkout, published and unpublished revisions, and a child PATH without host SDKs.
+
 ## Native packages
 
 A native platform package contains the executable, `catalog.tar.gz`, and `distribution.json`. The frontend is embedded in the executable. Keep those files together for the first setup. Host Go, Git, Node, pnpm, Python, and a separate problem checkout are unnecessary. Docker with Linux containers and the Compose plugin are prerequisites.

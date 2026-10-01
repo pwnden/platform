@@ -41,6 +41,10 @@ File problem tools need no service startup. Their problem directory is read-only
 
 `./pwnden --help` lists commands. Linux/WSL is the current execution target for checkout verification. Windows and macOS actual host checks are a later stage.
 
+## Catalog maintenance
+
+Maintainers can select the latest published problems with `./pwnden catalog update`, or a specific published commit with `./pwnden catalog update --revision <full-commit>`. The command updates `catalog.lock` through the same checkout entry. Commit that change, then use `./pwnden setup` to install it. See [catalog selection](docs/distribution.md#selecting-the-published-catalog).
+
 ## Built packages
 
 Maintainers can also build a platform package containing the native executable and its problem catalog. From an unpacked package, run `./pwnden setup` and then the same player commands. Keep the package files together. Windows packages use `pwnden.exe`. See [distribution](docs/distribution.md) for build and verification commands.

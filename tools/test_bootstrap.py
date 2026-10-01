@@ -65,6 +65,9 @@ elif args[:2] == ["buildx", "build"]:
     if target == "entry":
         shutil.copy2(os.environ["BOOTSTRAP_TEST_ENTRY"], output / "pwnden-entry")
         sys.exit(0)
+    if target == "catalog-export":
+        (output / "catalog.lock").write_text("a" * 40 + "\\n")
+        sys.exit(0)
     binary = output / "pwnden"
     binary.write_text('#!/bin/sh\\nif [ "$1" = setup ]; then exit "${BOOTSTRAP_TEST_SETUP_CODE:-0}"; fi\\nif [ "$1" = stdin ]; then IFS= read -r line; printf "%s\\\\n" "$line"; exit; fi\\nprintf "%s\\\\n" "$@"\\n')
     binary.chmod(0o755)
@@ -118,6 +121,23 @@ else:
                 self.assertEqual((self.root / "dist/active").read_text(), before)
                 self.assertEqual(sorted(p.name for p in (self.root / "dist").iterdir()), paths)
                 del self.environment[variable]
+
+    def test_catalog_command_updates_lock_without_host_git_or_setup(self):
+        lock = self.root / "catalog.lock"
+        lock.write_text("b" * 40 + "\n")
+        result = self.invoke("pwnden", "catalog", "update")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(lock.read_text(), "a" * 40 + "\n")
+        self.assertIn("Catalog pinned", result.stdout)
+        self.assertEqual(list((self.root / "dist").iterdir()), [])
+        result = self.invoke("pwnden", "catalog", "update", "--revision", "a" * 40)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("already pinned", result.stdout)
+        self.environment["BOOTSTRAP_TEST_BUILD_CODE"] = "42"
+        result = self.invoke("pwnden", "catalog", "update")
+        self.assertEqual(result.returncode, 42, result.stderr)
+        self.assertEqual(lock.read_text(), "a" * 40 + "\n")
+        self.assertEqual(list((self.root / "dist").iterdir()), [])
 
     def test_external_output_symlink_is_rejected(self):
         outside = Path(self.temporary.name) / "outside"

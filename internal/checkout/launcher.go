@@ -45,6 +45,9 @@ func (l *Launcher) Run(ctx context.Context, args []string) error {
 	if err := plainPath(filepath.Join(l.Root, "dist"), true); err != nil {
 		return err
 	}
+	if len(args) > 0 && args[0] == "catalog" {
+		return l.catalog(ctx, args[1:])
+	}
 	if len(args) > 0 && (args[0] == "setup" || args[0] == "dev") {
 		if len(args) == 2 && (args[1] == "--help" || args[1] == "-h") {
 			_, err := fmt.Fprintf(l.Stderr, "usage: pwnden %s\n", args[0])
@@ -59,9 +62,12 @@ func (l *Launcher) Run(ctx context.Context, args []string) error {
 		return l.dev(ctx)
 	}
 	if len(args) == 0 || (len(args) == 1 && (args[0] == "--help" || args[0] == "-h")) {
+		if _, err := fmt.Fprintln(l.Stderr, "Checkout commands:\n  setup                  build and prepare official problems\n  dev                    build and serve the local challenges checkout\n  catalog update         pin published problems; see pwnden catalog --help"); err != nil {
+			return err
+		}
 		if _, err := l.active("active"); errors.Is(err, errNoBuild) {
 			if _, err := l.active("development"); errors.Is(err, errNoBuild) {
-				_, err := fmt.Fprintln(l.Stderr, "usage: pwnden <command> [arguments]\n\nCheckout commands:\n  setup   build and prepare official problems\n  dev     build and serve the local challenges checkout\n\nRun pwnden setup for player commands, or pwnden dev for development.")
+				_, err := fmt.Fprintln(l.Stderr, "usage: pwnden <command> [arguments]\n\nRun pwnden setup for player commands, or pwnden dev for development.")
 				if err == nil && len(args) == 0 {
 					err = errors.New("a command is required")
 				}
