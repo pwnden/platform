@@ -20,6 +20,23 @@ Ctrl+U/K/W/Y/R/L, Ctrl+C/Z and `fg` keep their normal shell behavior. Ctrl+D
 deletes at the cursor or exits on an empty line. Bracketed paste waits for
 confirmation. Browser and operating system reserved shortcuts follow their own rules.
 
+Clipboard shortcuts follow the browser's operating system, independently of the
+server or container host:
+
+| Browser OS | Copy selection | Paste |
+| --- | --- | --- |
+| Windows | Ctrl+C, Ctrl+Shift+C, Ctrl+Insert | Ctrl+V, Ctrl+Shift+V, Shift+Insert |
+| macOS | Command+C | Command+V |
+| Linux | Ctrl+Shift+C, Ctrl+Insert | Ctrl+Shift+V, Shift+Insert |
+
+Windows Ctrl+C copies while text is selected and interrupts otherwise. macOS and
+Linux Ctrl+C interrupts regardless of selection. Copy remains available after
+shell exit. Paste uses native browser clipboard events and xterm's existing
+newline normalization and bracketed-paste handling. Read permission is not
+requested. The explicit Ctrl+Shift+C shortcut suppresses browser developer tools,
+copies through a native copy event and falls back to clipboard write. If both
+are unavailable, the terminal shows a context-menu copy instruction.
+
 The declared solution image supplies Bash, `stty` and `C.UTF-8`. Startup enables
 TTY `iutf8`, uses `LANG=LC_ALL=C.UTF-8`, `--noprofile --norc` and
 `INPUTRC=/dev/null`. History remains in the retained shell with
@@ -119,6 +136,9 @@ Unit tests cover timer cancellation/reset, active retention, ten-environment cap
 exit, cleanup errors, installation locks, crash recovery and split UTF-8/ANSI
 screen restoration. Frontend tests cover automatic attachment, stale callbacks,
 visibility, capacity recovery, keyboard byte transport and resize.
+Clipboard tests cover browser OS detection, native copy/paste delegation,
+selection-dependent Windows interruption, Linux/macOS control keys, IME key
+pass-through, copy-event listener cleanup and clipboard failure handling.
 
 Actual Docker checks cover shell state retention, detached output, Readline,
 mount/network/privilege policy, automatic service startup, terminal-only stop,

@@ -3,17 +3,20 @@ import { onMounted, onUnmounted, ref, watch } from 'vue';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { terminalDocument } from './terminal-document';
+import { copyTerminalSelection, terminalClipboardKeys, terminalPlatform } from './terminal-clipboard';
 import type { UITerminalProps, UITerminalHandle } from './props';
 
 const props = defineProps<UITerminalProps>();
 const emit = defineEmits<{ input: [data: Uint8Array]; resize: [size: { cols: number; rows: number }] }>();
 const container = ref<HTMLElement>();
+const clipboardError = ref('');
 let terminal: Terminal | undefined;
 let observer: ResizeObserver | undefined;
 let alive = true;
+let clipboardRevision = 0;
 const handle: UITerminalHandle = {
   write(data, rendered) { if (alive && terminal) terminal.write(data, rendered); },
-  clear() { terminal?.reset(); },
+  clear() { clipboardRevision++; clipboardError.value = ''; terminal?.reset(); },
   focus() { terminal?.focus(); },
 };
 defineExpose(handle);
@@ -42,6 +45,14 @@ onMounted(() => {
   const fit = new FitAddon();
   terminal.loadAddon(fit);
   terminal.open(container.value);
+  const current = terminal;
+  terminal.attachCustomKeyEventHandler(terminalClipboardKeys(terminalPlatform(navigator), terminal, () => {
+    const revision = ++clipboardRevision;
+    clipboardError.value = '';
+    void copyTerminalSelection(document, navigator.clipboard, current.getSelection()).then(copied => {
+      if (alive && terminal === current && revision === clipboardRevision && !copied) clipboardError.value = '복사하지 못했습니다. 터미널에서 우클릭한 뒤 복사를 선택해 주세요.';
+    });
+  }));
   terminal.onData(data => { if (props.enabled) emit('input', new TextEncoder().encode(data)); });
   terminal.onBinary(data => { if (props.enabled) emit('input', Uint8Array.from(data, char => char.charCodeAt(0))); });
   terminal.onResize(({ cols, rows }) => emit('resize', { cols, rows }));
@@ -62,9 +73,14 @@ onUnmounted(() => { alive = false; observer?.disconnect(); terminal?.dispose(); 
 </script>
 
 <template>
-  <div ref="container" class="ui-terminal" :aria-label="label" />
+  <div class="ui-terminal">
+    <div ref="container" class="ui-terminal-screen" :aria-label="label" />
+    <p v-if="clipboardError" class="ui-terminal-message" role="status">{{ clipboardError }}</p>
+  </div>
 </template>
 
 <style scoped>
-.ui-terminal { min-width: 0; width: 100%; min-height: 18rem; height: 100%; padding: var(--ui-space-2); background: var(--ui-terminal-background); overflow: hidden; }
+.ui-terminal { display: flex; flex-direction: column; min-width: 0; width: 100%; min-height: 18rem; height: 100%; padding: var(--ui-space-2); background: var(--ui-terminal-background); overflow: hidden; }
+.ui-terminal-screen { flex: 1; min-width: 0; min-height: 0; }
+.ui-terminal-message { margin: var(--ui-space-2) 0 0; color: var(--ui-danger); font-family: var(--ui-font-body); }
 </style>
