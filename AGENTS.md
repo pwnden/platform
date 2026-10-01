@@ -16,5 +16,6 @@ when extending embedded web tools.
 
 Common web navigation belongs to the platform browsing proxy, controller and UI.
 Derive it from declared HTTP endpoints using the existing problem declarations.
-Keep current-page reload, browser history and address editing in the shared web
-tool. Compose selected-tool actions in the common tab strip with shared controls.
+Keep current-page reload, browser history and address editing together in the
+shared web tool's address bar. Compose terminal refresh, file download and the
+web new-tab action in the common tab strip with shared controls.

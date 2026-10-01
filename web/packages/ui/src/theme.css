@@ -150,6 +150,7 @@ a:not(.ui-button):active { color: var(--ui-accent); background: var(--ui-accent-
   line-height: 1.4rem;
   transition: border-color var(--ui-state-duration) var(--ui-state-easing), background-color var(--ui-state-duration) var(--ui-state-easing);
 }
+.ui-input--compact { height: var(--ui-control-size-compact); padding: var(--ui-inset-compact); font-size: 0.85rem; line-height: 1.19rem; }
 .ui-input::placeholder { color: var(--ui-muted); }
 @media (hover: hover) { .ui-input:hover:enabled, .ui-input:has(select:enabled):hover { border-color: var(--ui-accent); } }
 .ui-input:focus { border-color: var(--ui-accent); }

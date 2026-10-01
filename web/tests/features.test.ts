@@ -168,7 +168,7 @@ it('keeps terminal, source and web state across tool tabs and resets tools on pr
   await click(button(root, '웹')); await settle();
   const frame = flatten(root).find(item => item.type === 'iframe')!;
   expect(frame.props.src).toBe(browserSession('http://127.0.0.1:43123').url);
-  expect(button(root, '문제 웹 새로고침').parent).toBe(actions);
+  expect(button(root, '문제 웹 새로고침').parent?.props['aria-label']).toBe('웹 탐색');
   expect(button(root, 'checker.py 다운로드')).toBeUndefined();
   expect(flatten(root).find(item => item.type === 'a')?.props.rel).toBe('noopener noreferrer');
   await click(button(root, '터미널')); await settle();

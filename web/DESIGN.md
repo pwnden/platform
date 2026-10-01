@@ -312,7 +312,9 @@ Source: [UITerminal.vue](packages/ui/src/UITerminal.vue), [UIIconButton.vue](pac
 
 The Files tool displays the selected file immediately on first entry. A single file has a compact path label; multiple files use a named selector. Source fills the available height with independent scrolling. The selected file's download icon lives at the right edge of the common tab strip. File sizes remain internal metadata for preview limits. The catalog feature owns file selection, fetching, retry and cache through a public handle. Terminal refresh, file download, web refresh and the new-tab link share the same compact square hit box, control radius and icon size. Busy icons retain their dimensions.
 
-Source: [UIMarkdown.vue](packages/ui/src/UIMarkdown.vue), [markdown.ts](packages/ui/src/markdown.ts), [UICode.vue](packages/ui/src/UICode.vue), [syntax.ts](packages/ui/src/syntax.ts), [ProblemFiles.vue](features/catalog/src/ProblemFiles.vue).
+The Web tool groups back, forward and reload immediately to the left of its address field. All four controls share the compact height and control radius; equal gaps separate them. The field fills the remaining row width and shrinks in narrower panes while icon buttons keep their square hit boxes. The new-tab link remains at the right edge of the common tab strip.
+
+Source: [UIMarkdown.vue](packages/ui/src/UIMarkdown.vue), [markdown.ts](packages/ui/src/markdown.ts), [UICode.vue](packages/ui/src/UICode.vue), [syntax.ts](packages/ui/src/syntax.ts), [ProblemFiles.vue](features/catalog/src/ProblemFiles.vue), [ProblemWeb.vue](features/play/src/ProblemWeb.vue).
 
 ## Do's and Don'ts
 

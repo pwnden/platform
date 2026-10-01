@@ -113,6 +113,7 @@ export interface UITextFieldProps {
   readonly disabled?: boolean;
   readonly required?: boolean;
   readonly labelHidden?: boolean;
+  readonly size?: 'default' | 'compact';
 }
 
 export interface UISelectProps {

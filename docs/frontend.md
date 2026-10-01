@@ -155,8 +155,8 @@ The tab strip shares one content divider. Full-height tab targets use equal
 workspace insets and a selected bottom indicator. Hover and pressed states affect
 the strip surface; keyboard focus outlines the label separately from selection.
 Selected-tool icon actions occupy the strip's right edge, outside the tablist's
-arrow-key navigation. Terminal refresh, file download, browser navigation, web
-refresh and the new-tab link share the compact square control class and radius.
+arrow-key navigation. Terminal refresh, file download and the new-tab link share
+the compact square control class and radius with the web address bar's navigation.
 
 `ProblemDetail` loads metadata once and emits the detail to the app. The app
 passes declared files to `ProblemFiles` and observed run status to `ProblemWeb`;
@@ -169,9 +169,11 @@ when an attachment finishes preparing.
 Documents load on first use, retain state when switching tools or endpoints, and
 reload only on an explicit web refresh. Environment termination or unknown state
 removes old frames. A restarted endpoint loads its new address. Multiple HTTP
-services have a labeled selector. The common tab strip offers back, forward,
-reload and a native new-tab link for browser developer tools. An accessible
-address field edits paths and query strings within the selected problem origin.
+services have a labeled selector. Back, forward and reload sit to the left of the
+accessible address field, in one row with equal compact control heights. The field
+shrinks to fit narrower panes and edits paths and query strings within the selected
+problem origin. The common tab strip offers a native new-tab link for browser
+developer tools.
 Reload refreshes the current page and retains its history. These actions preserve
 service state. `UILink` keeps `noopener noreferrer` on the new-tab link.
 

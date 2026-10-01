@@ -74,9 +74,6 @@ function select(problem: Problem) {
                 <UIIconButton v-if="tool === 'terminal'" label="터미널 새로고침" icon="refresh" :busy="!!terminal?.busy" :disabled="!terminal" @click="terminal?.refresh()" />
                 <UIIconButton v-else-if="tool === 'files'" :label="materials?.filename ? `${materials.filename} 다운로드` : '파일 다운로드'" icon="download" :busy="!!materials?.busy" :disabled="!materials?.filename" @click="materials?.download()" />
                 <template v-else-if="tool === 'web'">
-                  <UIIconButton label="뒤로 가기" icon="back" :disabled="!web?.canBack || web.busy" @click="web?.back()" />
-                  <UIIconButton label="앞으로 가기" icon="forward" :disabled="!web?.canForward || web.busy" @click="web?.forward()" />
-                  <UIIconButton label="문제 웹 새로고침" icon="refresh" :busy="!!web?.busy" :disabled="!web?.canReload" @click="web?.reload()" />
                   <UILink v-if="web?.url" :href="web.url" new-tab icon-only variant="ghost" size="compact" aria-label="문제 웹을 새 탭에서 열기" title="새 탭에서 열기"><span class="ui-sr-only">새 탭에서 열기</span></UILink>
                 </template>
               </template>
