@@ -41,11 +41,11 @@ const sizeLabel = computed(() => {
 .ui-file-header { border-start-start-radius: var(--ui-file-radius-start, var(--ui-radius-surface)); border-start-end-radius: var(--ui-file-radius-start, var(--ui-radius-surface)); }
 .ui-file-header:has(+ .ui-file-preview[hidden]), .ui-file-preview { border-end-start-radius: var(--ui-file-radius-end, var(--ui-radius-surface)); border-end-end-radius: var(--ui-file-radius-end, var(--ui-radius-surface)); }
 .ui-file-header { display: flex; align-items: center; gap: var(--ui-space-1); padding: var(--ui-space-1); background: var(--ui-surface-raised); }
-.ui-file-toggle { flex: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--ui-space-1); padding-inline: var(--ui-space-1); }
+.ui-file-toggle { flex: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--ui-space-1); height: var(--ui-control-size-compact); min-height: var(--ui-control-size-compact); padding: var(--ui-inset-compact); font-size: 0.85rem; line-height: 1.4; }
 .ui-file-identity { min-width: 0; max-width: 100%; }
 .ui-file-directory { flex-shrink: 2; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ui-muted); }
 .ui-file-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
-.ui-file-size { color: var(--ui-muted); font-size: 0.8rem; white-space: nowrap; }
+.ui-file-size { color: var(--ui-muted); white-space: nowrap; }
 .ui-file-download { gap: var(--ui-space-1); min-width: 2.5rem; }
 .ui-file-download svg { width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
 .ui-file-preview { min-width: 0; border-top: 1px solid var(--ui-border); background: var(--ui-background); }
@@ -53,9 +53,5 @@ const sizeLabel = computed(() => {
 .ui-file-preview :deep(.ui-code:last-child) { border-end-start-radius: var(--ui-file-radius-end, var(--ui-radius-surface)); border-end-end-radius: var(--ui-file-radius-end, var(--ui-radius-surface)); }
 .ui-file-preview :deep(p), .ui-file-preview :deep([role='alert']) { padding: var(--ui-space-2); }
 .ui-file-preview :deep([role='alert'] p) { padding: 0; margin-bottom: var(--ui-space-1); }
-@container (max-width: 28rem) {
-  .ui-file-toggle { row-gap: 0; }
-  .ui-file-size { grid-column: 1; padding-left: calc(1rem + var(--ui-space-1)); text-align: left; }
-}
-@container (max-width: 20rem) { .ui-file-download span { display: none; } }
+@container (max-width: 20rem) { .ui-file-download { width: var(--ui-control-size-compact); padding: 0; } .ui-file-download span { display: none; } }
 </style>

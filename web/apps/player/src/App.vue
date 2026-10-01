@@ -64,26 +64,25 @@ function select(problem: Problem) {
 
 <style scoped>
 .player-shell { width: 100%; height: 100dvh; display: grid; grid-template-rows: auto minmax(0, 1fr); }
-.app-header { min-height: 3.75rem; padding: 0.7rem var(--ui-space-3); display: flex; align-items: center; justify-content: space-between; gap: var(--ui-space-2); border-bottom: 1px solid var(--ui-border); background: var(--ui-surface); }
+.app-header { min-height: 3.75rem; padding: var(--ui-space-2); display: flex; align-items: center; justify-content: space-between; gap: var(--ui-space-2); border-bottom: 1px solid var(--ui-border); background: var(--ui-surface); }
 h1 { font-family: var(--ui-font-mono); font-size: 1.2rem; font-weight: 500; color: var(--ui-accent); }
 .workspace { min-height: 0; }
 .catalog { height: 100%; min-width: 0; min-height: 0; overflow: hidden; background: var(--ui-surface); }
 .selected-problem { min-width: 0; min-height: 0; }
 .briefing { height: 100%; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
-.problem-header { flex: none; padding: var(--ui-space-3); border-bottom: 1px solid var(--ui-border-active); background: var(--ui-surface); }
+.problem-header { flex: none; display: grid; gap: var(--ui-space-1); padding: var(--ui-space-3); border-bottom: 1px solid var(--ui-border-active); background: var(--ui-surface); }
 .problem-header h2 { font-size: 1.5rem; line-height: 1.35; overflow-wrap: anywhere; text-wrap: pretty; }
-.problem-header p { margin-top: var(--ui-space-1); color: var(--ui-muted); font-size: 0.85rem; }
+.problem-header p { color: var(--ui-muted); font-size: 0.85rem; }
 .briefing-scroll { flex: 1; min-height: 0; min-width: 0; overflow: auto; }
 .terminal-pane { min-height: 0; }
 .workspace-empty { height: 100%; min-width: 0; display: grid; align-items: center; justify-items: center; padding: var(--ui-space-4); }
-.empty-content { width: min(100%, 42rem); }
-.workspace-empty h2 { margin-bottom: 0.8rem; font-size: 1.35rem; }
+.empty-content { width: min(100%, 42rem); display: grid; gap: var(--ui-space-2); }
+.workspace-empty h2 { font-size: 1.35rem; }
 .workspace-empty p { color: var(--ui-muted); line-height: 1.9; }
 .session-error { display: grid; align-content: center; justify-items: center; gap: 1rem; padding: var(--ui-space-3); }
 .session-error h2 { font-size: 1.25rem; }
 @media (max-width: 48rem) {
   .player-shell { height: auto; min-height: 100dvh; grid-template-rows: auto 1fr; }
-  .app-header { padding-inline: var(--ui-space-2); }
   .catalog { height: 30rem; border-bottom: 1px solid var(--ui-border); }
   .briefing { height: auto; border-bottom: 1px solid var(--ui-border); }
   .problem-header { position: sticky; top: 0; z-index: 2; padding: var(--ui-space-2); }

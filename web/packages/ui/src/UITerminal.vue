@@ -80,7 +80,7 @@ onUnmounted(() => { alive = false; observer?.disconnect(); terminal?.dispose(); 
 </template>
 
 <style scoped>
-.ui-terminal { display: flex; flex-direction: column; min-width: 0; width: 100%; min-height: 18rem; height: 100%; padding: var(--ui-space-2); background: var(--ui-terminal-background); overflow: hidden; }
+.ui-terminal { display: flex; flex-direction: column; gap: var(--ui-space-2); min-width: 0; width: 100%; min-height: 18rem; height: 100%; padding: var(--ui-space-2); background: var(--ui-terminal-background); overflow: hidden; }
 .ui-terminal-screen { flex: 1; min-width: 0; min-height: 0; }
-.ui-terminal-message { margin: var(--ui-space-2) 0 0; color: var(--ui-danger); font-family: var(--ui-font-body); }
+.ui-terminal-message { margin: 0; color: var(--ui-danger); font-family: var(--ui-font-body); }
 </style>

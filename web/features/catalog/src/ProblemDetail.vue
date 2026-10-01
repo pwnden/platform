@@ -145,13 +145,13 @@ onMounted(load);
 <style scoped>
 .detail-panel { min-width: 0; }
 .detail-panel > p, .detail-panel > [role='alert'] { padding: var(--ui-space-3); }
-.content-section { border-bottom: 1px solid var(--ui-border); }
-.content-section :deep(.ui-panel-heading) { background: var(--ui-surface-raised); padding-inline: var(--ui-space-3); }
+.content-section { --ui-panel-inset: var(--ui-space-3); border-bottom: 1px solid var(--ui-border); }
+.content-section :deep(.ui-panel-heading) { background: var(--ui-surface-raised); }
 .content-section :deep(.ui-reveal:first-child) { border-top: 0; }
 .files { --ui-radius-outer: var(--ui-radius-surface); --ui-radius-inset: 1px; list-style: none; padding: 0; margin: 0; border: 1px solid var(--ui-border); border-radius: var(--ui-radius-outer); }
 .files > li { --ui-file-radius-start: var(--ui-radius-flush); --ui-file-radius-end: var(--ui-radius-flush); }
 .files > li:first-child { --ui-file-radius-start: max(0px, calc(var(--ui-radius-outer) - var(--ui-radius-inset))); }
 .files > li:last-child { --ui-file-radius-end: max(0px, calc(var(--ui-radius-outer) - var(--ui-radius-inset))); }
 .files li + li { border-top: 1px solid var(--ui-border); }
-@media (max-width: 48rem) { .content-section :deep(.ui-panel-heading) { padding-inline: var(--ui-space-2); } }
+@media (max-width: 48rem) { .content-section { --ui-panel-inset: var(--ui-space-2); } }
 </style>

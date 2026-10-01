@@ -81,6 +81,19 @@ Features supply actual state and connection behavior.
 buttons and switch tracks. Switch padding derives from this shared height and
 the square thumb size, retaining two thumb widths of usable track space.
 
+All component padding uses one inset for top, right, bottom and left. Default
+and compact controls derive their inset from the height, content line height
+and border. Panel headings and bodies share `--ui-panel-inset`; responsive
+changes replace the whole inset. Sibling spacing uses `gap`. Embedded terminal
+output receives its inset from the panel body.
+
+`UISelect` presents the selected label and chevron in a grid with equal outer
+insets. A native select covers the full field, retaining its label, option
+selection, keyboard navigation and mouse behavior. Focus and disabled styles
+apply to the visible field. `pnpm check:spacing`, included in `pnpm verify`,
+checks owned Vue style blocks and CSS with the existing Vue compiler's CSS
+parser, rejecting unequal padding and directional overrides.
+
 Corner tokens distinguish controls (`--ui-radius-control`), content surfaces
 (`--ui-radius-surface`), inline elements (`--ui-radius-inline`) and adjoining
 workspace panels (`--ui-radius-flush`). `--ui-radius` remains a control alias.
@@ -105,7 +118,8 @@ own semantic styles. Reduced-motion and forced-color preferences are supported.
 `UIFile` provides a compact material header with a filename, formatted byte size,
 preview disclosure and independent download action. Its source preview follows
 directly below the header. Container queries adapt metadata and the download
-label to the reading pane's actual width. The catalog feature owns fetching,
+label to the reading pane's actual width. Filename and size stay in one row;
+preview and download share the compact height and symmetric inset. The catalog feature owns fetching,
 preview limits, retry and cached source; the UI component owns presentation and
 emits preview and download intent through its public API.
 

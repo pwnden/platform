@@ -13,9 +13,12 @@ import UITerminalControls from '../packages/ui/src/UITerminalControls.vue';
 
 it('renders labeled native category choices and a plain status without decorative markers', async () => {
   const html = await renderToString(createSSRApp({ render: () => h(UISelect, { id: 'category', label: '분야', modelValue: 'web', options: [{ value: '', label: '전체 분야' }, { value: 'web', label: '웹' }] }) }));
-  expect(html).toContain('<label for="category">분야</label>');
+  expect(html).toMatch(/<label for="category"[^>]*>분야<\/label>/);
   expect(html).toContain('<select id="category"');
-  expect(html).toContain('<option value="web" selected>웹</option>');
+  expect(html).toMatch(/<option value="web"[^>]* selected>웹<\/option>/);
+  expect(html).toMatch(/class="ui-select-value" aria-hidden="true"[^>]*>웹<\/span>/);
+  expect(html).toContain('<svg');
+  expect(html).not.toMatch(/<select[^>]*aria-hidden/);
   const status = await renderToString(createSSRApp({ render: () => h(UIStatus, {}, () => '준비됨') }));
   expect(status).toContain('준비됨');
   expect(status).not.toContain('aria-hidden');

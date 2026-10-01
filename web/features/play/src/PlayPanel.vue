@@ -87,15 +87,16 @@ defineExpose(handle);
 </template>
 
 <style scoped>
-.actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-space-1); margin-block: var(--ui-space-2); }
-.play-panel { container-type: inline-size; border-bottom: 1px solid var(--ui-border); }
-.play-panel :deep(.ui-panel-heading) { background: var(--ui-surface-raised); padding-inline: var(--ui-space-3); }
-p { color: var(--ui-muted); font-size: 0.9rem; margin-block: var(--ui-space-1); }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-space-1); }
+.play-panel { --ui-panel-inset: var(--ui-space-3); container-type: inline-size; border-bottom: 1px solid var(--ui-border); }
+.play-panel :deep(.ui-panel-heading) { background: var(--ui-surface-raised); }
+.play-panel :deep(.ui-panel-body) { display: flex; flex-direction: column; gap: var(--ui-space-2); }
+p { color: var(--ui-muted); font-size: 0.9rem; }
 p[role='alert'] { color: var(--ui-danger); }
 form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: var(--ui-space-1); }
-form:not(:first-child) { margin-top: var(--ui-space-3); padding-top: var(--ui-space-3); border-top: 1px solid var(--ui-border); }
+form:not(:first-child)::before { content: ''; grid-column: 1 / -1; border-top: 1px solid var(--ui-border); }
 .ui-field { width: 100%; }
-.endpoints { padding-left: var(--ui-space-3); overflow-wrap: anywhere; }
+.endpoints { margin: 0; padding: var(--ui-space-2); overflow-wrap: anywhere; }
 @container (max-width: 30rem) { form { grid-template-columns: minmax(0, 1fr); } form > .ui-button { justify-self: start; } }
-@media (max-width: 48rem) { .play-panel :deep(.ui-panel-heading) { padding-inline: var(--ui-space-2); } }
+@media (max-width: 48rem) { .play-panel { --ui-panel-inset: var(--ui-space-2); } }
 </style>

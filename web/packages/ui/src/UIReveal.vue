@@ -16,5 +16,5 @@ function toggle(event: Event) {
 
 <style scoped>
 .ui-reveal { min-width: 0; border-block-start: 1px solid var(--ui-border); }
-.ui-reveal-content { min-width: 0; padding: var(--ui-space-1) 0 var(--ui-space-2); }
+.ui-reveal-content { min-width: 0; padding: var(--ui-space-1); }
 </style>

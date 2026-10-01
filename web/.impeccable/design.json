@@ -21,7 +21,7 @@
       "refersTo": "button-primary",
       "description": "Run, submit or connect with the shared blue action treatment.",
       "html": "<button class=\"ds-primary\">정답 확인</button>",
-      "css": ".ds-primary{font:inherit;min-height:2.75rem;padding:.5rem .9rem;border:1px solid var(--ui-border-active);border-radius:var(--ui-radius);color:var(--ui-accent);background:var(--ui-accent-surface);line-height:1.4;cursor:pointer;transition:background-color 140ms,border-color 140ms,box-shadow 140ms}.ds-primary:hover:enabled{background:var(--ui-surface-hover);box-shadow:var(--ui-glow)}.ds-primary:focus-visible{outline:2px solid var(--ui-accent);outline-offset:3px}.ds-primary:disabled{color:var(--ui-muted);opacity:.5;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none}}"
+      "css": ".ds-primary{font:inherit;font-size:1rem;min-height:2.75rem;padding:calc((2.75rem - 1.4rem)/2 - 1px);border:1px solid var(--ui-border-active);border-radius:var(--ui-radius);color:var(--ui-accent);background:var(--ui-accent-surface);line-height:1.4;cursor:pointer;transition:background-color 140ms,border-color 140ms,box-shadow 140ms}.ds-primary:hover:enabled{background:var(--ui-surface-hover);box-shadow:var(--ui-glow)}.ds-primary:focus-visible{outline:2px solid var(--ui-accent);outline-offset:3px}.ds-primary:disabled{color:var(--ui-muted);opacity:.5;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none}}"
     },
     {
       "name": "Secondary Button",
@@ -29,7 +29,7 @@
       "refersTo": "button-secondary",
       "description": "A raised tonal control for supporting actions.",
       "html": "<button class=\"ds-secondary\">다운로드</button>",
-      "css": ".ds-secondary{font:inherit;min-height:2.75rem;padding:.5rem .9rem;border:1px solid var(--ui-border);border-radius:var(--ui-radius);color:var(--ui-foreground);background:var(--ui-surface-raised);line-height:1.4;cursor:pointer;transition:background-color 140ms,border-color 140ms,box-shadow 140ms}.ds-secondary:hover:enabled{background:var(--ui-surface-hover);border-color:var(--ui-border-active)}.ds-secondary:focus-visible{outline:2px solid var(--ui-accent);outline-offset:3px}.ds-secondary:disabled{color:var(--ui-muted);opacity:.5;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-secondary{transition:none}}"
+      "css": ".ds-secondary{font:inherit;font-size:1rem;min-height:2.75rem;padding:calc((2.75rem - 1.4rem)/2 - 1px);border:1px solid var(--ui-border);border-radius:var(--ui-radius);color:var(--ui-foreground);background:var(--ui-surface-raised);line-height:1.4;cursor:pointer;transition:background-color 140ms,border-color 140ms,box-shadow 140ms}.ds-secondary:hover:enabled{background:var(--ui-surface-hover);border-color:var(--ui-border-active)}.ds-secondary:focus-visible{outline:2px solid var(--ui-accent);outline-offset:3px}.ds-secondary:disabled{color:var(--ui-muted);opacity:.5;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-secondary{transition:none}}"
     },
     {
       "name": "Ghost Button",
@@ -37,7 +37,7 @@
       "refersTo": "button-ghost",
       "description": "A quiet refresh or disconnect action.",
       "html": "<button class=\"ds-ghost\">목록 새로고침</button>",
-      "css": ".ds-ghost{font:inherit;min-height:2.75rem;padding:.5rem .9rem;border:1px solid transparent;border-radius:var(--ui-radius);color:var(--ui-muted);background:transparent;line-height:1.4;cursor:pointer;transition:background-color 140ms,border-color 140ms,box-shadow 140ms}.ds-ghost:hover:enabled{background:var(--ui-surface-hover);border-color:var(--ui-border-active)}.ds-ghost:focus-visible{outline:2px solid var(--ui-accent);outline-offset:3px}.ds-ghost:disabled{color:var(--ui-muted);opacity:.5;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-ghost{transition:none}}"
+      "css": ".ds-ghost{font:inherit;font-size:1rem;min-height:2.75rem;padding:calc((2.75rem - 1.4rem)/2 - 1px);border:1px solid transparent;border-radius:var(--ui-radius);color:var(--ui-muted);background:transparent;line-height:1.4;cursor:pointer;transition:background-color 140ms,border-color 140ms,box-shadow 140ms}.ds-ghost:hover:enabled{background:var(--ui-surface-hover);border-color:var(--ui-border-active)}.ds-ghost:focus-visible{outline:2px solid var(--ui-accent);outline-offset:3px}.ds-ghost:disabled{color:var(--ui-muted);opacity:.5;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-ghost{transition:none}}"
     },
     {
       "name": "Danger Button",
@@ -45,7 +45,7 @@
       "refersTo": "button-danger",
       "description": "The stop action carries the shared danger text color.",
       "html": "<button class=\"ds-danger\">문제 중지</button>",
-      "css": ".ds-danger{font:inherit;min-height:2.75rem;padding:.5rem .9rem;border:1px solid var(--ui-border);border-radius:var(--ui-radius);color:var(--ui-danger);background:var(--ui-surface-raised);line-height:1.4;cursor:pointer;transition:background-color 140ms,border-color 140ms,box-shadow 140ms}.ds-danger:hover:enabled{background:var(--ui-surface-hover);border-color:var(--ui-border-active)}.ds-danger:focus-visible{outline:2px solid var(--ui-accent);outline-offset:3px}.ds-danger:disabled{color:var(--ui-muted);opacity:.5;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-danger{transition:none}}"
+      "css": ".ds-danger{font:inherit;font-size:1rem;min-height:2.75rem;padding:calc((2.75rem - 1.4rem)/2 - 1px);border:1px solid var(--ui-border);border-radius:var(--ui-radius);color:var(--ui-danger);background:var(--ui-surface-raised);line-height:1.4;cursor:pointer;transition:background-color 140ms,border-color 140ms,box-shadow 140ms}.ds-danger:hover:enabled{background:var(--ui-surface-hover);border-color:var(--ui-border-active)}.ds-danger:focus-visible{outline:2px solid var(--ui-accent);outline-offset:3px}.ds-danger:disabled{color:var(--ui-muted);opacity:.5;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-danger{transition:none}}"
     },
     {
       "name": "Problem Row",
@@ -53,7 +53,7 @@
       "refersTo": "button-row",
       "description": "Full-width problem navigation with a pressed selection state.",
       "html": "<button class=\"ds-row\" aria-pressed=\"true\"><span class=\"ds-title\">문제 제목</span></button>",
-      "css": ".ds-row{font:inherit;display:flex;align-items:center;min-height:2.75rem;width:100%;padding:.5rem .9rem;text-align:left;border:1px solid transparent;border-radius:var(--ui-radius);background:transparent;color:var(--ui-foreground);line-height:1.4;cursor:pointer;transition:background-color 140ms,border-color 140ms,box-shadow 140ms}.ds-row[aria-pressed=true]{color:var(--ui-accent);background:var(--ui-accent-surface);border-color:var(--ui-border-active);box-shadow:var(--ui-glow)}.ds-row:hover:enabled{background:var(--ui-surface-hover);border-color:var(--ui-border-active)}.ds-row:focus-visible{outline:2px solid var(--ui-accent);outline-offset:3px}.ds-row:disabled{color:var(--ui-muted);opacity:.5;cursor:not-allowed}.ds-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}@media(prefers-reduced-motion:reduce){.ds-row{transition:none}}"
+      "css": ".ds-row{font:inherit;font-size:1rem;display:flex;align-items:center;min-height:2.75rem;width:100%;padding:calc((2.75rem - 1.4rem)/2 - 1px);text-align:left;border:1px solid transparent;border-radius:var(--ui-radius);background:transparent;color:var(--ui-foreground);line-height:1.4;cursor:pointer;transition:background-color 140ms,border-color 140ms,box-shadow 140ms}.ds-row[aria-pressed=true]{color:var(--ui-accent);background:var(--ui-accent-surface);border-color:var(--ui-border-active);box-shadow:var(--ui-glow)}.ds-row:hover:enabled{background:var(--ui-surface-hover);border-color:var(--ui-border-active)}.ds-row:focus-visible{outline:2px solid var(--ui-accent);outline-offset:3px}.ds-row:disabled{color:var(--ui-muted);opacity:.5;cursor:not-allowed}.ds-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}@media(prefers-reduced-motion:reduce){.ds-row{transition:none}}"
     },
     {
       "name": "Flag Field",
@@ -61,7 +61,7 @@
       "refersTo": "input",
       "description": "A labelled Pretendard field with an active resting border.",
       "html": "<div class=\"ds-field\"><label for=\"ds-flag\">플래그</label><input id=\"ds-flag\" class=\"ds-input\" placeholder=\"찾은 플래그를 입력하세요\" autocomplete=\"off\" spellcheck=\"false\" required></div>",
-      "css": ".ds-field{display:grid;gap:.5rem;min-width:0}.ds-field label{color:var(--ui-muted);font-size:.85rem}.ds-input{font:inherit;min-width:0;width:100%;min-height:2.75rem;padding:.6rem .8rem;border:1px solid var(--ui-border-active);border-radius:var(--ui-radius);color:var(--ui-foreground);background:var(--ui-background);caret-color:var(--ui-accent)}.ds-input::placeholder{color:var(--ui-muted)}.ds-input:hover:enabled{border-color:var(--ui-border-active)}.ds-input:focus-visible{outline:2px solid var(--ui-accent);outline-offset:0;box-shadow:var(--ui-glow)}.ds-input:disabled{opacity:.5}@media(max-width:48rem){.ds-input{font-size:16px}}"
+      "css": ".ds-field{display:grid;gap:.5rem;min-width:0}.ds-field label{color:var(--ui-muted);font-size:.85rem}.ds-input{font:inherit;font-size:1rem;line-height:1.4rem;min-width:0;width:100%;height:2.75rem;padding:calc((2.75rem - 1.4rem)/2 - 1px);border:1px solid var(--ui-border-active);border-radius:var(--ui-radius);color:var(--ui-foreground);background:var(--ui-background);caret-color:var(--ui-accent)}.ds-input::placeholder{color:var(--ui-muted)}.ds-input:hover:enabled{border-color:var(--ui-border-active)}.ds-input:focus-visible{outline:2px solid var(--ui-accent);outline-offset:0;box-shadow:var(--ui-glow)}.ds-input:disabled{opacity:.5}@media(max-width:48rem){.ds-input{font-size:16px}}"
     },
     {
       "name": "Panel",
@@ -69,7 +69,7 @@
       "refersTo": "panel",
       "description": "A straight-edged section with a compact heading and divided content.",
       "html": "<section class=\"ds-panel\" aria-labelledby=\"ds-heading\"><header class=\"ds-heading\"><h2 id=\"ds-heading\">문제 설명</h2></header><div class=\"ds-body\">문제 내용</div></section>",
-      "css": ".ds-panel{min-width:0;min-height:0;display:flex;flex-direction:column;background:var(--ui-surface);color:var(--ui-foreground)}.ds-heading{display:flex;flex:none;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--ui-space-1);min-height:3.5rem;padding:.8rem var(--ui-space-3);background:var(--ui-surface-raised);border-bottom:1px solid var(--ui-border)}.ds-heading h2{margin:0;font-size:1rem;font-weight:600;overflow-wrap:anywhere}.ds-body{min-width:0;min-height:0;padding:var(--ui-space-3);flex:1}@media(max-width:48rem){.ds-heading{padding-inline:var(--ui-space-2)}.ds-body{padding:var(--ui-space-2)}}"
+      "css": ".ds-panel{min-width:0;min-height:0;display:flex;flex-direction:column;background:var(--ui-surface);color:var(--ui-foreground)}.ds-heading{display:flex;flex:none;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--ui-space-1);min-height:3.5rem;padding:var(--ui-space-3);background:var(--ui-surface-raised);border-bottom:1px solid var(--ui-border)}.ds-heading h2{margin:0;font-size:1rem;font-weight:600;overflow-wrap:anywhere}.ds-body{min-width:0;min-height:0;padding:var(--ui-space-3);flex:1}@media(max-width:48rem){.ds-heading{padding:var(--ui-space-2)}.ds-body{padding:var(--ui-space-2)}}"
     },
     {
       "name": "Info Status",
@@ -95,6 +95,7 @@
     ],
     "dos": [
       "Do use shared color, spacing and corner tokens for controls and panels.",
+      "Do use the same padding inset on all four sides and gap between siblings.",
       "Do use Pretendard for reading and controls, and bundled monospace for code, terminal output and the brand.",
       "Do keep input borders visible at rest and provide the shared keyboard focus outline.",
       "Do preserve the full viewport layout and bounded terminal screen when adapting widths.",

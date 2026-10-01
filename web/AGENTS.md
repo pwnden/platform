@@ -13,3 +13,9 @@ Use public workspace package exports for imports between packages. Each direct,
 peer, development and optional dependency has an exact version. Run
 `pnpm verify` with the versions pinned in this workspace, or run the root
 `Dockerfile.web` verification target.
+
+Component insets use one padding value for all four sides. Shared control
+insets derive from the control height and content line height. Panel headings
+and bodies share their panel inset. Sibling spacing uses gap; nested contours
+derive their inner radius from the outer radius and the complete inset.
+`pnpm check:spacing` enforces padding declarations in owned Vue and CSS sources.

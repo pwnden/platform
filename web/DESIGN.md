@@ -90,6 +90,8 @@ rounded:
   control: "0.25rem"
   surface: "0.5rem"
 spacing:
+  ui-inset-control: "calc((2.75rem - 1.4rem) / 2 - 1px)"
+  ui-inset-compact: "calc((2.5rem - 1.19rem) / 2 - 1px)"
   ui-space-1: "0.5rem"
   ui-space-2: "1rem"
   ui-space-3: "1.5rem"
@@ -99,39 +101,39 @@ components:
     backgroundColor: "{colors.surface-raised}"
     textColor: "{colors.foreground}"
     rounded: "{rounded.control}"
-    padding: "0.5rem 0.9rem"
+    padding: "{spacing.ui-inset-control}"
   button-primary:
     backgroundColor: "{colors.accent-surface}"
     textColor: "{colors.accent}"
     rounded: "{rounded.control}"
-    padding: "0.5rem 0.9rem"
+    padding: "{spacing.ui-inset-control}"
   button-ghost:
     backgroundColor: "transparent"
     textColor: "{colors.muted}"
     rounded: "{rounded.control}"
-    padding: "0.5rem 0.9rem"
+    padding: "{spacing.ui-inset-control}"
   button-danger:
     backgroundColor: "{colors.surface-raised}"
     textColor: "{colors.danger}"
     rounded: "{rounded.control}"
-    padding: "0.5rem 0.9rem"
+    padding: "{spacing.ui-inset-control}"
   button-row:
     backgroundColor: "transparent"
     textColor: "{colors.foreground}"
     rounded: "{rounded.control}"
     width: "100%"
-    padding: "0.5rem 0.9rem"
+    padding: "{spacing.ui-inset-control}"
   button-row-selected:
     backgroundColor: "{colors.accent-surface}"
     textColor: "{colors.accent}"
     rounded: "{rounded.control}"
     width: "100%"
-    padding: "0.5rem 0.9rem"
+    padding: "{spacing.ui-inset-control}"
   input:
     backgroundColor: "{colors.background}"
     textColor: "{colors.foreground}"
     rounded: "{rounded.control}"
-    padding: "0.6rem 0.8rem"
+    padding: "{spacing.ui-inset-control}"
     width: "100%"
   panel:
     backgroundColor: "{colors.surface}"
@@ -198,7 +200,9 @@ The player occupies (100dvh) beneath a compact brand header. Two nested `UISplit
 
 At (48rem), panes stack in reading order and the resize handles are hidden. The catalog occupies (30rem), with its results scrolling between filters and pagination. The terminal has a minimum height of (32rem), and the page uses document scrolling. The selected problem header stays sticky at the top of its content. Panel padding changes from `ui-space-3` to `ui-space-2`. The flag field and submit button stack when their own panel is narrower than (30rem). The document supports widths from (320px).
 
-Shared panel bodies use `ui-space-3`; headings, terminal controls and output use `ui-space-2`. Control groups use `ui-space-1`. Panel headings wrap actions as whole units. Navigation labels ellipsize within narrow panes and retain full titles; URLs and file paths can wrap while prose preserves words.
+Each container uses the same inset on all four sides. Panel headings and bodies share `--ui-panel-inset`: reading and execution sections use `ui-space-3` on desktop and `ui-space-2` on narrow screens; catalog and terminal sections use `ui-space-2`. Catalog filters, results and pagination use the same inset. The embedded terminal receives its inset once from the panel body. Control groups use `ui-space-1` as gap. Panel headings wrap actions as whole units. Navigation labels ellipsize within narrow panes and retain full titles; URLs and file paths can wrap while prose preserves words.
+
+**The Equal Inset Rule.** Top, right, bottom and left padding use one value. Control padding derives from border-box height, content line height and border thickness. Sibling rhythm uses gap. Responsive layouts replace the entire inset. `pnpm check:spacing` validates owned CSS and Vue style declarations through the existing CSS parser and runs as part of `pnpm verify`.
 
 **The Bounded Terminal Rule.** Keep terminal measurement inside a positioned, bounded viewport. The terminal screen can shrink to (6rem) on short desktop windows, with its renderer positioned within that screen.
 
@@ -222,13 +226,13 @@ Nested contours derive the inner radius from the outer radius minus the complete
 
 ### Buttons
 
-The shared button has a minimum height of (2.75rem), a thin border and line height of (1.4). Primary, secondary, ghost, danger and row variants use the assignments in the frontmatter. Hover, pressing, selection and keyboard focus follow Elevation & Depth. Compact buttons use a minimum height of (2.5rem), horizontal padding of (0.65rem) and label size of (0.85rem). Disabled or busy buttons are disabled, muted and rendered at (0.5) opacity; busy controls expose `aria-busy`.
+The shared button has a minimum height of (2.75rem), a thin border, font size of (1rem) and line height of (1.4). Its four-sided inset is `(height - line height) / 2 - border`. Primary, secondary, ghost, danger and row variants use the assignments in the frontmatter. Hover, pressing, selection and keyboard focus follow Elevation & Depth. Compact buttons use a fixed height of (2.5rem), label size of (0.85rem), content line height of (1.19rem) and the same inset calculation. Icon-only controls center their icon in a square. Disabled or busy buttons are disabled, muted and rendered at (0.5) opacity; busy controls expose `aria-busy`.
 
 Source: [UIButton.vue](packages/ui/src/UIButton.vue), [theme.css](packages/ui/src/theme.css).
 
 ### Inputs / Fields
 
-An associated label precedes a full-width field. The resting field uses the active blue stroke, a dark canvas and an accent caret. Hover and focus accent the border; keyboard focus adds the shared inset outline. Placeholder text is muted. Invalid fields use the danger border. Disabled fields use (0.5) opacity. `UITextField` wraps Sectile through the public UI package. `UISelect` supplies labeled, controlled native category choices.
+An associated label precedes a full-width field. Its height and four-sided inset follow default controls, with a fixed (1.4rem) content line box. The resting field uses the active blue stroke, a dark canvas and an accent caret. Hover and focus accent the border; keyboard focus adds the shared inset outline. Placeholder text is muted. Invalid fields use the danger border. Disabled fields use (0.5) opacity. `UITextField` wraps Sectile through the public UI package. `UISelect` places the selected label and chevron in an inset grid. A native select covers the complete field, preserving click, keyboard and accessibility behavior; focus and disabled states apply to its visible wrapper.
 
 Source: [UITextField.vue](packages/ui/src/UITextField.vue).
 

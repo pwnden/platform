@@ -144,10 +144,10 @@ onUnmounted(() => {
 
 <style scoped>
 .terminal-panel { height: 100%; background: var(--ui-terminal-background); container-type: inline-size; }
-.terminal-panel :deep(.ui-panel-body) { display: flex; flex-direction: column; gap: var(--ui-space-2); padding: var(--ui-space-2); overflow-y: auto; }
+.terminal-panel :deep(.ui-panel-body) { display: flex; flex-direction: column; gap: var(--ui-space-2); overflow-y: auto; }
 .terminal-screen { position: relative; flex: 1; min-height: 6rem; min-width: 0; }
-.terminal-screen :deep(.ui-terminal) { position: absolute; inset: 0; min-height: 0; }
-.terminal-footnote { color: var(--ui-muted); font-size: 0.75rem; padding-inline: var(--ui-space-1); }
+.terminal-screen :deep(.ui-terminal) { position: absolute; inset: 0; min-height: 0; padding: 0; }
+.terminal-footnote { color: var(--ui-muted); font-size: 0.75rem; }
 .retained { padding: 0; margin: 0; list-style: none; display: grid; gap: var(--ui-space-1); }
 .retained li { display: flex; align-items: center; justify-content: space-between; gap: var(--ui-space-1); }
 </style>

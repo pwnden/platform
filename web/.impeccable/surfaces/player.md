@@ -14,9 +14,17 @@ A compact header and footer frame a full-width workspace. A persistent problem s
 
 ## Interaction
 
+Every component uses equal top, right, bottom and left padding. Panel headers
+and bodies share their inset; responsive layouts change all four sides together.
+Controls derive their inset from height and content line height. Native category
+selection covers the whole field beneath a consistently inset label and chevron.
+Material filename and size stay in one row, with matching compact preview and
+download controls. The embedded terminal uses its panel's inset once. Sibling
+rhythm uses gap, and the source spacing check enforces padding declarations.
+
 Selecting a problem highlights its row and opens the associated workspace. Selecting the current problem keeps its terminal session. Keyboard focus uses an inset accent outline on bounded controls and a compact outline around disclosure labels. Hover, pressing, selection and expanded state have distinct shared styles. Pointer focus follows native focus-visible semantics. Reduced-motion and forced-color preferences are supported. The empty prompt softly pulses; reduced-motion preferences stop its animation.
 
-The brief describes the player's situation and starting actions. Each material has a compact header grouping its filename, size and download, with escaped Shiki-colored source immediately below when opened. The preview and download are independent controls. Narrow reading panes move size beneath the filename and retain a named download icon. Markdown code fences use the same code renderer. Hints open individually in increasing specificity. The walkthrough is labeled as containing answers and loads only when opened. All documents stay within the workspace, with independent loading, error and retry states. Large or binary materials use the prepared terminal. Player steps use actual UI labels and the prepared environment.
+The brief describes the player's situation and starting actions. Each material has a compact header grouping its filename, size and download, with escaped Shiki-colored source immediately below when opened. The preview and download are independent controls. Filename and size remain in one row; narrow reading panes retain a named download icon. Markdown code fences use the same code renderer. Hints open individually in increasing specificity. The walkthrough is labeled as containing answers and loads only when opened. All documents stay within the workspace, with independent loading, error and retry states. Large or binary materials use the prepared terminal. Player steps use actual UI labels and the prepared environment.
 
 The terminal header groups a compact rectangular connection switch and an icon-only environment-stop action. A (1.75rem) square thumb travels its full width between the ends of a track with two thumb widths of usable space. Connected and disconnected chain icons sit inside the thumb; a progress icon represents preparation. Both controls have accessible names and tooltips, with hidden status text. Controls share the compact hit height and role-based corner tokens. Nested corners derive their radius from the outside contour minus border and padding. The switch is on while connected or preparing; preparation can be cancelled by switching off. Switching off retains the environment for its ten-minute inactivity window and waits for switching on. Environment stop immediately removes it. Successful connection is conveyed in the header; error and exit messages appear above the terminal. Narrow panes wrap complete controls.
 

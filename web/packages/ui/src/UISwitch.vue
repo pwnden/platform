@@ -17,7 +17,7 @@ defineEmits<{ 'update:modelValue': [value: boolean] }>();
 .ui-switch { --ui-radius-outer: var(--ui-radius-control); --ui-switch-thumb-size: 1.75rem; --ui-switch-padding: calc((var(--ui-control-size-compact) - var(--ui-switch-thumb-size)) / 2 - 1px); --ui-radius-inset: calc(var(--ui-switch-padding) + 1px); position: relative; display: inline-flex; align-items: center; gap: var(--ui-space-1); height: var(--ui-control-size-compact); padding: 0; border: 0; background: transparent; color: var(--ui-muted); cursor: pointer; font-size: 0.85rem; white-space: nowrap; }
 .ui-switch--compact { flex: none; }
 .ui-switch-track { display: flex; align-items: center; flex: none; width: calc(var(--ui-switch-thumb-size) + var(--ui-switch-thumb-size) + var(--ui-radius-inset) + var(--ui-radius-inset)); height: var(--ui-control-size-compact); padding: var(--ui-switch-padding); border: 1px solid var(--ui-border); background: var(--ui-surface-raised); transition: border-color var(--ui-state-duration) var(--ui-state-easing), background-color var(--ui-state-duration) var(--ui-state-easing); }
-.ui-switch-label { margin-inline-end: var(--ui-space-1); }
+.ui-switch-label { margin: 0; }
 .ui-switch-thumb { display: flex; align-items: center; justify-content: center; flex: none; width: var(--ui-switch-thumb-size); height: var(--ui-switch-thumb-size); background: var(--ui-muted); color: var(--ui-background); transition: transform var(--ui-state-duration) var(--ui-state-easing), background-color var(--ui-state-duration) var(--ui-state-easing); }
 .ui-switch[aria-checked='true'] { color: var(--ui-accent); }
 .ui-switch[aria-checked='true'] .ui-switch-track { background: var(--ui-accent-surface); border-color: var(--ui-border-active); }
