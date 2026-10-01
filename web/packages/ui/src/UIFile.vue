@@ -38,6 +38,8 @@ const sizeLabel = computed(() => {
 
 <style scoped>
 .ui-file { min-width: 0; container-type: inline-size; }
+.ui-file-header { border-start-start-radius: var(--ui-file-radius-start, var(--ui-radius-surface)); border-start-end-radius: var(--ui-file-radius-start, var(--ui-radius-surface)); }
+.ui-file-header:has(+ .ui-file-preview[hidden]), .ui-file-preview { border-end-start-radius: var(--ui-file-radius-end, var(--ui-radius-surface)); border-end-end-radius: var(--ui-file-radius-end, var(--ui-radius-surface)); }
 .ui-file-header { display: flex; align-items: center; gap: var(--ui-space-1); padding: var(--ui-space-1); background: var(--ui-surface-raised); }
 .ui-file-toggle { flex: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--ui-space-1); padding-inline: var(--ui-space-1); }
 .ui-file-identity { min-width: 0; max-width: 100%; }
@@ -47,7 +49,8 @@ const sizeLabel = computed(() => {
 .ui-file-download { gap: var(--ui-space-1); min-width: 2.5rem; }
 .ui-file-download svg { width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
 .ui-file-preview { min-width: 0; border-top: 1px solid var(--ui-border); background: var(--ui-background); }
-.ui-file-preview :deep(.ui-code) { border: 0; }
+.ui-file-preview :deep(.ui-code) { border: 0; border-radius: var(--ui-radius-flush); }
+.ui-file-preview :deep(.ui-code:last-child) { border-end-start-radius: var(--ui-file-radius-end, var(--ui-radius-surface)); border-end-end-radius: var(--ui-file-radius-end, var(--ui-radius-surface)); }
 .ui-file-preview :deep(p), .ui-file-preview :deep([role='alert']) { padding: var(--ui-space-2); }
 .ui-file-preview :deep([role='alert'] p) { padding: 0; margin-bottom: var(--ui-space-1); }
 @container (max-width: 28rem) {

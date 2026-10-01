@@ -27,7 +27,7 @@ const CodeContent = () => lines.value
 </template>
 
 <style scoped>
-.ui-code { max-height: 32rem; overflow: auto; margin: 0; padding: var(--ui-space-2); background: var(--ui-background); border: 1px solid var(--ui-border); color: var(--ui-foreground); font-family: var(--ui-font-mono); font-size: 0.82rem; line-height: 1.65; white-space: pre; tab-size: 4; }
+.ui-code { max-height: 32rem; overflow: auto; margin: 0; padding: var(--ui-space-2); background: var(--ui-background); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-surface); color: var(--ui-foreground); font-family: var(--ui-font-mono); font-size: 0.82rem; line-height: 1.65; white-space: pre; tab-size: 4; }
 .ui-code :deep(.ui-syntax--text) { color: var(--ui-foreground); }
 .ui-code :deep(.ui-syntax--comment) { color: var(--ui-muted); }
 .ui-code :deep(.ui-syntax--keyword) { color: var(--ui-syntax-keyword); }

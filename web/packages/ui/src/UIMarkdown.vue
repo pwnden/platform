@@ -57,8 +57,8 @@ const MarkdownContent = () => nodes.value.map(node => renderMarkdownNode(node, p
 .ui-markdown :deep(ul), .ui-markdown :deep(ol) { padding-left: var(--ui-space-3); }
 .ui-markdown :deep(li > ul), .ui-markdown :deep(li > ol) { margin-block: var(--ui-space-1); }
 .ui-markdown :deep(blockquote) { margin-inline: 0; padding-left: var(--ui-space-2); border-left: 1px solid var(--ui-border-active); color: var(--ui-muted); }
-.ui-markdown :deep(pre) { min-width: 0; overflow: auto; padding: var(--ui-space-2); border: 1px solid var(--ui-border); border-radius: var(--ui-radius); background: var(--ui-terminal-background); white-space: pre; line-height: 1.6; }
-.ui-markdown :deep(code) { padding: 0.1rem 0.3rem; border-radius: var(--ui-radius); color: var(--ui-accent); background: var(--ui-surface-raised); }
+.ui-markdown :deep(pre) { min-width: 0; overflow: auto; padding: var(--ui-space-2); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-surface); background: var(--ui-terminal-background); white-space: pre; line-height: 1.6; }
+.ui-markdown :deep(code) { padding: 0.1rem 0.3rem; border-radius: var(--ui-radius-inline); color: var(--ui-accent); background: var(--ui-surface-raised); }
 .ui-markdown :deep(pre code) { padding: 0; color: var(--ui-foreground); background: transparent; }
 .ui-markdown :deep(hr) { margin-block: var(--ui-space-3); border: 0; border-top: 1px solid var(--ui-border); }
 .ui-markdown :deep(mark) { color: var(--ui-foreground); background: var(--ui-accent-surface); }

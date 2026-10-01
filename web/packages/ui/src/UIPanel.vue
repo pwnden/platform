@@ -14,7 +14,7 @@ withDefaults(defineProps<UIPanelProps>(), { headingLevel: 2 });
 </template>
 
 <style scoped>
-.ui-panel { min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--ui-surface); }
+.ui-panel { min-width: 0; min-height: 0; display: flex; flex-direction: column; border-radius: var(--ui-radius-flush); background: var(--ui-surface); }
 .ui-panel-heading { display: flex; flex: none; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--ui-space-1); min-height: 3.5rem; padding: 0.8rem var(--ui-space-2); border-bottom: 1px solid var(--ui-border); }
 h2, h3 { font-size: 1rem; font-weight: 600; word-break: keep-all; }
 .ui-panel-actions { display: flex; align-items: center; gap: var(--ui-space-1); }

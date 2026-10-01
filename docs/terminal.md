@@ -7,12 +7,17 @@ jobs remain available. A hidden tab, problem switch, refresh or lost connection
 detaches the browser. Returning cancels expiry; leaving starts another ten minutes.
 Visible attachments stay active even without keyboard input.
 
-The header groups a rectangular connection switch and a labeled **환경 종료**
-button. The switch uses Sectile's native button semantics and `role="switch"`,
+The header groups a compact rectangular connection switch and a power-icon
+**환경 종료** button. Both have matching compact hit heights and softly rounded
+control corners. The square thumb has surrounding space; the track's usable
+width is twice the thumb width, with a one-thumb-width transition between ends.
+Connected and disconnected chain icons distinguish on and off, with a progress
+icon during preparation. The switch uses Sectile's native button semantics and `role="switch"`,
 with the stable accessible name **터미널 연결**. It is on when connected or
 preparing an attachment; preparing is explicitly labeled and exposes `aria-busy`.
-Disconnected and failed states are off. Status text and color distinguish these
-states. Controls wrap as complete units in narrow panes while retaining labels.
+Disconnected and failed states are off. Position, icon and color distinguish
+these states. Accessible names, hidden status text and tooltips retain their
+meaning. Controls wrap as complete units in narrow panes.
 
 Turning the connection switch off detaches the browser and starts the existing
 inactivity timer while retaining the shell and services. A manually disconnected

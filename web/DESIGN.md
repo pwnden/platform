@@ -85,7 +85,10 @@ typography:
     fontWeight: 400
     lineHeight: 1.65
 rounded:
-  control: "0.1875rem"
+  flush: "0px"
+  inline: "0.125rem"
+  control: "0.25rem"
+  surface: "0.5rem"
 spacing:
   ui-space-1: "0.5rem"
   ui-space-2: "1rem"
@@ -211,7 +214,9 @@ Control color, border and shadow transitions take (140ms) with ease-out timing. 
 
 ## Shapes
 
-Controls have small, nearly square corners using `rounded.control`. Panels meet through straight borders. General status is text with semantic color; terminal connection uses a rectangular switch with a square thumb and an accessible state label. Section headings use a raised navy surface and a dividing stroke.
+Buttons, inputs, disclosures and switch tracks share `rounded.control`. Inline code, links and disclosure focus labels use `rounded.inline`; standalone code blocks and material lists use `rounded.surface`. Adjoining workspace panels and interior file rows use `rounded.flush`. General status is text with semantic color; terminal connection uses a rectangular switch with a square thumb and accessible state text. Section headings use a raised navy surface and a dividing stroke.
+
+Nested contours derive the inner radius from the outer radius minus the complete border and padding inset, clamped to zero. `theme.css` provides `.ui-radius-outer` and `.ui-radius-inner`, with inherited `--ui-radius-outer` and `--ui-radius-inset` values. The calculation stays on the child so local overrides work. The switch applies it to its track and thumb. Material lists apply it only to the first and last exposed edges; preview content follows those corners while focus indicators remain visible.
 
 ## Components
 
@@ -249,7 +254,7 @@ Source: [UIStatus.vue](packages/ui/src/UIStatus.vue), [UITerminalControls.vue](p
 
 ### Terminal
 
-`UITerminal` owns xterm and its fit addon inside the UI package. It maps shared tokens to the terminal theme, enables screen reader mode and resizes after fonts load or column changes. Its public resize event contains only `cols` and `rows`. Selecting a problem prepares and connects its environment automatically. `UITerminalControls` places a rectangular connection switch, its explicit status label and a labeled environment-stop button in the panel header. The switch has a square thumb and represents connection intent: connected and preparing states are on; preparing is labeled with `aria-busy` and can be cancelled by switching off. Disconnected and error states are off. `UISwitch` owns the Sectile wrapper, shared hover/pressed/focus styles and reduced-motion behavior. Controls wrap as complete labeled units within narrow panes. Switching off retains the environment for the existing ten-minute inactivity window and waits for switching on; environment stop immediately removes it. Switching on after environment stop prepares a fresh environment. The renderer preserves output after shell exit. Failure and exit messages appear above the terminal; successful connection is conveyed in the header. The cleanup footnote stays below the viewport.
+`UITerminal` owns xterm and its fit addon inside the UI package. It maps shared tokens to the terminal theme, enables screen reader mode and resizes after fonts load or column changes. Its public resize event contains only `cols` and `rows`. Selecting a problem prepares and connects its environment automatically. `UITerminalControls` places a compact rectangular connection switch and an icon-only environment-stop button in the panel header. The switch has a (1.75rem) square thumb with breathing room. Its usable track width is exactly two thumb widths; checked state translates the thumb by (100%) of its width. The connected chain, disconnected chain and preparation progress icons occupy the thumb. Control names and state remain in accessible text and tooltips. The switch represents connection intent: connected and preparing states are on; preparing exposes `aria-busy` and can be cancelled by switching off. Disconnected and error states are off. `UISwitch` owns the Sectile wrapper, shared hover/pressed/focus styles and reduced-motion behavior. Both controls use the shared compact hit height and wrap as complete units within narrow panes. Switching off retains the environment for the existing ten-minute inactivity window and waits for switching on; environment stop immediately removes it. Switching on after environment stop prepares a fresh environment. The renderer preserves output after shell exit. Failure and exit messages appear above the terminal; successful connection is conveyed in the header. The cleanup footnote stays below the viewport.
 
 Source: [UITerminal.vue](packages/ui/src/UITerminal.vue), [UISwitch.vue](packages/ui/src/UISwitch.vue), [UITerminalControls.vue](packages/ui/src/UITerminalControls.vue), [TerminalPanel.vue](features/terminal/src/TerminalPanel.vue).
 

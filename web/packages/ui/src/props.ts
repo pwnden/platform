@@ -57,6 +57,7 @@ export interface UISwitchProps {
   readonly modelValue: boolean;
   readonly disabled?: boolean;
   readonly busy?: boolean;
+  readonly compact?: boolean;
 }
 
 export interface UIStatusProps {

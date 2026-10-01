@@ -67,11 +67,25 @@ in [PRODUCT.md](../web/PRODUCT.md). `@pwnden/ui` owns the shared palette,
 body and monospace font stacks, focus treatment, spacing and component variants.
 `UIPanel` provides a labelled section with an optional actions slot; `UIStatus`
 renders a textual status. `UISwitch` wraps Sectile's native switch semantics with
-a rectangular track and square thumb. It exposes a controlled boolean value,
-stable accessible label and a pending state. Pending state remains operable;
+a softly rounded rectangular track and square thumb. The track's usable width
+is twice the thumb width, and the thumb travels by its own width. It exposes a
+controlled boolean value, stable accessible label, optional compact presentation
+and a thumb slot receiving checked and busy state. Pending state remains operable;
 callers use `disabled` when changes are unavailable. `UITerminalControls` uses it
-for terminal connection beside a visibly labeled environment-stop button.
+beside an icon-only environment-stop button. Connection, disconnection and
+preparation have distinct thumb icons; names and state remain available through
+accessible text and tooltips.
 Features supply actual state and connection behavior.
+
+Corner tokens distinguish controls (`--ui-radius-control`), content surfaces
+(`--ui-radius-surface`), inline elements (`--ui-radius-inline`) and adjoining
+workspace panels (`--ui-radius-flush`). `--ui-radius` remains a control alias.
+For nested contours, a container sets `--ui-radius-outer` and
+`--ui-radius-inset` (border plus padding). `.ui-radius-outer` uses the outer
+value; `.ui-radius-inner` computes `max(0px, outer - inset)` on the child,
+so locally overridden values remain effective. The switch uses this relation
+for its track and thumb. File lists derive their first and last inner corners
+from the containing surface while keeping intervening rows flush.
 
 The execution panel groups status and its refresh action in the panel header.
 Refresh queries the current server state. Service controls occupy the body only
