@@ -208,7 +208,7 @@ Control color, border and shadow transitions take (140ms). Reduced-motion prefer
 
 ## Shapes
 
-Controls have small, nearly square corners using `rounded.control`. Panels meet through straight borders. Status is plain text with semantic color. Section headings use a raised navy surface and a dividing stroke.
+Controls have small, nearly square corners using `rounded.control`. Panels meet through straight borders. General status is text with semantic color; terminal connection status uses a meaningful plug symbol with an accessible state label. Section headings use a raised navy surface and a dividing stroke.
 
 ## Components
 
@@ -238,15 +238,15 @@ Source: [ProblemList.vue](features/catalog/src/ProblemList.vue), [App.vue](apps/
 
 ### Status
 
-Inline text communicates muted, info, success or danger tone. Labels describe actual client, execution or terminal state. Alert text uses danger. Supporting status text uses (0.8rem).
+Inline text communicates muted, info, success or danger tone. Labels describe actual client or execution state. Alert text uses danger. Supporting status text uses (0.8rem). `UIConnectionStatus` uses an authored plug SVG to distinguish connected, connecting, disconnected and error states through shape and semantic color. Its accessible label and tooltip name the state. Connecting animates the current mark; reduced-motion preferences stop it.
 
-Source: [UIStatus.vue](packages/ui/src/UIStatus.vue).
+Source: [UIStatus.vue](packages/ui/src/UIStatus.vue), [UIConnectionStatus.vue](packages/ui/src/UIConnectionStatus.vue).
 
 ### Terminal
 
-`UITerminal` owns xterm and its fit addon inside the UI package. It maps shared tokens to the terminal theme, enables screen reader mode and resizes after fonts load or column changes. Its public resize event contains only `cols` and `rows`. The surrounding panel supplies connection controls and real connection status. A stopped service offers **문제 실행 후 터미널 연결**, delegating startup to the play feature through the app before opening a terminal. Failed preparation keeps the shell closed. Connection errors name the recovery action. The renderer is hidden until ready, then receives focus after Vue updates its input state. Plain text explains the closed state, and a footnote explains session cleanup.
+`UITerminal` owns xterm and its fit addon inside the UI package. It maps shared tokens to the terminal theme, enables screen reader mode and resizes after fonts load or column changes. Its public resize event contains only `cols` and `rows`. Selecting a problem prepares and connects its environment automatically. `UITerminalControls` keeps connection status, disconnect/reconnect or preparation cancellation, and environment stop together in the panel header. Below a pane width of (20rem), connection buttons retain accessible names and tooltips while their visible labels give way to icons. The status and controls stay together when the heading wraps. Disconnect retains the environment for the existing ten-minute inactivity window and waits for explicit reconnect; environment stop removes it. The renderer preserves output after shell exit. Failure and exit messages appear above the terminal; successful connection is conveyed in the header. The cleanup footnote stays below the viewport.
 
-Source: [UITerminal.vue](packages/ui/src/UITerminal.vue), [TerminalPanel.vue](features/terminal/src/TerminalPanel.vue).
+Source: [UITerminal.vue](packages/ui/src/UITerminal.vue), [UITerminalControls.vue](packages/ui/src/UITerminalControls.vue), [TerminalPanel.vue](features/terminal/src/TerminalPanel.vue).
 
 ### Markdown
 

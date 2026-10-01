@@ -18,6 +18,8 @@ Selecting a problem highlights its row and opens the associated workspace. Selec
 
 The brief describes the player's situation and starting actions. Materials open as escaped source in the reading pane; downloading is optional. Hints open individually in increasing specificity. The walkthrough is labeled as containing answers and loads only when opened. All documents stay within the workspace, with independent loading, error and retry states. Large or binary materials use the prepared terminal. Player steps use actual UI labels and the prepared environment.
 
+The terminal header groups a plug-shaped state indicator, disconnect/reconnect or preparation cancellation, and environment stop in one row. State is communicated by shape and semantic color with an accessible label. Disconnect retains the existing environment for its ten-minute inactivity window and waits for explicit reconnect. Successful connection is conveyed in the header; error and exit messages appear above the terminal. Narrow panes keep controls together using named icon buttons.
+
 ## Responsive behavior
 
 Catalog, description and terminal columns have two draggable and keyboard-accessible boundaries. Resizing preserves the terminal connection and refits its rows and columns. At 48rem the panes stack in reading order, with bounded catalog scrolling and full-width document scrolling. Korean prose keeps words together; control labels remain whole. The terminal viewport has a bounded independent layout so terminal row measurements cannot grow the page.

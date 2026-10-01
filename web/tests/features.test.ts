@@ -14,6 +14,7 @@ vi.mock('../packages/ui/src/index.ts', async () => {
   return {
     UIPanel: (await import('../packages/ui/src/UIPanel.vue')).default,
     UIStatus: (await import('../packages/ui/src/UIStatus.vue')).default,
+    UITerminalControls: (await import('../packages/ui/src/UITerminalControls.vue')).default,
     UISplit: defineComponent({ setup: (_, { attrs, slots }) => () => h('split', attrs, [slots.before?.(), slots.after?.()]) }),
     UIMarkdown: defineComponent({ props: ['source'], setup: props => () => h('markdown', props.source) }),
     UICode: defineComponent({ props: ['source'], setup: props => () => h('code', props.source) }),
@@ -37,7 +38,7 @@ it('automatically connects and releases pending and ready attachments on unmount
   renderer.render(h(TerminalPanel, { terminals, slug: 'test' }), root);
   await settle();
   expect(terminals.connect).toHaveBeenCalledOnce();
-  expect(text(root)).toContain('연결하는 중');
+  expect(text(root)).toContain('준비·연결 중');
   renderer.render(null, root);
   resolve(session); await settle();
   expect(close).toHaveBeenCalledOnce();
@@ -130,6 +131,76 @@ it('detaches on hidden pages and automatically reattaches when visible', async (
   renderer.render(null, root);
 });
 
+it('disconnects through the header without stopping the environment and waits for explicit reconnect', async () => {
+  const target = new EventTarget();
+  const document = { visibilityState: 'visible', addEventListener: target.addEventListener.bind(target), removeEventListener: target.removeEventListener.bind(target) };
+  vi.stubGlobal('document', document);
+  const close = vi.fn();
+  const session = { input: vi.fn(), resize: vi.fn(), close: vi.fn(), reused: true };
+  const terminals = { connect: vi.fn(() => ({ ready: Promise.resolve(session), close })), list: vi.fn(), stop: vi.fn(async () => {}) };
+  const root = node('root');
+  renderer.render(h(TerminalPanel, { terminals, slug: 'test' }), root);
+  await settle();
+  const header = flatten(root).find(item => item.type === 'header')!;
+  expect(text(header)).toContain('연결됨');
+  expect(text(header)).toContain('연결 해제');
+  await click(button(root, '연결 해제')); await settle();
+  expect(close).toHaveBeenCalledOnce();
+  expect(terminals.stop).not.toHaveBeenCalled();
+  expect(flatten(root).find(item => item.type === 'terminal')!.props.enabled).toBe(false);
+  document.visibilityState = 'hidden'; target.dispatchEvent(new Event('visibilitychange'));
+  document.visibilityState = 'visible'; target.dispatchEvent(new Event('visibilitychange')); await settle();
+  expect(terminals.connect).toHaveBeenCalledOnce();
+  await click(button(root, '터미널 다시 연결')); await settle();
+  expect(terminals.connect).toHaveBeenCalledTimes(2);
+  expect(text(root)).toContain('연결됨');
+  await click(button(root, '문제 환경 종료')); await settle();
+  expect(terminals.stop).toHaveBeenCalledWith('test');
+  document.visibilityState = 'hidden'; target.dispatchEvent(new Event('visibilitychange'));
+  document.visibilityState = 'visible'; target.dispatchEvent(new Event('visibilitychange')); await settle();
+  expect(terminals.connect).toHaveBeenCalledTimes(2);
+  renderer.render(null, root);
+});
+
+it('cancels pending preparation and releases a late ready session without changing the disconnected state', async () => {
+  const close = vi.fn();
+  const session = { input: vi.fn(), resize: vi.fn(), close: vi.fn() };
+  let resolve: (value: unknown) => void = () => {};
+  const terminals = { connect: vi.fn(() => ({ ready: new Promise<any>(done => { resolve = done; }), close })), list: vi.fn(), stop: vi.fn() };
+  const root = node('root');
+  renderer.render(h(TerminalPanel, { terminals, slug: 'test' }), root);
+  await settle();
+  await click(button(root, '연결 취소')); await settle();
+  expect(close).toHaveBeenCalledOnce();
+  resolve(session); await settle();
+  expect(session.close).toHaveBeenCalledOnce();
+  expect(text(root)).toContain('연결 해제됨');
+  expect(text(root)).not.toContain('연결됨');
+  expect(terminals.stop).not.toHaveBeenCalled();
+  renderer.render(null, root);
+});
+
+it('drops an old capacity list when a new connection is already ready', async () => {
+  let resolveList: (value: unknown) => void = () => {};
+  const session = { input: vi.fn(), resize: vi.fn(), close: vi.fn() };
+  const terminals = {
+    connect: vi.fn((_slug, _size, receive) => {
+      receive({ type: 'error', code: 'workspace_full' });
+      return { ready: Promise.reject(new Error('workspace_full')), close: vi.fn() };
+    }),
+    list: vi.fn(() => new Promise<any>(done => { resolveList = done; })), stop: vi.fn(),
+  };
+  const root = node('root');
+  renderer.render(h(TerminalPanel, { terminals, slug: 'test' }), root);
+  await settle();
+  terminals.connect.mockImplementationOnce(() => ({ ready: Promise.resolve(session), close: vi.fn() }));
+  await click(button(root, '터미널 다시 연결')); await settle();
+  resolveList([{ slug: 'old', title: '오래된 유지 환경', connected: false, expiresAt: null }]); await settle();
+  expect(text(root)).toContain('연결됨');
+  expect(text(root)).not.toContain('오래된 유지 환경');
+  renderer.render(null, root);
+});
+
 interface Node {
   type: string;
   text: string;
@@ -154,7 +225,7 @@ const renderer = createRenderer<Node, Node>({
 });
 const text = (item: Node): string => (item.type === 'comment' ? '' : item.text) + item.children.map(text).join('');
 const flatten = (item: Node): Node[] => [item, ...item.children.flatMap(flatten)];
-const button = (root: Node, label: string) => flatten(root).find(item => item.type === 'button' && text(item) === label)!;
+const button = (root: Node, label: string) => flatten(root).find(item => item.type === 'button' && (text(item) === label || item.props['aria-label'] === label))!;
 const click = (item: Node) => (item.props.onClick as () => unknown)();
 async function settle() { for (let i = 0; i < 8; i++) { await Promise.resolve(); await nextTick(); } }
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });

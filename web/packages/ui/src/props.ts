@@ -34,6 +34,15 @@ export interface UICodeProps {
   readonly label: string;
 }
 
+export interface UIConnectionStatusProps {
+  readonly state: 'connected' | 'connecting' | 'disconnected' | 'error';
+}
+
+export interface UITerminalControlsProps extends UIConnectionStatusProps {
+  readonly disabled?: boolean;
+  readonly busy?: boolean;
+}
+
 export interface UIStatusProps {
   readonly tone?: 'muted' | 'info' | 'success' | 'danger';
 }

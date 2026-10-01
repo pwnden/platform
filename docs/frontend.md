@@ -64,9 +64,12 @@ documents in the committed lockfile; use the pinned pnpm to consume it.
 The player fills the browser viewport with a blue-black terminal workspace.
 The design contract lives in [DESIGN.md](../web/DESIGN.md), with product context
 in [PRODUCT.md](../web/PRODUCT.md). `@pwnden/ui` owns the shared palette,
-monospace typography, focus treatment, spacing and component variants.
+body and monospace font stacks, focus treatment, spacing and component variants.
 `UIPanel` provides a labelled section with an optional actions slot; `UIStatus`
-renders a textual status with a decorative dot. Features supply actual state.
+renders a textual status. `UIConnectionStatus` conveys terminal state through a
+plug symbol, semantic color and an accessible label. `UITerminalControls` keeps
+that state beside disconnect/reconnect, preparation cancellation and environment
+stop in the panel header. Features supply actual state and connection behavior.
 
 The wide layout places the problem list, reading/execution controls and terminal
 in adjacent columns. At 76rem the terminal follows the reading column; at 48rem

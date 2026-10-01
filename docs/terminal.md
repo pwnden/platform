@@ -7,6 +7,19 @@ jobs remain available. A hidden tab, problem switch, refresh or lost connection
 detaches the browser. Returning cancels expiry; leaving starts another ten minutes.
 Visible attachments stay active even without keyboard input.
 
+The header groups a visual plug indicator with connection and environment-stop
+controls. Shape and color distinguish connected, preparing, disconnected and
+failed states; screen readers receive the corresponding state label. Preparing
+animates the wire indicator unless reduced motion is requested. Controls stay
+together in one row; narrow panes use labeled icon buttons with tooltips.
+
+**연결 해제** detaches the browser and starts the existing inactivity timer without
+stopping its shell or services. A manually disconnected terminal stays detached
+across tab visibility changes until **터미널 다시 연결** is selected. **연결 취소**
+cancels a pending attachment. **문제 환경 종료** stops the shell and services and
+waits for an explicit reconnect. Successful connection is indicated in the
+header; body messages report failures and shell exit.
+
 Up to ten problem environments are retained per server. Each environment includes
 its service containers and one toolbox; the limit counts problems, not containers.
 At capacity, existing work remains intact. The terminal shows the retained

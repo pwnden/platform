@@ -8,6 +8,7 @@ import UIStatus from '../packages/ui/src/UIStatus.vue';
 import UIReveal from '../packages/ui/src/UIReveal.vue';
 import UICode from '../packages/ui/src/UICode.vue';
 import { terminalDocument } from '../packages/ui/src/terminal-document';
+import UITerminalControls from '../packages/ui/src/UITerminalControls.vue';
 
 it('renders labeled native category choices and a plain status without decorative markers', async () => {
   const html = await renderToString(createSSRApp({ render: () => h(UISelect, { id: 'category', label: '분야', modelValue: 'web', options: [{ value: '', label: '전체 분야' }, { value: 'web', label: '웹' }] }) }));
@@ -29,6 +30,23 @@ it('omits hidden spoilers and renders material source as escaped selectable code
   expect(source).toContain('&lt;script&gt;run()&lt;/script&gt;');
   expect(source).not.toContain('<script>');
   expect(source).toContain('tabindex="0"');
+});
+
+it('groups the accessible visual connection state and connection controls together in every state', async () => {
+  for (const [state, label, action] of [
+    ['connected', '연결됨', '연결 해제'], ['connecting', '준비·연결 중', '연결 취소'],
+    ['disconnected', '연결 해제됨', '터미널 다시 연결'], ['error', '연결 오류', '터미널 다시 연결'],
+  ] as const) {
+    const html = await renderToString(createSSRApp({ render: () => h(UITerminalControls, { state }) }));
+    expect(html).toContain('role="group" aria-label="터미널 연결 제어"');
+    expect(html).toContain(`ui-connection-status--${state}`);
+    expect(html).toContain(`role="status" title="${label}"`);
+    expect(html).toContain(`aria-label="${action}"`);
+    expect(html).toContain('aria-label="문제 환경 종료"');
+    expect(html).toContain('aria-hidden="true" focusable="false"');
+  }
+  const disabled = await renderToString(createSSRApp({ render: () => h(UITerminalControls, { state: 'disconnected', busy: true }) }));
+  expect(disabled.match(/ disabled/g)).toHaveLength(2);
 });
 
 it('uses a native non-submit button and disables it while busy', async () => {

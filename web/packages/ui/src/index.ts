@@ -8,4 +8,6 @@ export { default as UIMarkdown } from './UIMarkdown.vue';
 export { default as UISplit } from './UISplit.vue';
 export { default as UIReveal } from './UIReveal.vue';
 export { default as UICode } from './UICode.vue';
-export type { UIButtonProps, UITextFieldProps, UISelectProps, UITerminalProps, UITerminalHandle, UIPanelProps, UIStatusProps, UIMarkdownProps, UISplitProps, UIRevealProps, UICodeProps } from './props';
+export { default as UIConnectionStatus } from './UIConnectionStatus.vue';
+export { default as UITerminalControls } from './UITerminalControls.vue';
+export type { UIButtonProps, UITextFieldProps, UISelectProps, UITerminalProps, UITerminalHandle, UIPanelProps, UIStatusProps, UIMarkdownProps, UISplitProps, UIRevealProps, UICodeProps, UIConnectionStatusProps, UITerminalControlsProps } from './props';
