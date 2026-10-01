@@ -110,13 +110,21 @@ full-title tooltip; the category appears in a right-aligned `UIBadge`, with a
 screen-reader category prefix. The body scrolls independently below it.
 
 The execution panel groups status and an icon-only refresh action in the header.
-Refresh queries the current server state. Service entry points and the current
-start or stop action share one wrapping row. `UILink` preserves native navigation
+Refresh queries the current server state. The panel observes service entry
+points and environment state; the terminal header owns connection and
+environment termination. Connecting prepares the environment automatically.
+Service entry points share one wrapping row. `UILink` preserves native navigation
 and shares button heights, padding, corners and interaction states. New-tab links
 show an external-link icon and expose their behavior in the accessible name.
 The flag field and confirmation form are a separate group below a divider.
 File problems proceed directly to submission. Both form controls share the
 default height; narrow containers stack them at full width.
+Refresh retains the existing body, entry links, flag input and submission result
+while the header icon rotates inside its fixed box. The flag field remains
+editable; submitting and duplicate refresh requests wait for the observation.
+Reduced-motion preferences keep the refresh icon static. Failed observation
+clears stale endpoints and exposes recovery; a confirmed state change updates
+the displayed content.
 
 Shared interaction styles live in `packages/ui/src/theme.css`. Buttons, fields,
 links, disclosures, code scroll regions and split handles share focus tokens and
@@ -215,10 +223,12 @@ including detail, declared file downloads and observed run status. Descriptions
 are rendered as Markdown through the UI-owned AST renderer. Download
 ports return plain `Uint8Array`; the catalog feature creates the browser Blob URL
 and revokes it after initiating the download. The bearer token stays in the fetch
-header. Play loads status on selection, refreshes it after mutations and provides
-a manual refresh. Failed observation clears stale endpoints; an unavailable
-recorded service offers stop for cleanup. Service stop also remains available
-after failed observation; unknown state permits no new start or submission.
+header. Play loads status on selection, refreshes it after submission and terminal
+lifecycle events, and provides
+a manual refresh. Failed observation clears stale endpoints; unavailable
+resources direct the player to the terminal header's environment termination
+and reconnect controls. Those controls remain available after failed
+observation; unknown state disables submission.
 The API client uses a fixed same-origin
 `/api/v1` base, keeps the fragment token in memory and uses a bearer header. It follows the server's
 snake_case DTOs and tolerates extra response fields. Flags are checked on Go;

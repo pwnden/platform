@@ -11,13 +11,12 @@ import { UIBadge, UISplit, UIStatus } from '@pwnden/ui';
 defineProps<{ client?: APIClient | undefined; sessionRejected?: boolean }>();
 const selected = ref<Problem>();
 const busy = ref(false);
-const terminalPaused = ref(false);
 const play = ref<PlayPanelHandle>();
 const catalogWidth = ref(20);
 const briefingWidth = ref(50);
 function select(problem: Problem) {
   if (!busy.value && selected.value?.slug !== problem.slug) {
-    terminalPaused.value = false; selected.value = problem;
+    selected.value = problem;
   }
 }
 </script>
@@ -44,12 +43,12 @@ function select(problem: Problem) {
             <div class="briefing-scroll" tabindex="0" role="region" aria-labelledby="problem-heading">
               <ProblemDetail :catalog="client.catalog" :slug="selected.slug">
                 <template #play>
-                  <PlayPanel ref="play" :player="client.player" :slug="selected.slug" :kind="selected.kind" @busy="busy = $event" @stopped="terminalPaused = true" @started="terminalPaused = false" />
+                  <PlayPanel ref="play" :player="client.player" :slug="selected.slug" :kind="selected.kind" @busy="busy = $event" />
                 </template>
               </ProblemDetail>
             </div>
           </div></template>
-          <template #after><TerminalPanel class="terminal-pane" :terminals="client.terminals" :slug="selected.slug" :paused="terminalPaused" @ready="play?.refresh()" @stopped="play?.refresh()" /></template>
+          <template #after><TerminalPanel class="terminal-pane" :terminals="client.terminals" :slug="selected.slug" @ready="play?.refresh()" @stopped="play?.refresh()" /></template>
         </UISplit>
         <div v-else class="workspace-empty">
         <div class="empty-content">

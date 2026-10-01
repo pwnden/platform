@@ -208,11 +208,17 @@ full-title tooltip. `--ui-workspace-header-size` derives the minimum height from
 the compact control, two equal workspace insets and a divider. Category badges
 use the control radius and equal padding, with accessible category context.
 
-The execution section groups service entry points and its available start or stop
-action. Entry links use the shared control recipe through `UILink`. New-tab
-navigation has an external-link icon and accessible description. A divider
+The execution section shows service entry points and the flag form. Connecting
+the terminal prepares the environment; its header owns connection and immediate
+environment termination. Entry links use the shared control recipe through
+`UILink`. New-tab navigation has an external-link icon and accessible description. A divider
 separates the flag form; its field and submit button share the default height.
 Status and an icon-only refresh action remain together in the section header.
+Status refresh retains the body, entry links, editable flag input and submission
+result throughout observation. Progress appears in the existing header icon box
+and respects reduced-motion preferences. A completed state change or observation
+failure updates the content; unknown state disables submission and removes stale
+entry points.
 
 **The Equal Inset Rule.** Top, right, bottom and left padding use one value. Control padding derives from border-box height, content line height and border thickness. Sibling rhythm uses gap. Responsive layouts replace the entire inset. `pnpm check:spacing` validates owned CSS and Vue style declarations through the existing CSS parser and runs as part of `pnpm verify`.
 
