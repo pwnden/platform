@@ -134,10 +134,20 @@ def interrupted(_signum, _frame):
     raise KeyboardInterrupt
 
 
-def terminal(driver, origin, token, work, slug, mode):
+def installed_catalog(work):
     catalogs = list((work / "config" / "pwnden" / "catalogs").glob("*/catalog"))
     assert len(catalogs) == 1
-    settings = {"origin": origin, "token": token, "root": str(catalogs[0]), "slug": slug, "mode": mode}
+    return catalogs[0]
+
+
+def check_catalog(work, problems):
+    expected = {manifest.parent.name for manifest in installed_catalog(work).glob("challenges/*/challenge.toml")}
+    actual = [problem["slug"] for problem in problems]
+    assert expected and set(actual) == expected and len(actual) == len(expected), "HTTP catalog differs from installed problems"
+
+
+def terminal(driver, origin, token, work, slug, mode):
+    settings = {"origin": origin, "token": token, "root": str(installed_catalog(work)), "slug": slug, "mode": mode}
     result = subprocess.run([str(driver)], input=json.dumps(settings), capture_output=True, text=True, timeout=120)
     if result.returncode:
         raise RuntimeError(result.stderr)
@@ -177,7 +187,7 @@ def main():
             assert blocked.returncode != 0 and not blocked.stdout, "CLI bypassed installation ownership"
         check_assets(origin, token)
         problems = api(origin, token, "GET", "/problems")["problems"]
-        assert {p["slug"] for p in problems} == {"note-vault", "rotor-lock"}
+        check_catalog(work, problems)
         assert api(origin, "incorrect", "GET", "/problems", expected=401)["error"]["code"] == "unauthorized"
         detail = api(origin, token, "GET", "/problems/rotor-lock")
         assert detail["description"] and len(detail["files"]) == 1

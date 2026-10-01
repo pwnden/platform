@@ -49,6 +49,9 @@ jobs:
       - name: Test checkout bootstrap boundaries
         working-directory: platform
         run: python3 -B tools/test_bootstrap.py
+      - name: Test catalog smoke coverage
+        working-directory: platform
+        run: python3 -B tools/test_smoke_http.py
       - name: Verify catalog selection without host development tools
         working-directory: platform
         run: python3 -B tools/smoke_catalog.py
