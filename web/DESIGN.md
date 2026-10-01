@@ -6,6 +6,7 @@ colors:
   surface: "#080e18"
   surface-raised: "#0d1725"
   surface-hover: "#122239"
+  surface-pressed: "#19324b"
   foreground: "#d2dfef"
   muted: "#8a9db6"
   border: "#1b2d43"
@@ -204,9 +205,9 @@ Source: [App.vue](apps/player/src/App.vue), [UIPanel.vue](packages/ui/src/UIPane
 
 ## Elevation & Depth
 
-Depth comes from tonal surfaces and dividing strokes. The shared blue glow supports primary button hover, selected rows and focused fields. Its exact value is recorded in the sidecar. Keyboard focus uses a (2px) accent outline with a (3px) offset; inputs bring that outline to their edge.
+Depth comes from tonal surfaces and dividing strokes. The shared blue glow supports primary button hover. Keyboard focus uses the shared (2px) accent outline inside the control boundary so scroll containers retain the indicator. Inline links and disclosure labels use an external (2px) offset. Disclosure focus follows its label and chevron. Pointer focus follows the browser's `:focus-visible` semantics; editable fields also show an accent border while focused.
 
-Control color, border and shadow transitions take (140ms). Reduced-motion preferences remove CSS transitions and animations. The xterm renderer enables its blinking cursor when connected.
+Control color, border and shadow transitions take (140ms) with ease-out timing. Enabled hover uses the hover surface and active stroke on devices that support hover. Pressing a control uses the pressed surface and accent border; selected rows keep their accent fill after release. Expanded disclosures use the accent label and rotated chevron. Disabled controls retain their resting appearance at reduced opacity. Forced-color mode uses the system Highlight for focus and selection borders. Reduced-motion preferences remove CSS transitions and animations. The xterm renderer enables its blinking cursor when connected. These states belong to the shared UI package.
 
 ## Shapes
 
@@ -216,13 +217,13 @@ Controls have small, nearly square corners using `rounded.control`. Panels meet 
 
 ### Buttons
 
-The shared button has a minimum height of (2.75rem), a thin border and line height of (1.4). Primary, secondary, ghost, danger and row variants use the assignments in the frontmatter. Enabled hover moves to the hover surface and active stroke; primary hover adds the glow. Compact buttons use a minimum height of (2.5rem), horizontal padding of (0.65rem) and label size of (0.85rem). Disabled or busy buttons are disabled, muted and rendered at (0.5) opacity; busy controls expose `aria-busy`.
+The shared button has a minimum height of (2.75rem), a thin border and line height of (1.4). Primary, secondary, ghost, danger and row variants use the assignments in the frontmatter. Hover, pressing, selection and keyboard focus follow Elevation & Depth. Compact buttons use a minimum height of (2.5rem), horizontal padding of (0.65rem) and label size of (0.85rem). Disabled or busy buttons are disabled, muted and rendered at (0.5) opacity; busy controls expose `aria-busy`.
 
 Source: [UIButton.vue](packages/ui/src/UIButton.vue), [theme.css](packages/ui/src/theme.css).
 
 ### Inputs / Fields
 
-An associated label precedes a full-width field. The resting field uses the active blue stroke, a dark canvas and an accent caret. Focus adds the outline and shared glow; placeholder text is muted. Disabled fields use (0.5) opacity. `UITextField` wraps Sectile through the public UI package. `UISelect` supplies labeled, controlled native category choices.
+An associated label precedes a full-width field. The resting field uses the active blue stroke, a dark canvas and an accent caret. Hover and focus accent the border; keyboard focus adds the shared inset outline. Placeholder text is muted. Invalid fields use the danger border. Disabled fields use (0.5) opacity. `UITextField` wraps Sectile through the public UI package. `UISelect` supplies labeled, controlled native category choices.
 
 Source: [UITextField.vue](packages/ui/src/UITextField.vue).
 
@@ -234,7 +235,7 @@ Source: [UIPanel.vue](packages/ui/src/UIPanel.vue).
 
 ### Navigation
 
-Problem rows are compact full-width title buttons, grouped under readable Korean category headings. Search matches all words across titles, identifiers and categories; a category filter narrows results. Pages contain at most (20) rows, with the result range and previous/next controls below. `aria-pressed` identifies the current selection; its accent fill, stroke and glow provide the visual state. Search and pagination preserve the current problem and terminal session. The responsive sidebar behavior follows Layout.
+Problem rows are compact full-width title buttons, grouped under readable Korean category headings. Search matches all words across titles, identifiers and categories; a category filter narrows results. Pages contain at most (20) rows, with the result range and previous/next controls below. `aria-pressed` identifies the current selection through accent fill and stroke. Keyboard focus remains a separate indicator. Search and pagination preserve the current problem and terminal session. The responsive sidebar behavior follows Layout.
 
 Source: [ProblemList.vue](features/catalog/src/ProblemList.vue), [App.vue](apps/player/src/App.vue).
 

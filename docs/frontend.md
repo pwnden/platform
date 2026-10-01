@@ -71,6 +71,13 @@ plug symbol, semantic color and an accessible label. `UITerminalControls` keeps
 that state beside disconnect/reconnect, preparation cancellation and environment
 stop in the panel header. Features supply actual state and connection behavior.
 
+Shared interaction styles live in `packages/ui/src/theme.css`. Buttons, fields,
+links, disclosures, code scroll regions and split handles share focus tokens and
+140ms state transitions. Keyboard focus stays inside bounded controls; disclosure
+focus outlines the label and chevron. Hover is gated by the device's hover
+capability. Pressed, selected, expanded, disabled and invalid states have their
+own semantic styles. Reduced-motion and forced-color preferences are supported.
+
 The wide layout places the problem list, reading/execution controls and terminal
 in adjacent columns. At 76rem the terminal follows the reading column; at 48rem
 the list moves above the content and the full-width document scrolls vertically.

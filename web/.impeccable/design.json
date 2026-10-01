@@ -4,10 +4,10 @@
   "title": "Design System: pwnden",
   "extensions": {
     "shadows": [
-      { "name": "ui-glow", "value": "0 0 18px #54b5ff1c", "purpose": "Primary hover, selected rows and field focus." }
+      { "name": "ui-glow", "value": "0 0 18px #54b5ff1c", "purpose": "Primary action hover." }
     ],
     "motion": [
-      { "name": "control-state", "value": "background-color 140ms, border-color 140ms, box-shadow 140ms", "purpose": "Enabled button state feedback; transitions stop for reduced-motion preferences." }
+      { "name": "control-state", "value": "color 140ms ease-out, background-color 140ms ease-out, border-color 140ms ease-out, box-shadow 140ms ease-out", "purpose": "Shared control state feedback; transitions stop for reduced-motion preferences." }
     ],
     "breakpoints": [
       { "name": "catalog-above-content", "value": "48rem" },

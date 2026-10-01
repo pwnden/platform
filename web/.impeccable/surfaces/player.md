@@ -14,7 +14,7 @@ A compact header and footer frame a full-width workspace. A persistent problem s
 
 ## Interaction
 
-Selecting a problem highlights its row and opens the associated workspace. Selecting the current problem keeps its terminal session. Focus and primary actions use the blue accent. The empty prompt softly pulses; reduced-motion preferences stop its animation.
+Selecting a problem highlights its row and opens the associated workspace. Selecting the current problem keeps its terminal session. Keyboard focus uses an inset accent outline on bounded controls and a compact outline around disclosure labels. Hover, pressing, selection and expanded state have distinct shared styles. Pointer focus follows native focus-visible semantics. Reduced-motion and forced-color preferences are supported. The empty prompt softly pulses; reduced-motion preferences stop its animation.
 
 The brief describes the player's situation and starting actions. Materials open as escaped source with Shiki syntax colors in the reading pane; downloading is optional. Markdown code fences use the same code renderer. Hints open individually in increasing specificity. The walkthrough is labeled as containing answers and loads only when opened. All documents stay within the workspace, with independent loading, error and retry states. Large or binary materials use the prepared terminal. Player steps use actual UI labels and the prepared environment.
 
