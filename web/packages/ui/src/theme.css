@@ -118,7 +118,7 @@ a:active { color: var(--ui-accent); background: var(--ui-accent-surface); }
 .ui-button--primary { color: var(--ui-accent); background: var(--ui-accent-surface); border-color: var(--ui-border-active); }
 .ui-button--ghost { background: transparent; color: var(--ui-muted); border-color: transparent; }
 .ui-button--danger { color: var(--ui-danger); }
-.ui-button--compact { min-height: var(--ui-control-size-compact); padding-inline: 0.65rem; font-size: 0.85rem; }
+.ui-button--compact { height: var(--ui-control-size-compact); min-height: var(--ui-control-size-compact); padding-inline: 0.65rem; font-size: 0.85rem; }
 .ui-button--row { width: 100%; justify-content: flex-start; text-align: left; background: transparent; border-color: transparent; }
 .ui-button--row[aria-pressed='true'] { color: var(--ui-accent); background: var(--ui-accent-surface); border-color: var(--ui-border-active); }
 @media (hover: hover) { .ui-button--row[aria-pressed='true']:hover:enabled { background: var(--ui-surface-pressed); } }

@@ -77,6 +77,10 @@ preparation have distinct thumb icons; names and state remain available through
 accessible text and tooltips.
 Features supply actual state and connection behavior.
 
+`--ui-control-size-compact` fixes the visible border-box height of compact
+buttons and switch tracks. Switch padding derives from this shared height and
+the square thumb size, retaining two thumb widths of usable track space.
+
 Corner tokens distinguish controls (`--ui-radius-control`), content surfaces
 (`--ui-radius-surface`), inline elements (`--ui-radius-inline`) and adjoining
 workspace panels (`--ui-radius-flush`). `--ui-radius` remains a control alias.

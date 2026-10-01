@@ -26,7 +26,7 @@ const labels = { connected: '연결됨', connecting: '준비·연결 중', disco
 
 <style scoped>
 .ui-terminal-controls { display: flex; flex: 0 1 auto; min-width: 0; max-width: 100%; align-items: center; flex-wrap: wrap; gap: var(--ui-space-1); }
-.ui-terminal-controls :deep(.ui-button) { width: var(--ui-control-size-compact); height: var(--ui-control-size-compact); padding: 0; }
+.ui-terminal-controls :deep(.ui-button) { width: var(--ui-control-size-compact); padding: 0; }
 .ui-terminal-controls svg { flex: none; width: 1.125rem; height: 1.125rem; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
 .ui-terminal-controls :deep(.ui-switch-thumb) svg { width: 1rem; height: 1rem; }
 .ui-terminal-progress { animation: terminal-progress 1s linear infinite; }
