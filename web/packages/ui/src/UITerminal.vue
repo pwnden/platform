@@ -44,7 +44,7 @@ onMounted(() => {
   terminal.open(container.value);
   terminal.onData(data => { if (props.enabled) emit('input', new TextEncoder().encode(data)); });
   terminal.onBinary(data => { if (props.enabled) emit('input', Uint8Array.from(data, char => char.charCodeAt(0))); });
-  terminal.onResize(size => emit('resize', size));
+  terminal.onResize(({ cols, rows }) => emit('resize', { cols, rows }));
   const resize = () => {
     if (!alive || !container.value?.clientWidth) return;
     const size = fit.proposeDimensions();

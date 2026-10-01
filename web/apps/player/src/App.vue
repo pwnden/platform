@@ -8,7 +8,7 @@ import type { PlayPanelHandle } from '@pwnden/play-feature';
 import { TerminalPanel } from '@pwnden/terminal-feature';
 import { UISplit, UIStatus } from '@pwnden/ui';
 
-defineProps<{ client?: APIClient | undefined }>();
+defineProps<{ client?: APIClient | undefined; sessionRejected?: boolean }>();
 const selected = ref<Problem>();
 const busy = ref(false);
 const terminalEnabled = ref(false);
@@ -32,8 +32,8 @@ function select(problem: Problem) {
       <UIStatus :tone="client ? 'info' : 'danger'">{{ client ? '로컬 세션' : '세션 없음' }}</UIStatus>
     </header>
     <div v-if="!client" class="session-error">
-      <h2>세션에 연결할 수 없습니다.</h2>
-      <p role="alert">실행 중인 pwnden 서버가 출력한 주소로 다시 접속하세요.</p>
+      <h2>{{ sessionRejected ? '서버 연결 정보를 확인해 주세요.' : '서버에 연결해 주세요.' }}</h2>
+      <p role="alert">실행 중인 pwnden 서버가 출력한 전체 주소로 접속하세요.</p>
     </div>
     <UISplit v-else v-model="catalogWidth" class="workspace" label="문제 목록 너비" :min="14" :max="36">
       <template #before><aside class="catalog"><ProblemList :catalog="client.catalog" :selected-slug="selected?.slug" :selection-disabled="busy" @select="select" /></aside></template>

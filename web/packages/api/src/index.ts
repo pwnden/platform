@@ -19,6 +19,7 @@ export interface APIClient {
 
 export interface APIOptions {
   readonly token: string;
+  readonly onUnauthorized?: () => void;
   readonly fetch?: typeof globalThis.fetch;
   readonly socket?: (url: string, protocol: string) => TerminalTransport;
 }
@@ -96,6 +97,7 @@ export function createAPI(options: APIOptions): APIClient {
       throw new APIError('network_error', 0);
     }
     if (!response.ok) {
+      if (response.status === 401) options.onUnauthorized?.();
       let payload: Record<string, unknown>;
       try { payload = object(await response.json()); }
       catch { throw new APIError('invalid_response', response.status); }
@@ -118,7 +120,10 @@ export function createAPI(options: APIOptions): APIClient {
     terminals: {
       connect(slug, size, receive) {
         const path = `/api/v1${route(slug)}/terminal`;
-        return connectTerminal(path, options.token, size, receive,
+        return connectTerminal(path, options.token, size, event => {
+          if (event.type === 'error' && event.code === 'unauthorized') options.onUnauthorized?.();
+          receive(event);
+        },
           options.socket ?? ((url, protocol) => new WebSocket(url, protocol)), globalThis.location.origin);
       },
     },

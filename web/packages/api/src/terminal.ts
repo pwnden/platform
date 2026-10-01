@@ -52,7 +52,7 @@ export function connectTerminal(
   socket.onopen = () => {
     if (!active) { socket.close(); return; }
     if (socket.url !== url.href) { terminate('invalid_origin'); return; }
-    try { socket.send(JSON.stringify({ type: 'authenticate', token, ...size })); }
+    try { socket.send(JSON.stringify({ type: 'authenticate', token, cols: size.cols, rows: size.rows })); }
     catch { terminate('network_error'); }
   };
   socket.onerror = () => terminate('network_error');
@@ -79,7 +79,7 @@ export function connectTerminal(
           },
           resize(next) {
             if (!validSize(next)) { terminate('invalid_argument'); return; }
-            send(JSON.stringify({ type: 'resize', ...next }));
+            send(JSON.stringify({ type: 'resize', cols: next.cols, rows: next.rows }));
           },
           close: () => terminate(),
         });

@@ -121,9 +121,20 @@ func (h *handler) terminal(w http.ResponseWriter, r *http.Request, slug string) 
 	auth, done := context.WithTimeout(ctx, 5*time.Second)
 	typ, data, err := conn.Read(auth)
 	done()
+	if err != nil {
+		if errors.Is(auth.Err(), context.DeadlineExceeded) {
+			fail("deadline_exceeded")
+		} else {
+			fail("network_error")
+		}
+		return
+	}
 	message, decodeErr := decodeTerminal(data)
-	if err != nil || typ != websocket.MessageText || decodeErr != nil || message.Type != "authenticate" ||
-		subtle.ConstantTimeCompare([]byte(message.Token), []byte(h.token)) != 1 {
+	if typ != websocket.MessageText || decodeErr != nil || message.Type != "authenticate" {
+		fail("invalid_request")
+		return
+	}
+	if subtle.ConstantTimeCompare([]byte(message.Token), []byte(h.token)) != 1 {
 		fail("unauthorized")
 		return
 	}

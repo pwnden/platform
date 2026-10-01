@@ -111,7 +111,7 @@ def check_assets(origin, token):
         assert content and token not in content
         if path.endswith(".js"):
             assert "history.replaceState" in content and "/api/v1" in content
-            assert "localStorage" not in content and "sessionStorage" not in content
+            assert "localStorage" not in content and "sessionStorage" in content
 
 
 def download(origin, token, slug, file):

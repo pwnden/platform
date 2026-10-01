@@ -50,7 +50,9 @@ async function connect() {
         const reasons: Record<string, string> = {
           terminal_busy: '다른 탭의 터미널 연결을 종료한 뒤 다시 연결하세요.',
           not_running: '문제가 실행 중이지 않습니다. 실행 상태를 새로고침하고 문제를 실행하세요.',
-          unauthorized: '세션이 만료되었습니다. 서버가 출력한 전체 주소로 다시 접속하세요.',
+          unauthorized: '서버 연결 정보를 확인할 수 없습니다. 서버가 출력한 전체 주소로 다시 접속하세요.',
+          invalid_request: '터미널 연결 메시지를 처리하지 못했습니다. 페이지를 새로고침한 뒤 다시 연결하세요.',
+          deadline_exceeded: '터미널 연결 시간이 끝났습니다. 다시 연결하세요.',
           network_error: '서버 연결이 끊겼습니다. 서버가 실행 중인지 확인하고 다시 연결하세요.',
           output_backpressure: '터미널 출력 응답이 지연되어 연결이 종료되었습니다. 다시 연결하세요.',
           execution_failed: '풀이 컨테이너를 시작하지 못했습니다. Docker 상태를 확인하고 다시 연결하세요.',

@@ -55,6 +55,9 @@ func terminalServer(t *testing.T, b fakeBackend) (*handler, *httptest.Server) {
 	return h, server
 }
 func dialTerminal(t *testing.T, server *httptest.Server, token string) *websocket.Conn {
+	return dialTerminalControl(t, server, map[string]any{"type": "authenticate", "token": token, "cols": 80, "rows": 24})
+}
+func dialTerminalControl(t *testing.T, server *httptest.Server, control any) *websocket.Conn {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -65,7 +68,7 @@ func dialTerminal(t *testing.T, server *httptest.Server, token string) *websocke
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { conn.CloseNow() })
-	writeTerminal(t, conn, map[string]any{"type": "authenticate", "token": token, "cols": 80, "rows": 24})
+	writeTerminal(t, conn, control)
 	return conn
 }
 func writeTerminal(t *testing.T, conn *websocket.Conn, value any) {
@@ -95,6 +98,11 @@ func TestTerminalAuthenticationAndAdmission(t *testing.T) {
 		return newFakeTerminal(), nil
 	}}
 	h, server := terminalServer(t, b)
+	malformed := dialTerminalControl(t, server, map[string]any{"type": "authenticate", "token": testToken, "cols": 80, "rows": 24, "colsChanged": true, "rowsChanged": true})
+	_, malformedData := readTerminal(t, malformed)
+	if string(malformedData) != `{"code":"invalid_request","type":"error"}` || calls.Load() != 0 {
+		t.Fatalf("malformed dimensions misreported as rejected credentials: %s", malformedData)
+	}
 	conn := dialTerminal(t, server, "wrong")
 	_, data := readTerminal(t, conn)
 	if string(data) != `{"code":"unauthorized","type":"error"}` || calls.Load() != 0 {

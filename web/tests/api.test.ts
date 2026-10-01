@@ -4,6 +4,17 @@ import { APIError, createAPI } from '../packages/api/src/index';
 const token = 'a'.repeat(64);
 const response = (payload: unknown, status = 200) => new Response(JSON.stringify(payload), { status, headers: { 'Content-Type': 'application/json' } });
 
+it('invalidates a rejected credential even for malformed 401 bodies and retains it on network failures', async () => {
+  const onUnauthorized = vi.fn();
+  const client = createAPI({ token, onUnauthorized, fetch: vi.fn().mockResolvedValueOnce(new Response('unauthorized', { status: 401 }))
+    .mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(response({ error: { code: 'not_found' } }, 404)) });
+  await expect(client.catalog.list()).rejects.toMatchObject({ status: 401 });
+  expect(onUnauthorized).toHaveBeenCalledOnce();
+  await expect(client.catalog.list()).rejects.toMatchObject({ code: 'network_error' });
+  await expect(client.catalog.list()).rejects.toMatchObject({ code: 'not_found' });
+  expect(onUnauthorized).toHaveBeenCalledOnce();
+});
+
 it('requests only explicit guidance IDs and cancels oversized preview streams', async () => {
   const request = vi.fn(async (_input: RequestInfo | URL, _options?: RequestInit) => response({ id: 'hint-1', content: 'One clue', path: 'private' }));
   const client = createAPI({ token, fetch: request });
