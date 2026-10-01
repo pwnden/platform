@@ -1,6 +1,7 @@
 """Check bootstrap activation and path boundaries without a Docker daemon."""
 
 import json
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import os
 from pathlib import Path
 import shutil
@@ -8,6 +9,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
 
@@ -50,6 +52,8 @@ elif args[:2] == ["compose", "version"]:
 elif args[:2] == ["buildx", "version"]:
     print("fixture")
 elif args[:2] == ["buildx", "build"]:
+    if "--load" in args:
+        sys.exit(0)
     if os.environ.get("BOOTSTRAP_TEST_BLOCK") and args[args.index("--target") + 1] == os.environ.get("BOOTSTRAP_TEST_BLOCK_TARGET", "entry"):
         pathlib.Path(os.environ["BOOTSTRAP_TEST_CHILD_PID"]).write_text(str(os.getpid()))
         time.sleep(60)
@@ -64,6 +68,10 @@ elif args[:2] == ["buildx", "build"]:
     binary = output / "pwnden"
     binary.write_text('#!/bin/sh\\nif [ "$1" = setup ]; then exit "${BOOTSTRAP_TEST_SETUP_CODE:-0}"; fi\\nif [ "$1" = stdin ]; then IFS= read -r line; printf "%s\\\\n" "$line"; exit; fi\\nprintf "%s\\\\n" "$@"\\n')
     binary.chmod(0o755)
+elif args[:1] in (["run"], ["rm"]):
+    pass
+elif args[:1] == ["port"]:
+    print("127.0.0.1:" + os.environ["BOOTSTRAP_TEST_VITE_PORT"])
 else:
     sys.exit(125)
 ''')
@@ -166,6 +174,29 @@ else:
                     pass
 
     def test_development_uses_local_checkout_and_separate_reference(self):
+        web = self.root / "web"
+        web.mkdir()
+        (web / "package.json").write_text('{}\n')
+
+        class ViteFixture(BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.send_response(200 if self.path == '/@vite/client' else 404)
+                self.end_headers()
+
+            def log_message(self, *_args):
+                pass
+
+        server = ThreadingHTTPServer(('127.0.0.1', 0), ViteFixture)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+
+        def cleanup():
+            server.shutdown()
+            thread.join(timeout=2)
+            server.server_close()
+
+        self.addCleanup(cleanup)
+        self.environment['BOOTSTRAP_TEST_VITE_PORT'] = str(server.server_port)
         challenges = self.root.parent / "challenges"
         challenges.mkdir()
         (challenges / "contract.toml").write_text("version=1\n")
