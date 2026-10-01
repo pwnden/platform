@@ -56,6 +56,13 @@ func TestTerminalFilenameCompletionDocker(t *testing.T) {
 		{"relative filename ignoring case", "printf '\\137\\137RELATIVE__:%s\\n' readme\t\r", "__RELATIVE__:README.md\r\n"},
 		{"absolute filename ignoring case", "printf '\\137\\137ABSOLUTE__:%s\\n' /challenge/readme\t\r", "__ABSOLUTE__:/challenge/README.md\r\n"},
 		{"directory completion", "printf '\\137\\137DIRECTORY__:%s\\n' /challenge/sol\t\r", "__DIRECTORY__:/challenge/solve/\r\n"},
+		{"completion candidates", "mkdir -p /tmp/pwnden-completion; touch /tmp/pwnden-completion/choice-{alpha,beta,gamma}; printf '\\137\\137CANDIDATES__:ok\\n'\r", "__CANDIDATES__:ok\r\n"},
+		{"first candidate", "printf '\\137\\137FIRST__:%s\\n' /tmp/pwnden-completion/choice-\t\r", "__FIRST__:/tmp/pwnden-completion/choice-alpha\r\n"},
+		{"next candidate", "printf '\\137\\137SECOND__:%s\\n' /tmp/pwnden-completion/choice-\t\t\r", "__SECOND__:/tmp/pwnden-completion/choice-beta\r\n"},
+		{"completion wraparound", "printf '\\137\\137WRAP__:%s\\n' /tmp/pwnden-completion/choice-" + strings.Repeat("\t", 5) + "\r", "__WRAP__:/tmp/pwnden-completion/choice-alpha\r\n"},
+		{"Shift+Tab previous candidate", "printf '\\137\\137PREVIOUS__:%s\\n' /tmp/pwnden-completion/choice-\t\t\x1b[Z\r", "__PREVIOUS__:/tmp/pwnden-completion/choice-alpha\r\n"},
+		{"Shift+Tab first candidate", "printf '\\137\\137REVERSE__:%s\\n' /tmp/pwnden-completion/choice-\x1b[Z\r", "__REVERSE__:/tmp/pwnden-completion/choice-gamma\r\n"},
+		{"no match keeps input", "printf '\\137\\137MISSING__:%s\\n' /tmp/pwnden-completion/missing-\t\r", "__MISSING__:/tmp/pwnden-completion/missing-\r\n"},
 		{"UTF-8 erase", "printf '\\137\\137ERASE__:%s\\n' '가나\x7f\x7fok'\r", "__ERASE__:ok\r\n"},
 		{"command history", "\x1b[A\r", "__ERASE__:ok\r\n"},
 	}

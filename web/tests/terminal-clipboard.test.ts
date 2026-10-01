@@ -84,7 +84,7 @@ it('leaves IME composition, Alt/AltGr chords and other shell editing keys to xte
   for (const event of [
     key('C', { ctrlKey: true, shiftKey: true, isComposing: true }),
     key('c', { ctrlKey: true, altKey: true }), key('c', { ctrlKey: true, metaKey: true }),
-    key('Tab'), key('ArrowUp'), key('a', { ctrlKey: true }), key('r', { ctrlKey: true }), key('z', { ctrlKey: true }),
+    key('Tab'), key('Tab', { shiftKey: true }), key('ArrowUp'), key('a', { ctrlKey: true }), key('r', { ctrlKey: true }), key('z', { ctrlKey: true }),
   ]) {
     expect(handle(event)).toBe(true);
     expect(event.preventDefault).not.toHaveBeenCalled();

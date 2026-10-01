@@ -44,7 +44,15 @@ confirmation. Browser and operating system reserved shortcuts follow their own r
 
 Filename completion ignores case: `cat readme` followed by Tab completes to
 `cat README.md` when that filename is the unique match. The filesystem still
-uses the actual filename; ambiguous matches retain normal Readline behavior.
+uses the actual filename. Tab invokes Readline's `menu-complete` to cycle forward
+through multiple matches; Shift+Tab invokes `menu-complete-backward` to cycle
+backward. Native Readline cycling includes the original input after the last
+candidate, then begins again. A missing match leaves the input intact.
+
+Other shell bindings retain Bash's native behavior. Readline supplies editing
+and history, Bash supplies builtins, expansions, pipelines, redirection,
+functions and programmable completion, and the Docker PTY supplies job control.
+Available external programs come from the declared solution image.
 
 Clipboard shortcuts follow the browser's operating system, independently of the
 server or container host:
@@ -66,8 +74,18 @@ are unavailable, the terminal shows a context-menu copy instruction.
 The declared solution image supplies Bash, `stty` and `C.UTF-8`. Startup enables
 TTY `iutf8`, uses `LANG=LC_ALL=C.UTF-8`, `--noprofile --norc` and
 the platform's container-local `INPUTRC=/tmp/pwnden.inputrc`, containing
-`set completion-ignore-case on`. Startup creates this file with private
-permissions in the toolbox, preserving the repository mount policy.
+case-insensitive completion and these native function bindings:
+
+```text
+set completion-ignore-case on
+"\C-i": menu-complete
+"\e[Z": menu-complete-backward
+```
+
+Startup passes this configuration as a positional argument to Bash and writes
+it with private permissions in the toolbox, preserving the repository mount
+policy. Only configuration creation changes the umask; the interactive shell
+retains its ordinary file permissions.
 History remains in the retained shell with
 `HISTFILE=/dev/null`. The Docker Engine owns the PTY; the Docker CLI helper
 preserves context, TLS and endpoint selection.
@@ -75,7 +93,8 @@ preserves context, TLS and endpoint selection.
 For a disposable Docker completion regression check, run
 `PWNDEN_TEST_CHALLENGES=/absolute/path/to/challenges go test ./internal/runtime -run '^TestTerminalFilenameCompletionDocker$' -count=1 -v`.
 It creates its own toolbox, checks relative and absolute case-insensitive
-completion, directory completion, UTF-8 deletion and command history, then
+completion, directory completion, forward and reverse candidate cycling,
+wraparound, missing matches, UTF-8 deletion and command history, then
 removes that toolbox. Existing player environments remain available.
 
 The toolbox mounts only the declared repository-contained problem directory,
