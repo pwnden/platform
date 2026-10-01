@@ -28,4 +28,4 @@ The name is `pwnden`. The player uses a hacker terminal visual language, subtly 
 
 ## Evidence on Hand
 
-The local challenges checkout contains `rotor-lock` and `note-vault`, each with a player brief, three progressive hints and a complete explanation. The player supports list, detail, source preview, optional download, hints, walkthrough, run, stop, status, flag submission and interactive terminals. Demonstration content used in visual verification is synthetic and stays separate from player data.
+The local challenges checkout contains `rotor-lock` and `note-vault`, each with a player brief, three progressive hints and a complete explanation. The player supports list, detail, automatic source preview, optional download, hints, walkthrough, automatic environment preparation and cleanup, status, flag submission and interactive terminals. The selected tool's icon actions share the common tab strip. Demonstration content used in visual verification is synthetic and stays separate from player data.

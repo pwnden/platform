@@ -124,6 +124,11 @@ a:not(.ui-button):active { color: var(--ui-accent); background: var(--ui-accent-
 .ui-button--ghost { background: transparent; color: var(--ui-muted); border-color: transparent; }
 .ui-button--danger { color: var(--ui-danger); }
 .ui-button--compact { height: var(--ui-control-size-compact); min-height: var(--ui-control-size-compact); padding: var(--ui-inset-compact); font-size: 0.85rem; }
+.ui-icon-control { flex: none; width: var(--ui-control-size-compact); height: var(--ui-control-size-compact); padding: 0; }
+.ui-icon-control svg { flex: none; width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.ui-icon-progress { animation: ui-icon-progress 1s linear infinite; }
+@keyframes ui-icon-progress { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ui-icon-progress { animation: none; } }
 .ui-button--row { width: 100%; justify-content: flex-start; text-align: left; background: transparent; border-color: transparent; }
 .ui-button--row[aria-pressed='true'] { color: var(--ui-accent); background: var(--ui-accent-surface); border-color: var(--ui-border-active); }
 @media (hover: hover) { .ui-button--row[aria-pressed='true']:hover:enabled { background: var(--ui-surface-pressed); } }

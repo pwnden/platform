@@ -7,10 +7,18 @@ export interface UIButtonProps {
 }
 
 export interface UILinkProps {
+  readonly iconOnly?: boolean;
   readonly href: string;
   readonly newTab?: boolean;
   readonly variant?: 'secondary' | 'primary' | 'ghost';
   readonly size?: 'default' | 'compact';
+}
+
+export interface UIIconButtonProps {
+  readonly label: string;
+  readonly icon: 'refresh' | 'download';
+  readonly busy?: boolean;
+  readonly disabled?: boolean;
 }
 
 export interface UIPanelProps {

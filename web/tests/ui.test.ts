@@ -2,6 +2,8 @@ import { expect, it } from 'vitest';
 import { createSSRApp, h } from 'vue';
 import { renderToString } from '@vue/server-renderer';
 import UIButton from '../packages/ui/src/UIButton.vue';
+import UIIconButton from '../packages/ui/src/UIIconButton.vue';
+import UILink from '../packages/ui/src/UILink.vue';
 import UITextField from '../packages/ui/src/UITextField.vue';
 import UISelect from '../packages/ui/src/UISelect.vue';
 import UIStatus from '../packages/ui/src/UIStatus.vue';
@@ -16,7 +18,7 @@ import UIWebFrame from '../packages/ui/src/UIWebFrame.vue';
 it('keeps inactive tool panels mounted and inaccessible with linked Sectile tabs', async () => {
   const html = await renderToString(createSSRApp({ render: () => h(UITabs, {
     label: '풀이 도구', modelValue: 'terminal', items: [{ value: 'terminal', label: '터미널' }, { value: 'web', label: '웹' }],
-  }, { terminal: () => 'shell state', web: () => 'web state' }) }));
+  }, { terminal: () => 'shell state', web: () => 'web state', actions: () => h(UIIconButton, { label: '터미널 새로고침', icon: 'refresh' }) }) }));
   expect(html).toContain('role="tablist"');
   expect(html).toContain('aria-label="풀이 도구"');
   expect(html.match(/role="tab"/g)).toHaveLength(2);
@@ -27,7 +29,25 @@ it('keeps inactive tool panels mounted and inaccessible with linked Sectile tabs
   expect(html).toContain('web state');
   expect(html).toContain('inert');
   expect(html).toContain('aria-hidden="true"');
+  expect(html.replace(/<!--[\s\S]*?-->/g, '')).toMatch(/<\/div><div class="ui-tabs-actions"[^>]*><button[^>]*aria-label="터미널 새로고침"/);
   for (const id of html.matchAll(/aria-controls="([^"]+)"/g)) expect(html).toContain(`id="${id[1]}"`);
+});
+
+it('gives toolbar actions stable names and a shared compact icon control', async () => {
+  for (const icon of ['refresh', 'download'] as const) {
+    const html = await renderToString(createSSRApp({ render: () => h(UIIconButton, { label: '도구 작업', icon, busy: true }) }));
+    expect(html).toContain('ui-button--compact');
+    expect(html).toContain('ui-icon-control');
+    expect(html).toContain('aria-label="도구 작업"');
+    expect(html).toContain('title="도구 작업"');
+    expect(html).toContain('aria-busy="true"');
+    expect(html).toContain(' disabled');
+    expect(html).toContain('ui-icon-progress');
+  }
+  const link = await renderToString(createSSRApp({ render: () => h(UILink, { href: 'http://127.0.0.1:43123', newTab: true, iconOnly: true, size: 'compact', 'aria-label': '새 탭에서 열기' }) }));
+  expect(link).toContain('ui-button--compact');
+  expect(link).toContain('ui-icon-control');
+  expect(link).toContain('rel="noopener noreferrer"');
 });
 
 it('frames problem documents separately with named, bounded browser capabilities', async () => {

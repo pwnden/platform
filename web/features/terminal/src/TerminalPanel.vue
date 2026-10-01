@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue';
 import type { TerminalConnection, TerminalSession, TerminalSize, Terminals, RetainedEnvironment } from '@pwnden/terminal';
-import { UIButton, UITerminal, UIPanel, UITerminalControls } from '@pwnden/ui';
+import { UIButton, UITerminal } from '@pwnden/ui';
 import type { UITerminalHandle } from '@pwnden/ui';
+import type { TerminalPanelHandle } from './props';
 
 const props = defineProps<{ terminals: Terminals; slug: string; paused?: boolean; foreground?: boolean }>();
-const emit = defineEmits<{ ready: []; stopped: [] }>();
+const emit = defineEmits<{ ready: [] }>();
 const screen = ref<UITerminalHandle>();
 const state = ref<'closed' | 'connecting' | 'ready'>('closed');
 const session = shallowRef<TerminalSession>();
@@ -17,7 +18,6 @@ let size: TerminalSize = { cols: 80, rows: 24 };
 let connection: TerminalConnection | undefined;
 let generation = 0;
 let active = true;
-let manuallyDisconnected = false;
 const visible = () => typeof document === 'undefined' || document.visibilityState !== 'hidden';
 
 function disconnect() {
@@ -27,7 +27,7 @@ function disconnect() {
   owned?.close();
 }
 async function connect() {
-  if (!active || state.value !== 'closed' || props.paused || manuallyDisconnected || !visible()) return;
+  if (!active || state.value !== 'closed' || props.paused || !visible()) return;
   disconnect();
   const current = generation;
   state.value = 'connecting'; message.value = ''; failed.value = false; retained.value = [];
@@ -75,28 +75,25 @@ async function connect() {
     }
   }
 }
-function toggleConnection() {
-  if (state.value !== 'closed') {
-    manuallyDisconnected = true;
-    disconnect(); message.value = ''; failed.value = false; retained.value = [];
-  } else {
-    manuallyDisconnected = false;
-    void connect();
-  }
+async function refresh() {
+  if (state.value === 'connecting' || ending.value || props.paused) return;
+  disconnect();
+  await connect();
 }
+const handle: TerminalPanelHandle = { get busy() { return state.value === 'connecting' || ending.value || !!props.paused; }, refresh };
+defineExpose(handle);
 async function loadRetained() {
   const current = generation;
   try { const items = await props.terminals.list(); if (active && current === generation) retained.value = items; }
   catch { if (active && current === generation) message.value = '유지 환경 목록을 불러오지 못했습니다. 다시 연결하세요.'; }
 }
-async function endEnvironment(slug = props.slug) {
+async function endEnvironment(slug: string) {
   if (ending.value) return;
   ending.value = true;
   try {
     await props.terminals.stop(slug);
     if (!active) return;
-    if (slug === props.slug) { manuallyDisconnected = true; disconnect(); failed.value = false; message.value = '문제 환경을 종료했습니다.'; emit('stopped'); }
-    else { await loadRetained(); await connect(); }
+    await loadRetained(); await connect();
   } catch { if (active) { failed.value = true; message.value = '환경을 종료하지 못했습니다. 다시 시도하세요.'; } }
   finally { if (active) ending.value = false; }
 }
@@ -110,7 +107,7 @@ function input(data: Uint8Array) {
 }
 watch(() => props.paused, paused => {
   if (paused) disconnect();
-  else { manuallyDisconnected = false; void connect(); }
+  else void connect();
 });
 onMounted(() => {
   if (typeof document !== 'undefined') document.addEventListener('visibilitychange', visibility);
@@ -124,10 +121,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <UIPanel title="풀이 터미널" headingID="terminal-heading" class="terminal-panel">
-    <template #actions>
-      <UITerminalControls :state="state === 'ready' ? 'connected' : state === 'connecting' ? 'connecting' : failed ? 'error' : 'disconnected'" :disabled="paused" :busy="ending" @toggle="toggleConnection" @stop="endEnvironment()" />
-    </template>
+  <section class="terminal-panel" aria-label="문제 풀이 터미널" :aria-busy="state === 'connecting'">
     <p v-if="message" :role="failed ? 'alert' : 'status'">{{ message }}</p>
     <ul v-if="retained.length" class="retained">
       <li v-for="environment in retained" :key="environment.slug">
@@ -137,17 +131,16 @@ onUnmounted(() => {
     </ul>
     <div class="terminal-screen">
       <UITerminal ref="screen" label="문제 풀이 셸" class="terminal-renderer" :enabled="state === 'ready'" @input="input" @resize="resize" />
+      <p v-if="state === 'connecting'" class="terminal-progress" role="status">풀이 환경에 연결하는 중…</p>
     </div>
-    <p class="terminal-footnote">연결을 해제하거나 문제에서 나가면 10분 후 환경이 정리됩니다.</p>
-  </UIPanel>
+  </section>
 </template>
 
 <style scoped>
-.terminal-panel { height: 100%; background: var(--ui-terminal-background); container-type: inline-size; }
-.terminal-panel :deep(.ui-panel-body) { display: flex; flex-direction: column; gap: var(--ui-space-2); overflow-y: auto; }
+.terminal-panel { box-sizing: border-box; height: 100%; min-height: 0; padding: var(--ui-space-2); background: var(--ui-terminal-background); display: flex; flex-direction: column; gap: var(--ui-space-2); overflow-y: auto; }
 .terminal-screen { position: relative; flex: 1; min-height: 6rem; min-width: 0; }
 .terminal-screen :deep(.ui-terminal) { position: absolute; inset: 0; min-height: 0; padding: 0; }
-.terminal-footnote { color: var(--ui-muted); font-size: 0.75rem; }
+.terminal-progress { position: absolute; inset: 0; display: grid; place-content: center; pointer-events: none; color: var(--ui-muted); }
 .retained { padding: 0; margin: 0; list-style: none; display: grid; gap: var(--ui-space-1); }
 .retained li { display: flex; align-items: center; justify-content: space-between; gap: var(--ui-space-1); }
 </style>

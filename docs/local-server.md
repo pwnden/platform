@@ -23,18 +23,20 @@ The server prints one private session URL such as `http://127.0.0.1:49152/#<toke
 The root page serves the Vue player. Choose a problem and read its description,
 hints and walkthrough in the reading pane. Submit the discovered flag there.
 The right-side tool pane provides Terminal, Files for declared materials, and Web
-for published local HTTP services. Files supports source preview and optional
-download. Web shows the problem in an iframe and offers a new-tab link for browser
-developer tools. Switching tools retains the terminal, source and web state.
+for published local HTTP services. Files immediately displays the selected source.
+The common tab strip places terminal refresh, selected-file download, or web
+refresh and a new-tab link at its right edge. Icon controls share the same size.
+Web shows the problem in an iframe; the new-tab link supports browser developer
+tools. Switching tools retains the terminal, source and web state.
 
 The [interactive terminal](terminal.md) automatically prepares the selected
-problem and connects its toolbox shell. Its connection switch controls attachment;
-the power button immediately terminates the whole problem environment. Problem
+problem and connects its toolbox shell. Terminal refresh reattaches while retaining
+the environment. Problem
 switching, page refresh and hidden browser tabs retain the same shell and service
 state for ten inactive minutes. Returning cancels expiry. Up to ten problem
 environments are retained; the player explicitly ends one when capacity is reached.
 Shell exit removes the toolbox while a visible problem retains its services.
-Environment stop and normal server shutdown remove both. TCP endpoints are
+Inactivity cleanup and normal server shutdown remove both. TCP endpoints are
 displayed as addresses for terminal tools. Answer checking remains in Go through
 the implemented [API](web-api.md). Progress history is a subsequent capability.
 HTML, JavaScript and CSS are embedded in the executable; serving them requires

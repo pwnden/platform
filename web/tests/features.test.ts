@@ -7,7 +7,10 @@ import ProblemFiles from '../features/catalog/src/ProblemFiles.vue';
 import ProblemList from '../features/catalog/src/ProblemList.vue';
 import PlayPanel from '../features/play/src/PlayPanel.vue';
 import ProblemWeb from '../features/play/src/ProblemWeb.vue';
+import type { ProblemWebHandle } from '../features/play/src/props';
 import TerminalPanel from '../features/terminal/src/TerminalPanel.vue';
+import type { TerminalPanelHandle } from '../features/terminal/src/props';
+import type { ProblemFilesHandle } from '../features/catalog/src/props';
 import App from '../apps/player/src/App.vue';
 import UICode from '../packages/ui/src/UICode.vue';
 import * as syntax from '../packages/ui/src/syntax';
@@ -20,6 +23,7 @@ vi.mock('../packages/ui/src/index.ts', async () => {
     UIStatus: (await import('../packages/ui/src/UIStatus.vue')).default,
     UIBadge: (await import('../packages/ui/src/UIBadge.vue')).default,
     UILink: (await import('../packages/ui/src/UILink.vue')).default,
+    UIIconButton: (await import('../packages/ui/src/UIIconButton.vue')).default,
     UITerminalControls: (await import('../packages/ui/src/UITerminalControls.vue')).default,
     UIFile: (await import('../packages/ui/src/UIFile.vue')).default,
     UITabs: (await import('../packages/ui/src/UITabs.vue')).default,
@@ -47,14 +51,14 @@ it('automatically connects and releases pending and ready attachments on unmount
   renderer.render(h(TerminalPanel, { terminals, slug: 'test' }), root);
   await settle();
   expect(terminals.connect).toHaveBeenCalledOnce();
-  expect(text(root)).toContain('준비·연결 중');
+  expect(text(root)).toContain('풀이 환경에 연결하는 중');
   renderer.render(null, root);
   resolve(session); await settle();
   expect(close).toHaveBeenCalledOnce();
   expect(session.close).toHaveBeenCalledOnce();
   renderer.render(h(TerminalPanel, { terminals, slug: 'test' }), root);
   resolve(session); await settle();
-  expect(text(root)).toContain('연결됨');
+  expect(flatten(root).find(item => item.type === 'terminal')!.props.enabled).toBe(true);
   const terminal = flatten(root).find(item => item.type === 'terminal')!;
   (terminal.props.onInput as (data: Uint8Array) => void)(new Uint8Array([3]));
   expect(session.input).toHaveBeenCalledWith(new Uint8Array([3]));
@@ -82,7 +86,7 @@ it('automatically enters Note Vault and preserves its attachment across column r
   await settle();
   expect(client.terminals.connect).toHaveBeenCalledOnce();
   expect(client.player.run).not.toHaveBeenCalled();
-  expect(text(root)).toContain('연결됨');
+  expect(button(root, '터미널 새로고침')).toBeDefined();
   const heading = flatten(root).find(item => item.props.class === 'problem-header')!;
   expect(text(heading)).toBe('Note Vault분야: 웹');
   expect(flatten(heading).find(item => item.props.class === 'ui-badge')?.props.title).toBe('분야: 웹');
@@ -101,14 +105,13 @@ it('automatically enters Note Vault and preserves its attachment across column r
   expect(session.resize).toHaveBeenLastCalledWith({ cols: 100, rows: 30 });
   expect(button(root, '문제 실행')).toBeUndefined();
   expect(button(root, '문제 중지')).toBeUndefined();
-  await click(button(root, '문제 환경 종료')); await settle();
-  expect(client.terminals.stop).toHaveBeenCalledWith('note-vault');
+  expect(button(root, '문제 환경 종료')).toBeUndefined();
+  expect(button(root, '터미널 연결')).toBeUndefined();
+  expect(text(root)).not.toContain('풀이 터미널');
+  await click(button(root, '터미널 새로고침')); await settle();
+  expect(client.terminals.stop).not.toHaveBeenCalled();
   expect(client.player.stop).not.toHaveBeenCalled();
-  expect(text(root)).toContain('중지됨');
   expect(close).toHaveBeenCalledOnce();
-  expect(terminal.props.enabled).toBe(false);
-  expect(client.terminals.connect).toHaveBeenCalledOnce();
-  await click(button(root, '터미널 연결')); await settle();
   expect(client.terminals.connect).toHaveBeenCalledTimes(2);
   expect(terminal.props.enabled).toBe(true);
   renderer.render(null, root);
@@ -147,38 +150,45 @@ it('keeps terminal, source and web state across tool tabs and resets tools on pr
   Object.defineProperties(key, { key: { value: 'ArrowRight' }, currentTarget: { value: list } });
   (list.props.onKeydown as (event: Event) => void)(key); await settle();
   expect(button(root, '파일').props['aria-selected']).toBe('true');
-  await click(button(root, 'checker.py 미리보기 열기')); await settle();
+  expect(button(root, 'checker.py 미리보기 열기')).toBeUndefined();
+  const actions = flatten(root).find(item => item.props.class === 'ui-tabs-actions')!;
+  expect(button(root, 'checker.py 다운로드').parent).toBe(actions);
+  expect(button(root, '터미널 새로고침')).toBeUndefined();
   expect(client.catalog.download).toHaveBeenCalledWith('note-vault', id, 1 << 20);
   expect(text(root)).toContain('<script>plain source</script>');
   expect(flatten(root).some(item => item.type === 'script')).toBe(false);
   await click(button(root, '웹')); await settle();
   const frame = flatten(root).find(item => item.type === 'iframe')!;
   expect(frame.props.src).toBe('http://127.0.0.1:43123');
+  expect(button(root, '문제 웹 새로고침').parent).toBe(actions);
+  expect(button(root, 'checker.py 다운로드')).toBeUndefined();
   expect(flatten(root).find(item => item.type === 'a')?.props.rel).toBe('noopener noreferrer');
   await click(button(root, '터미널')); await settle();
   expect(flatten(root).find(item => item.type === 'terminal')).toBe(terminal);
   expect(client.terminals.connect).toHaveBeenCalledOnce();
   expect(close).not.toHaveBeenCalled();
   await click(button(root, '파일')); await settle();
-  expect(button(root, 'checker.py 미리보기 닫기').props['aria-expanded']).toBe(true);
+  expect(text(root)).toContain('<script>plain source</script>');
   expect(client.catalog.download).toHaveBeenCalledOnce();
   await click(button(root, '웹')); await settle();
   expect(flatten(root).find(item => item.type === 'iframe')).toBe(frame);
   await click(button(root, '실행 상태 새로고침')); await settle();
   expect(flatten(root).find(item => item.type === 'iframe')).toBe(frame);
   await click(button(root, '터미널')); await settle();
-  await click(button(root, '문제 환경 종료')); await settle();
+  state = { ...state, state: 'stopped', endpoints: [] };
+  await click(button(root, '실행 상태 새로고침')); await settle();
   expect(flatten(root).some(item => item.type === 'iframe')).toBe(false);
   expect(button(root, '웹')).toBeDefined();
   state = { ...state, state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:43124' }] };
-  await click(button(root, '터미널 연결')); await settle();
+  await click(button(root, '터미널 새로고침')); await settle();
   await click(button(root, '웹')); await settle();
   expect(flatten(root).find(item => item.type === 'iframe')?.props.src).toBe('http://127.0.0.1:43124');
   await click(flatten(root).find(item => item.type === 'button' && text(item).includes('Rotor Lock'))!); await settle();
   expect(flatten(root).filter(item => item.props.role === 'tab').map(text)).toEqual(['터미널', '파일']);
   expect(button(root, '터미널').props['aria-selected']).toBe('true');
   expect(flatten(root).some(item => item.type === 'iframe')).toBe(false);
-  expect(button(root, 'checker.py 미리보기 열기').props['aria-expanded']).toBe(false);
+  expect(client.catalog.download).toHaveBeenCalledOnce();
+  expect(button(root, '터미널 새로고침')).toBeDefined();
   renderer.render(null, root);
 });
 
@@ -186,7 +196,9 @@ it('retains multiple web documents and reloads only the explicitly selected one'
   const endpoints = [{ name: 'first', url: 'http://127.0.0.1:43123' }, { name: 'second', url: 'http://127.0.0.1:43124' }];
   const state: RunStatus = { slug: 'test', kind: 'service', state: 'running', endpoints };
   const root = node('root');
-  renderer.render(h(ProblemWeb, { status: state, active: true }), root); await settle();
+  const component = h(ProblemWeb, { status: state, active: true });
+  renderer.render(component, root); await settle();
+  const web = component.component!.exposed as ProblemWebHandle;
   const first = flatten(root).find(item => item.type === 'iframe')!;
   const selector = flatten(root).find(item => item.type === 'select')!;
   const choose = selector.props['onUpdate:modelValue'] as (url: string) => void;
@@ -196,7 +208,8 @@ it('retains multiple web documents and reloads only the explicitly selected one'
   expect(second.props.hidden).toBe(false);
   choose(endpoints[0]!.url); await settle();
   expect(flatten(root).find(item => item.type === 'iframe')).toBe(first);
-  await click(button(root, '문제 웹 새로고침')); await settle();
+  expect(web!.url).toBe(endpoints[0]!.url);
+  web!.reload(); await settle();
   expect(flatten(root).find(item => item.type === 'iframe')).not.toBe(first);
   expect(flatten(root).find(item => item.type === 'iframe' && item.props.src === endpoints[1]!.url)).toBe(second);
   renderer.render(h(ProblemWeb, { status: undefined, active: true }), root); await settle();
@@ -262,7 +275,7 @@ it('detaches on hidden pages and automatically reattaches when visible', async (
   renderer.render(null, root);
 });
 
-it('disconnects through the header without stopping the environment and waits for explicit reconnect', async () => {
+it('refreshes the attachment without stopping the retained environment', async () => {
   const target = new EventTarget();
   const document = { visibilityState: 'visible', addEventListener: target.addEventListener.bind(target), removeEventListener: target.removeEventListener.bind(target) };
   vi.stubGlobal('document', document);
@@ -270,46 +283,40 @@ it('disconnects through the header without stopping the environment and waits fo
   const session = { input: vi.fn(), resize: vi.fn(), close: vi.fn(), reused: true };
   const terminals = { connect: vi.fn(() => ({ ready: Promise.resolve(session), close })), list: vi.fn(), stop: vi.fn(async () => {}) };
   const root = node('root');
-  renderer.render(h(TerminalPanel, { terminals, slug: 'test' }), root);
+  const component = h(TerminalPanel, { terminals, slug: 'test' });
+  renderer.render(component, root);
+  const terminal = component.component!.exposed as TerminalPanelHandle;
   await settle();
-  const header = flatten(root).find(item => item.type === 'header')!;
-  expect(text(header)).toContain('연결됨');
-  expect(button(root, '터미널 연결').props.role).toBe('switch');
-  expect(button(root, '터미널 연결').props['aria-checked']).toBe('true');
-  await click(button(root, '터미널 연결')); await settle();
-  expect(button(root, '터미널 연결').props['aria-checked']).toBe('false');
+  expect(flatten(root).some(item => item.type === 'header')).toBe(false);
+  await terminal!.refresh(); await settle();
   expect(close).toHaveBeenCalledOnce();
   expect(terminals.stop).not.toHaveBeenCalled();
-  expect(flatten(root).find(item => item.type === 'terminal')!.props.enabled).toBe(false);
+  expect(flatten(root).find(item => item.type === 'terminal')!.props.enabled).toBe(true);
+  expect(terminals.connect).toHaveBeenCalledTimes(2);
   document.visibilityState = 'hidden'; target.dispatchEvent(new Event('visibilitychange'));
   document.visibilityState = 'visible'; target.dispatchEvent(new Event('visibilitychange')); await settle();
-  expect(terminals.connect).toHaveBeenCalledOnce();
-  await click(button(root, '터미널 연결')); await settle();
-  expect(terminals.connect).toHaveBeenCalledTimes(2);
-  expect(text(root)).toContain('연결됨');
-  await click(button(root, '문제 환경 종료')); await settle();
-  expect(terminals.stop).toHaveBeenCalledWith('test');
-  document.visibilityState = 'hidden'; target.dispatchEvent(new Event('visibilitychange'));
-  document.visibilityState = 'visible'; target.dispatchEvent(new Event('visibilitychange')); await settle();
-  expect(terminals.connect).toHaveBeenCalledTimes(2);
+  expect(terminals.connect).toHaveBeenCalledTimes(3);
+  expect(terminals.stop).not.toHaveBeenCalled();
   renderer.render(null, root);
 });
 
-it('cancels pending preparation and releases a late ready session without changing the disconnected state', async () => {
+it('keeps a single pending preparation when refresh is requested repeatedly', async () => {
   const close = vi.fn();
   const session = { input: vi.fn(), resize: vi.fn(), close: vi.fn() };
   let resolve: (value: unknown) => void = () => {};
   const terminals = { connect: vi.fn(() => ({ ready: new Promise<any>(done => { resolve = done; }), close })), list: vi.fn(), stop: vi.fn() };
   const root = node('root');
-  renderer.render(h(TerminalPanel, { terminals, slug: 'test' }), root);
+  const component = h(TerminalPanel, { terminals, slug: 'test' });
+  renderer.render(component, root);
+  const terminal = component.component!.exposed as TerminalPanelHandle;
   await settle();
-  expect(button(root, '터미널 연결').props['aria-busy']).toBe(true);
-  await click(button(root, '터미널 연결')); await settle();
-  expect(close).toHaveBeenCalledOnce();
+  expect(terminal!.busy).toBe(true);
+  await terminal!.refresh(); await terminal!.refresh(); await settle();
+  expect(close).not.toHaveBeenCalled();
+  expect(terminals.connect).toHaveBeenCalledOnce();
   resolve(session); await settle();
-  expect(session.close).toHaveBeenCalledOnce();
-  expect(text(root)).toContain('연결 해제됨');
-  expect(text(root)).not.toContain('연결됨');
+  expect(terminal!.busy).toBe(false);
+  expect(flatten(root).find(item => item.type === 'terminal')!.props.enabled).toBe(true);
   expect(terminals.stop).not.toHaveBeenCalled();
   renderer.render(null, root);
 });
@@ -325,12 +332,14 @@ it('drops an old capacity list when a new connection is already ready', async ()
     list: vi.fn(() => new Promise<any>(done => { resolveList = done; })), stop: vi.fn(),
   };
   const root = node('root');
-  renderer.render(h(TerminalPanel, { terminals, slug: 'test' }), root);
+  const component = h(TerminalPanel, { terminals, slug: 'test' });
+  renderer.render(component, root);
+  const terminal = component.component!.exposed as TerminalPanelHandle;
   await settle();
   terminals.connect.mockImplementationOnce(() => ({ ready: Promise.resolve(session), close: vi.fn() }));
-  await click(button(root, '터미널 연결')); await settle();
+  await terminal!.refresh(); await settle();
   resolveList([{ slug: 'old', title: '오래된 유지 환경', connected: false, expiresAt: null }]); await settle();
-  expect(text(root)).toContain('연결됨');
+  expect(flatten(root).find(item => item.type === 'terminal')!.props.enabled).toBe(true);
   expect(text(root)).not.toContain('오래된 유지 환경');
   renderer.render(null, root);
 });
@@ -476,10 +485,8 @@ it('routes binary and large materials to the prepared terminal without fetching 
   const root = node('root');
   renderer.render(h(ProblemFiles, { catalog, slug: 'test', files: [{ id: small, name: 'binary', size: 2 }, { id: large, name: 'large', size: (1 << 20) + 1 }] }), root);
   await settle();
-  for (const name of ['binary', 'large']) {
-    await click(button(root, `${name} 미리보기 열기`)); await settle();
-  }
   expect(text(root)).toContain('텍스트로 표시할 수 없는 자료');
+  (flatten(root).find(item => item.type === 'select')!.props['onUpdate:modelValue'] as (id: string) => void)(large); await settle();
   expect(text(root)).toContain('큰 자료는 터미널 탭');
   expect(catalog.download).toHaveBeenCalledOnce();
   renderer.render(null, root);
@@ -526,7 +533,7 @@ it('directs unavailable service recovery to the terminal environment controls', 
   await click(button(root, '실행 상태 새로고침')); await settle();
   expect(text(root)).toContain('실행 중');
   await click(button(root, '실행 상태 새로고침')); await settle();
-  expect(text(root)).toContain('오른쪽 전원 버튼으로 환경을 종료한 뒤 터미널을 다시 연결하세요.');
+  expect(text(root)).toContain('문제에서 나간 뒤 10분 후 다시 열면 환경을 새로 준비합니다.');
   expect(button(root, '문제 실행')).toBeUndefined();
   expect(button(root, '문제 중지')).toBeUndefined();
   expect(player.run).not.toHaveBeenCalled();
@@ -629,20 +636,22 @@ it('downloads only the selected declared file from the materials panel', async (
   const create = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:local');
   vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
   const root = node('root');
-  renderer.render(h(ProblemFiles, { catalog, slug: 'test', files: [{ id, name: 'files/data.bin', size: 3 }] }), root);
+  const component = h(ProblemFiles, { catalog, slug: 'test', files: [{ id, name: 'files/data.bin', size: 3 }] });
+  renderer.render(component, root);
+  const materials = component.component!.exposed as ProblemFilesHandle;
   await settle();
   expect(flatten(root).some(item => item.type === 'script')).toBe(false);
-  await click(button(root, '다운로드')); await settle();
+  await materials!.download(); await settle();
   expect(catalog.download).toHaveBeenCalledWith('test', id);
   expect(link.download).toBe('data.bin');
   expect(link.click).toHaveBeenCalledOnce();
   expect(new Uint8Array(await create.mock.calls[0]![0].arrayBuffer())).toEqual(new Uint8Array([0, 1, 255]));
-  expect(button(root, 'files/data.bin 미리보기 열기').props['aria-expanded']).toBe(false);
-  expect(catalog.download).toHaveBeenCalledOnce();
+  expect(button(root, 'files/data.bin 미리보기 열기')).toBeUndefined();
+  expect(catalog.download).toHaveBeenCalledTimes(2);
   renderer.render(null, root);
 });
 
-it('keeps file actions in the header while preview loading fails, retries and completes', async () => {
+it('automatically displays source, retries failures and caches it across tool visibility', async () => {
   const id = 'e'.repeat(64);
   let resolve: (bytes: Uint8Array) => void = () => {};
   const catalog: Catalog = {
@@ -651,26 +660,50 @@ it('keeps file actions in the header while preview loading fails, retries and co
     download: vi.fn().mockRejectedValueOnce(new Error('offline')).mockImplementationOnce(() => new Promise<Uint8Array>(done => { resolve = done; })),
   };
   const root = node('root');
-  renderer.render(h(ProblemFiles, { catalog, slug: 'test', files: [{ id, name: 'files/checker.py', size: 883 }] }), root);
+  const files = [{ id, name: 'files/checker.py', size: 883 }];
+  renderer.render(h(ProblemFiles, { catalog, slug: 'test', files }), root);
   await settle();
-  const action = button(root, 'files/checker.py 다운로드');
-  const header = action.parent!;
-  expect(text(header)).toContain('checker.py');
-  expect(text(header)).toContain('883 B');
-  await click(button(root, 'files/checker.py 미리보기 열기')); await settle();
+  expect(text(root)).toContain('files/checker.py');
+  expect(text(root)).not.toContain('883 B');
+  expect(button(root, 'files/checker.py 미리보기 열기')).toBeUndefined();
   expect(text(root)).toContain('자료를 불러오지 못했습니다.');
-  const preview = flatten(root).find(item => item.props.id === button(root, 'files/checker.py 미리보기 닫기').props['aria-controls'])!;
-  expect(preview.parent).toBe(header.parent);
-  expect(preview.props.hidden).toBe(false);
   void click(button(root, '자료 다시 불러오기')); await settle();
   expect(text(root)).toContain('자료를 불러오는 중');
-  expect(button(root, 'files/checker.py 다운로드').parent).toBe(header);
-  await click(button(root, 'files/checker.py 미리보기 닫기')); await settle();
+  renderer.render(h(ProblemFiles, { catalog, slug: 'test', files, foreground: false }), root); await settle();
   resolve(new TextEncoder().encode('print("ready")')); await settle();
-  expect(text(root)).not.toContain('print("ready")');
-  await click(button(root, 'files/checker.py 미리보기 열기')); await settle();
+  renderer.render(h(ProblemFiles, { catalog, slug: 'test', files, foreground: true }), root); await settle();
   expect(text(root)).toContain('print("ready")');
-  expect(button(root, 'files/checker.py 다운로드').parent).toBe(header);
   expect(catalog.download).toHaveBeenCalledTimes(2);
+  renderer.render(null, root);
+});
+
+it('keeps the selected file visible when another preview arrives late and downloads only that selection', async () => {
+  const files = [{ id: 'a'.repeat(64), name: 'first.py', size: 20 }, { id: 'b'.repeat(64), name: 'second.py', size: 20 }];
+  let resolve: (bytes: Uint8Array) => void = () => {};
+  const catalog: Catalog = {
+    list: vi.fn(), detail: vi.fn(), guidance: vi.fn(),
+    download: vi.fn().mockImplementationOnce(() => new Promise<Uint8Array>(done => { resolve = done; }))
+      .mockResolvedValue(new TextEncoder().encode('second source')),
+  };
+  const root = node('root');
+  const component = h(ProblemFiles, { catalog, slug: 'test', files });
+  renderer.render(component, root); await settle();
+  const materials = component.component!.exposed as ProblemFilesHandle;
+  const select = flatten(root).find(item => item.type === 'select')!.props['onUpdate:modelValue'] as (id: string) => void;
+  select(files[1]!.id); await settle();
+  expect(text(root)).toContain('second source');
+  expect(materials.filename).toBe('second.py');
+  resolve(new TextEncoder().encode('first source')); await settle();
+  expect(text(root)).not.toContain('first source');
+  const link = { href: '', download: '', click: vi.fn(), remove: vi.fn() };
+  vi.stubGlobal('document', { createElement: () => link, body: { append: vi.fn() } });
+  vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:local');
+  vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+  await materials.download(); await settle();
+  expect(catalog.download).toHaveBeenLastCalledWith('test', files[1]!.id);
+  expect(link.download).toBe('second.py');
+  select(files[0]!.id); await settle();
+  expect(text(root)).toContain('first source');
+  expect(catalog.download).toHaveBeenCalledTimes(3);
   renderer.render(null, root);
 });

@@ -70,7 +70,7 @@ defineExpose(handle);
     </template>
     <p v-if="!status && failed">실행 상태를 확인하지 못했습니다.</p>
     <p v-else-if="status?.state === 'stopped'">오른쪽 터미널을 연결하면 풀이 환경이 준비됩니다.</p>
-    <p v-else-if="status?.state === 'unavailable'" role="alert">오른쪽 전원 버튼으로 환경을 종료한 뒤 터미널을 다시 연결하세요.</p>
+    <p v-else-if="status?.state === 'unavailable'" role="alert">실행 환경에 문제가 있습니다. 문제에서 나간 뒤 10분 후 다시 열면 환경을 새로 준비합니다.</p>
     <div v-if="kind === 'service' && status?.endpoints.some(endpoint => endpoint.url.startsWith('tcp://'))" class="actions">
       <template v-for="endpoint in status?.endpoints" :key="endpoint.name">
         <code v-if="endpoint.url.startsWith('tcp://')" class="endpoint-address">{{ endpoint.url }}</code>

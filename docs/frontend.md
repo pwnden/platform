@@ -71,11 +71,9 @@ a softly rounded rectangular track and square thumb. The track's usable width
 is twice the thumb width, and the thumb travels by its own width. It exposes a
 controlled boolean value, stable accessible label, optional compact presentation
 and a thumb slot receiving checked and busy state. Pending state remains operable;
-callers use `disabled` when changes are unavailable. `UITerminalControls` uses it
-beside an icon-only environment-stop button. Connection, disconnection and
-preparation have distinct thumb icons; names and state remain available through
-accessible text and tooltips.
-Features supply actual state and connection behavior.
+callers use `disabled` when changes are unavailable. The player tool strip uses
+`UIIconButton` for the selected tool's actions, with accessible names and tooltips.
+Features supply actual state and behavior through their public component handles.
 
 `--ui-control-size-compact` fixes the visible border-box height of compact
 buttons and switch tracks. Switch padding derives from this shared height and
@@ -101,8 +99,8 @@ For nested contours, a container sets `--ui-radius-outer` and
 `--ui-radius-inset` (border plus padding). `.ui-radius-outer` uses the outer
 value; `.ui-radius-inner` computes `max(0px, outer - inset)` on the child,
 so locally overridden values remain effective. The switch uses this relation
-for its track and thumb. File lists derive their first and last inner corners
-from the containing surface while keeping intervening rows flush.
+for its track and thumb. The framed web document derives its inner corners
+from the containing surface and border.
 
 The selected problem header uses the same compact title scale and control-based
 height as its neighboring workspace headers. Its title stays on one line with a
@@ -131,18 +129,14 @@ focus outlines the label and chevron. Hover is gated by the device's hover
 capability. Pressed, selected, expanded, disabled and invalid states have their
 own semantic styles. Reduced-motion and forced-color preferences are supported.
 
-`UIFile` provides a compact material header with a filename, formatted byte size,
-preview disclosure and independent download action. Its source preview follows
-directly below the header. Container queries adapt metadata and the download
-label to the reading pane's actual width. Filename and size stay in one row;
-preview and download share the compact height and symmetric inset. The catalog feature owns fetching,
-preview limits, retry and cached source; the UI component owns presentation and
-emits preview and download intent through its public API.
-
-Download keeps its visible label throughout loading. The download icon becomes
-a progress indicator inside the same icon box, retaining the file row and
-button dimensions. The control remains named and busy, and repeated download
-requests remain disabled. Reduced-motion preferences use a static indicator.
+`ProblemFiles` displays its selected source automatically on entering Files.
+A single file has a path label; multiple files have a named selector. Source
+fills the remaining pane height. File sizes are metadata for the preview limit.
+The catalog feature owns selection, fetching, limits, retry, download and cache.
+Its public handle exposes the selected filename, download progress and download
+action for app composition. The common tab strip places the download icon at its
+right edge. Progress occupies the same icon box; repeated requests stay disabled.
+Reduced-motion preferences keep the indicator static.
 
 The wide layout places the problem list, reading/execution controls and tool pane
 in adjacent columns. At 76rem the tool pane follows the reading column; at 48rem
@@ -160,10 +154,13 @@ follow the existing terminal lifecycle.
 The tab strip shares one content divider. Full-height tab targets use equal
 workspace insets and a selected bottom indicator. Hover and pressed states affect
 the strip surface; keyboard focus outlines the label separately from selection.
+Selected-tool icon actions occupy the strip's right edge, outside the tablist's
+arrow-key navigation. Terminal refresh, file download, web refresh and new-tab
+link share the compact square control class and corner radius.
 
 `ProblemDetail` loads metadata once and emits the detail to the app. The app
 passes declared files to `ProblemFiles` and observed run status to `ProblemWeb`;
-features remain independent. Terminal preparation and termination refresh status
+features remain independent. Terminal preparation and reattachment refresh status
 after an existing request finishes, so an early observation cannot hide a newly
 prepared web service. Hidden terminals keep their dimensions and do not take focus
 when an attachment finishes preparing.
@@ -172,7 +169,7 @@ when an attachment finishes preparing.
 Documents load on first use, retain state when switching tools or endpoints, and
 reload only on an explicit web refresh. Environment termination or unknown state
 removes old frames. A restarted endpoint loads its new address. Multiple HTTP
-services have a labeled selector. The web header offers an icon-only reload and
+services have a labeled selector. The common tab strip offers an icon-only reload and
 native new-tab link for browser developer tools. Neither action changes service
 state. `UILink` keeps `noopener noreferrer` on the new-tab link.
 

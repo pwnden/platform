@@ -4,15 +4,20 @@ import type { APIClient } from '@pwnden/api';
 import type { Problem, ProblemFile } from '@pwnden/catalog';
 import type { RunStatus } from '@pwnden/play';
 import { ProblemDetail, ProblemFiles, ProblemList, categoryLabel } from '@pwnden/catalog-feature';
+import type { ProblemFilesHandle } from '@pwnden/catalog-feature';
 import { PlayPanel, ProblemWeb, webEndpoints } from '@pwnden/play-feature';
-import type { PlayPanelHandle } from '@pwnden/play-feature';
+import type { PlayPanelHandle, ProblemWebHandle } from '@pwnden/play-feature';
 import { TerminalPanel } from '@pwnden/terminal-feature';
-import { UIBadge, UISplit, UIStatus, UITabs } from '@pwnden/ui';
+import type { TerminalPanelHandle } from '@pwnden/terminal-feature';
+import { UIBadge, UIIconButton, UILink, UISplit, UIStatus, UITabs } from '@pwnden/ui';
 
 defineProps<{ client?: APIClient | undefined; sessionRejected?: boolean }>();
 const selected = ref<Problem>();
 const busy = ref(false);
 const play = ref<PlayPanelHandle>();
+const terminal = ref<TerminalPanelHandle>();
+const materials = ref<ProblemFilesHandle>();
+const web = ref<ProblemWebHandle>();
 const files = ref<readonly ProblemFile[]>([]);
 const runStatus = ref<RunStatus>();
 const webAvailable = ref(false);
@@ -65,9 +70,17 @@ function select(problem: Problem) {
           </div></template>
           <template #after>
             <UITabs v-model="tool" :items="tools" label="풀이 도구" class="tool-pane">
-              <template #terminal><TerminalPanel :terminals="client.terminals" :slug="selected.slug" :foreground="tool === 'terminal'" @ready="play?.refresh()" @stopped="play?.refresh()" /></template>
-              <template #files><ProblemFiles :catalog="client.catalog" :slug="selected.slug" :files="files" /></template>
-              <template #web><ProblemWeb :status="runStatus" :active="tool === 'web'" /></template>
+              <template #actions>
+                <UIIconButton v-if="tool === 'terminal'" label="터미널 새로고침" icon="refresh" :busy="!!terminal?.busy" :disabled="!terminal" @click="terminal?.refresh()" />
+                <UIIconButton v-else-if="tool === 'files'" :label="materials?.filename ? `${materials.filename} 다운로드` : '파일 다운로드'" icon="download" :busy="!!materials?.busy" :disabled="!materials?.filename" @click="materials?.download()" />
+                <template v-else-if="tool === 'web'">
+                  <UIIconButton label="문제 웹 새로고침" icon="refresh" :disabled="!web?.url" @click="web?.reload()" />
+                  <UILink v-if="web?.url" :href="web.url" new-tab icon-only variant="ghost" size="compact" aria-label="문제 웹을 새 탭에서 열기" title="새 탭에서 열기"><span class="ui-sr-only">새 탭에서 열기</span></UILink>
+                </template>
+              </template>
+              <template #terminal><TerminalPanel ref="terminal" :terminals="client.terminals" :slug="selected.slug" :foreground="tool === 'terminal'" @ready="play?.refresh()" /></template>
+              <template #files><ProblemFiles ref="materials" :catalog="client.catalog" :slug="selected.slug" :files="files" :foreground="tool === 'files'" /></template>
+              <template #web><ProblemWeb ref="web" :status="runStatus" :active="tool === 'web'" /></template>
             </UITabs>
           </template>
         </UISplit>

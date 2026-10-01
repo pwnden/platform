@@ -11,27 +11,15 @@ keeps the terminal mounted and attached. Its dimensions remain available while
 hidden, and it is measured again when shown. Tool switches preserve the existing
 inactivity policy for the selected problem.
 
-The header groups a compact rectangular connection switch and a power-icon
-**환경 종료** button. The visible track border and button border share the exact
-compact height, as do their hit areas, with softly rounded control corners.
-Track padding follows this height and the thumb size. The square thumb has
-surrounding space; the track's usable
-width is twice the thumb width, with a one-thumb-width transition between ends.
-Connected and disconnected chain icons distinguish on and off, with a progress
-icon during preparation. The switch uses Sectile's native button semantics and `role="switch"`,
-with the stable accessible name **터미널 연결**. It is on when connected or
-preparing an attachment; preparing is explicitly labeled and exposes `aria-busy`.
-Disconnected and failed states are off. Position, icon and color distinguish
-these states. Accessible names, hidden status text and tooltips retain their
-meaning. Controls wrap as complete units in narrow panes.
-
-Turning the connection switch off detaches the browser and starts the existing
-inactivity timer while retaining the shell and services. A manually disconnected
-terminal stays detached across tab visibility changes until the switch is turned
-on. Turning it off during preparation cancels the pending attachment.
-**환경 종료** immediately stops and removes the shell environment and services.
-Turning the switch back on prepares a new environment. Successful connection is
-indicated in the header; body messages report failures and shell exit.
+The common tool tab strip contains one **터미널 새로고침** icon at its right
+edge. Refresh closes only the browser attachment and reconnects to the existing
+shell. Files, directory, history and background jobs remain available; the server
+restores output. After shell exit, refresh prepares a new shell. During preparation,
+the icon is busy and disabled; a viewport overlay announces progress while
+preserving the terminal geometry. Failures and shell exit appear above the screen.
+Cleanup follows the existing ten-minute inactivity policy and server shutdown.
+An unavailable service is recovered after leaving the problem and allowing its
+inactivity cleanup to finish.
 
 Up to ten problem environments are retained per server. Each environment includes
 its service containers and one toolbox; the limit counts problems, not containers.
@@ -116,8 +104,8 @@ exit, keeping a visible service problem active.
 `exit` and empty-line Ctrl+D report the exit code and remove the toolbox.
 Services remain while their problem is visible. Reconnect creates a fresh shell.
 Browser disconnect preserves the shell. `DELETE /problems/{slug}/terminal`
-explicitly removes only the toolbox. **문제 환경 종료** and
-`DELETE /problems/{slug}/run` remove the toolbox and services. After inactivity
+explicitly removes only the toolbox. `DELETE /problems/{slug}/run` removes
+the toolbox and services. After inactivity
 expires, or on normal server shutdown, the manager performs the same full cleanup.
 
 The installation lock excludes another server and standalone `run`, `exec`,
