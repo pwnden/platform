@@ -98,9 +98,9 @@ it('opens only the declared web tool for Note Vault and retains its view during 
   const frame = flatten(root).find(item => item.type === 'iframe')!;
   expect(frame).toBeDefined();
   const heading = flatten(root).find(item => item.props.class === 'problem-header')!;
-  expect(text(heading)).toBe('Note Vault분야: 웹난이도: Intro');
+  expect(text(heading)).toBe('Note Vault분야: 웹난이도: 입문');
   expect(flatten(heading).find(item => item.props.title === '분야: 웹')).toBeDefined();
-  expect(flatten(heading).find(item => item.props.title === '난이도: Intro')).toBeDefined();
+  expect(flatten(heading).find(item => item.props.title === '난이도: 입문')).toBeDefined();
   for (const split of flatten(root).filter(item => item.type === 'split')) (split.props['onUpdate:modelValue'] as (value: number) => void)(30);
   await settle();
   expect(flatten(root).find(item => item.type === 'iframe')).toBe(frame);
@@ -517,14 +517,20 @@ it('filters difficulty, sorts problem rows and resets pagination without changin
   const rows = () => flatten(root).filter(item => item.type === 'button' && item.props.variant === 'row');
   await click(button(root, '다음')); await settle();
   const filter = flatten(root).find(item => item.props.id === 'problem-difficulty')!;
+  expect(filter.props.options).toEqual([
+    { value: '', label: '전체 난이도' },
+    { value: '1', label: '입문' }, { value: '2', label: '초급' },
+    { value: '3', label: '중급' }, { value: '4', label: '고급' },
+    { value: '5', label: '심화' },
+  ]);
   (filter.props['onUpdate:modelValue'] as (value: string) => void)('3'); await settle();
   expect(rows()).toHaveLength(9);
-  expect(rows().every(row => !!flatten(row).find(item => item.props.title === '난이도: Medium'))).toBe(true);
+  expect(rows().every(row => !!flatten(row).find(item => item.props.title === '난이도: 중급'))).toBe(true);
   expect(text(root)).toContain('1–9 / 9개');
   (filter.props['onUpdate:modelValue'] as (value: string) => void)('');
   const order = flatten(root).find(item => item.props.id === 'problem-order')!;
   (order.props['onUpdate:modelValue'] as (value: string) => void)('hardest'); await settle();
-  expect(flatten(rows()[0]!).find(item => item.props.title === '난이도: Expert')).toBeDefined();
+  expect(flatten(rows()[0]!).find(item => item.props.title === '난이도: 심화')).toBeDefined();
   expect(selected).not.toHaveBeenCalled();
   await click(rows()[0]!);
   expect(selected).toHaveBeenCalledWith(problems[4]);
