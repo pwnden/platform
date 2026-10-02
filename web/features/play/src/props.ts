@@ -1,7 +1,3 @@
-export interface PlayPanelHandle {
-  refresh(): Promise<void>;
-}
-
 export interface ProblemWebHandle {
   readonly url: string;
   readonly busy: boolean;

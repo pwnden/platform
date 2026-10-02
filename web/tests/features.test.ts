@@ -117,13 +117,14 @@ it('keeps terminal, source and web state across tool tabs and resets tools on pr
   const close = vi.fn();
   const session = { input: vi.fn(), resize: vi.fn(), close: vi.fn() };
   let state: RunStatus = { slug: 'note-vault', kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:43123' }] };
+  let environmentFailed: (code: string) => void = () => {};
   const client = {
     catalog: {
       list: vi.fn(async () => problems),
       detail: vi.fn(async (slug: string) => ({ ...problems.find(problem => problem.slug === slug)!, description: '설명', tools: (slug === 'note-vault' ? ['terminal', 'files', 'web'] : ['files', 'terminal']) as ('terminal' | 'files' | 'web')[], files: [{ id, name: 'checker.py', size: 30 }], hintCount: 0, walkthrough: false })),
       download: vi.fn(async () => new TextEncoder().encode('<script>plain source</script>')), guidance: vi.fn(),
     },
-    workspaces: { connect: vi.fn((slug: string) => ({ ready: Promise.resolve(slug === 'note-vault' ? state : { slug, kind: 'file' as const, state: 'ready' as const, endpoints: [] }), close: vi.fn() })), list: vi.fn(async () => []), stop: vi.fn() },
+    workspaces: { connect: vi.fn((slug: string, failed: (code: string) => void) => { environmentFailed = failed; return { ready: Promise.resolve(slug === 'note-vault' ? state : { slug, kind: 'file' as const, state: 'ready' as const, endpoints: [] }), close: vi.fn() }; }), list: vi.fn(async () => []), stop: vi.fn() },
     player: { browser: vi.fn(async () => browserSession(state.endpoints[0]!.url)), status: vi.fn(async (slug: string) => slug === 'note-vault' ? state : { slug, kind: 'file', state: 'ready', endpoints: [] }), run: vi.fn(), stop: vi.fn(), submit: vi.fn() },
     terminals: {
       connect: vi.fn(() => ({ ready: Promise.resolve(session), close })), list: vi.fn(),
@@ -164,15 +165,15 @@ it('keeps terminal, source and web state across tool tabs and resets tools on pr
   expect(client.catalog.download).toHaveBeenCalledOnce();
   await click(button(root, '웹')); await settle();
   expect(flatten(root).find(item => item.type === 'iframe')).toBe(frame);
-  await click(button(root, '실행 상태 새로고침')); await settle();
+  expect(button(root, '실행 상태 새로고침')).toBeUndefined();
+  expect(button(root, '풀이 환경 다시 연결')).toBeUndefined();
   expect(flatten(root).find(item => item.type === 'iframe')).toBe(frame);
   await click(button(root, '터미널')); await settle();
-  state = { ...state, state: 'stopped', endpoints: [] };
-  await click(button(root, '실행 상태 새로고침')); await settle();
+  environmentFailed('not_running'); await settle();
   expect(flatten(root).some(item => item.type === 'iframe')).toBe(false);
   expect(button(root, '웹')).toBeDefined();
   state = { ...state, state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:43124' }] };
-  await click(button(root, '실행 상태 새로고침')); await settle();
+  await click(button(root, '풀이 환경 다시 연결')); await settle();
   await click(button(root, '웹')); await settle();
   expect(flatten(root).find(item => item.type === 'iframe')?.props.src).toBe(browserSession('http://127.0.0.1:43124').url);
   await click(flatten(root).find(item => item.type === 'button' && text(item).includes('Rotor Lock'))!); await settle();
@@ -559,12 +560,19 @@ it('offers downloads for binary and large materials without fetching a large pre
 it.each(['file', 'service'] as const)('keeps accepted %s answers readonly and preserves submission geometry', async kind => {
   const status: RunStatus = { slug: 'test', kind, state: kind === 'file' ? 'ready' : 'running', endpoints: [] };
   const player: Player = { browser: unusedBrowser, status: vi.fn(async () => status), run: vi.fn(), stop: vi.fn(), submit: vi.fn().mockResolvedValueOnce({ slug: 'test', accepted: false }).mockResolvedValueOnce({ slug: 'test', accepted: true }) };
+  let failed: (code: string) => void = () => {};
+  const environments = workspace(status);
+  environments.connect = vi.fn((_slug, fail) => { failed = fail; return { ready: Promise.resolve(status), close: vi.fn() }; });
   const root = node('root');
-  renderer.render(h(PlayPanel, { player, workspaces: workspace(status), slug: 'test', kind }), root); await settle();
+  renderer.render(h(PlayPanel, { player, workspaces: environments, slug: 'test', kind }), root); await settle();
   const field = flatten(root).find(item => item.type === 'input')!;
   const form = flatten(root).find(item => item.type === 'form')!;
   const feedback = flatten(root).find(item => item.props.id === 'submission-feedback')!;
   const structure = flatten(root).map(item => item.type);
+  const submitButton = flatten(root).find(item => item.type === 'button' && item.props.type === 'submit')!;
+  expect(submitButton.children.map(item => item.type)).toEqual(['span', 'svg']);
+  expect(button(root, '실행 상태 새로고침')).toBeUndefined();
+  expect(button(root, '풀이 환경 다시 연결')).toBeUndefined();
   (field.props['onUpdate:modelValue'] as (value: string) => void)('pwnden{wrong}'); await settle();
   await (form.props.onSubmit as (event: Event) => Promise<unknown>)(new Event('submit')); await settle();
   expect(field.props.modelValue).toBe('pwnden{wrong}');
@@ -579,8 +587,12 @@ it.each(['file', 'service'] as const)('keeps accepted %s answers readonly and pr
   expect(flatten(root).find(item => item.type === 'button' && item.props.type === 'submit')?.props.disabled).toBe(true);
   expect(flatten(root).map(item => item.type)).toEqual(structure);
   expect(flatten(root).find(item => item.props.id === 'submission-feedback')).toBe(feedback);
-  player.status = vi.fn().mockRejectedValue(new Error('offline'));
-  await click(button(root, '실행 상태 새로고침')); await settle();
+  failed('network_error'); await settle();
+  expect(button(root, '풀이 환경 다시 연결')).toBeDefined();
+  await click(button(root, '풀이 환경 다시 연결')); await settle();
+  expect(environments.connect).toHaveBeenCalledTimes(2);
+  expect(player.status).not.toHaveBeenCalled();
+  expect(button(root, '풀이 환경 다시 연결')).toBeUndefined();
   expect(field.props.modelValue).toBe('pwnden{correct}');
   expect(field.props.readonly).toBe(true);
   expect(text(root)).toContain('해결 완료');

@@ -108,13 +108,15 @@ full-title tooltip; the category appears in a right-aligned `UIBadge`, with a
 screen-reader category prefix. The body scrolls independently below it.
 
 The submission bar stays outside the scrolling tool pane at its lower edge.
-Its caption contains a fixed feedback slot and an icon-only environment refresh.
+Its caption contains a fixed feedback slot and a reserved compact action slot.
+An environment connection error reveals a reconnect action in that slot; normal
+submission exposes only its primary action. Reconnect retries problem presence.
 The flag field and submit button retain their dimensions across loading, error
 and completion. Narrow panes stack the controls based on available width.
 Rejected answers remain editable. An accepted answer stays in the readonly
 field, with success color and a check icon on the completed button; it remains
-selectable for copying. Submission success remains confirmed when a later
-status request fails. TCP endpoints appear beside the terminal tab actions.
+selectable for copying. Button icons follow their labels. Submission success remains confirmed when a later
+environment connection fails. TCP endpoints appear beside the terminal tab actions.
 
 Shared interaction styles live in `packages/ui/src/theme.css`. Buttons, fields,
 links, disclosures, code scroll regions and split handles share focus tokens and
@@ -282,7 +284,7 @@ are rendered as Markdown through the UI-owned AST renderer. Download
 ports return plain `Uint8Array`; the catalog feature creates the browser Blob URL
 and revokes it after initiating the download. The bearer token stays in the fetch
 header. Play prepares and retains the selected problem through its workspace view stream.
-Submission and manual observation remain separate operations. Tool viewports keep
+Submission and environment reconnection remain separate operations. Tool viewports keep
 loading and errors inside overlays; the submission caption retains its geometry.
 The API client uses a fixed same-origin
 `/api/v1` base, keeps the fragment token in memory and uses a bearer header. It follows the server's

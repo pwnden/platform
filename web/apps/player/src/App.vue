@@ -6,7 +6,7 @@ import type { RunStatus } from '@pwnden/play';
 import { ProblemDetail, ProblemFiles, ProblemList, categoryLabel } from '@pwnden/catalog-feature';
 import type { ProblemFilesHandle } from '@pwnden/catalog-feature';
 import { PlayPanel, ProblemWeb } from '@pwnden/play-feature';
-import type { PlayPanelHandle, ProblemWebHandle } from '@pwnden/play-feature';
+import type { ProblemWebHandle } from '@pwnden/play-feature';
 import { TerminalPanel } from '@pwnden/terminal-feature';
 import type { TerminalPanelHandle } from '@pwnden/terminal-feature';
 import { UIBadge, UIIconButton, UILink, UISplit, UIStatus, UITabs } from '@pwnden/ui';
@@ -14,7 +14,6 @@ import { UIBadge, UIIconButton, UILink, UISplit, UIStatus, UITabs } from '@pwnde
 defineProps<{ client?: APIClient | undefined; sessionRejected?: boolean }>();
 const selected = ref<Problem>();
 const busy = ref(false);
-const play = ref<PlayPanelHandle>();
 const terminal = ref<TerminalPanelHandle>();
 const materials = ref<ProblemFilesHandle>();
 const web = ref<ProblemWebHandle>();
@@ -83,7 +82,7 @@ function select(problem: Problem) {
               <template #files><ProblemFiles ref="materials" :catalog="client.catalog" :slug="selected.slug" :files="files" :foreground="tool === 'files'" /></template>
               <template #web><ProblemWeb ref="web" :player="client.player" :slug="selected.slug" :status="runStatus" :active="tool === 'web'" /></template>
             </UITabs>
-            <PlayPanel ref="play" :player="client.player" :workspaces="client.workspaces" :slug="selected.slug" :kind="selected.kind" @busy="busy = $event" @status="observe" />
+            <PlayPanel :player="client.player" :workspaces="client.workspaces" :slug="selected.slug" :kind="selected.kind" @busy="busy = $event" @status="observe" />
             </div>
           </template>
         </UISplit>

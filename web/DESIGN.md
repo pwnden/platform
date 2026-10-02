@@ -208,7 +208,7 @@ full-title tooltip. `--ui-workspace-header-size` derives the minimum height from
 the compact control, two equal workspace insets and a divider. Category badges
 use the control radius and equal padding, with accessible category context.
 
-The submission bar is fixed below the right-side tool pane, outside its scrolling contents. Its field and button share the default control height; narrow panes stack them. A fixed-height caption holds the result and environment refresh. An accepted flag remains visible and readonly, styled with the success color and a check icon in the completed button. Loading, rejection and connection errors update existing slots and controls. Tool errors and progress use overlays within their viewports so adjacent controls keep their positions. TCP endpoints appear in terminal tab actions.
+The submission bar is fixed below the right-side tool pane, outside its scrolling contents. Its field and button share the default control height; narrow panes stack them. A fixed-height caption holds the result and reserves a compact action slot. Environment failures reveal a reconnect action in that slot. An accepted flag remains visible and readonly, styled with the success color and a check icon to the right of the completed button label. Loading, rejection and connection errors update existing slots and controls. Tool errors and progress use overlays within their viewports so adjacent controls keep their positions. TCP endpoints appear in terminal tab actions.
 
 The right-side tools use `UITabs`, with a continuous navigation strip at the
 workspace-header height. Each tab fills the strip height and uses the workspace
@@ -272,7 +272,7 @@ Source: [UITextField.vue](packages/ui/src/UITextField.vue).
 
 Each reading panel is a semantic section with a labelled heading and optional actions. A lower heading border separates the content; the header has a minimum height of (3.5rem). `headingLevel` places the catalog heading at level 2 and reading section headings at level 3 beneath the selected problem title. Brief, hints and walkthrough share raised heading bands. Tool contents use accessible region names beneath their shared tab strip. Panels flex to fill available space while permitting their contents to shrink. The terminal uses the terminal background.
 
-The submission bar groups its fixed feedback slot and environment refresh action above the form. Refresh queries server state. TCP addresses occupy the terminal tab actions when present. The tool pane has one fixed tab strip; selected-tool actions occupy its right edge, outside the tablist. Content fills the remaining bounded area above submission.
+The submission bar groups its fixed feedback slot and error-only reconnect action above the form. Reconnect retries problem presence without resetting the environment. Submission labels precede their progress, completion and action icons. TCP addresses occupy the terminal tab actions when present. The tool pane has one fixed tab strip; selected-tool actions occupy its right edge, outside the tablist. Content fills the remaining bounded area above submission.
 
 Source: [UIPanel.vue](packages/ui/src/UIPanel.vue), [PlayPanel.vue](features/play/src/PlayPanel.vue).
 
