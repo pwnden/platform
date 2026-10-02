@@ -76,12 +76,12 @@ onUnmounted(() => { active = false; if (typeof document !== 'undefined') documen
 <template>
   <section class="submission-bar" :class="{ 'submission-bar--accepted': accepted }" aria-label="플래그 제출" :aria-busy="pending || preparing">
     <div class="submission-caption">
-      <label for="flag">플래그</label>
+      <label for="flag">정답 제출</label>
       <p id="submission-feedback" class="submission-feedback" :class="{ 'submission-feedback--error': result === 'rejected' || result === 'error' || !!environmentError }" role="status" aria-live="polite" :title="feedback">{{ feedback }}</p>
       <div class="environment-retry"><UIIconButton v-if="environmentError" label="풀이 환경 다시 연결" icon="refresh" :disabled="pending" @click="retry" /></div>
     </div>
     <form @submit.prevent="submit">
-      <UITextField id="flag" v-model="flag" label="플래그 제출" label-hidden placeholder="찾은 플래그" :readonly="accepted" :tone="accepted ? 'success' : result === 'rejected' ? 'danger' : 'default'" :aria-invalid="result === 'rejected' || undefined" aria-describedby="submission-feedback" :disabled="pending" required />
+      <UITextField id="flag" v-model="flag" label="정답 플래그" label-hidden placeholder="문제에서 찾아낸 플래그를 입력하세요" :readonly="accepted" :tone="accepted ? 'success' : result === 'rejected' ? 'danger' : 'default'" :aria-invalid="result === 'rejected' || undefined" aria-describedby="submission-feedback" :disabled="pending" required />
       <UIButton class="submit-button" variant="primary" type="submit" :busy="pending" :disabled="accepted || !ready || !flag.trim()">
         <span>{{ accepted ? '완료' : '제출' }}</span>
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" :class="{ 'submit-progress': pending }"><path v-if="pending" d="M20 7v5h-5M4 17v-5h5m10.3-4a8 8 0 0 0-13.9-3M4.7 16a8 8 0 0 0 13.9 3" /><path v-else-if="accepted" d="m5 12 4 4L19 6" /><path v-else d="m5 12 14 0m-6-6 6 6-6 6" /></svg>
@@ -97,7 +97,7 @@ onUnmounted(() => { active = false; if (typeof document !== 'undefined') documen
 .submission-bar { position: relative; flex: none; min-width: 0; padding: var(--ui-space-2); border-top: 1px solid var(--ui-border); background: var(--ui-surface); display: grid; gap: var(--ui-space-1); container-type: inline-size; transition: border-color var(--ui-state-duration) var(--ui-state-easing), background-color var(--ui-state-duration) var(--ui-state-easing); }
 .submission-bar--accepted { border-color: var(--ui-success); }
 .submission-caption { display: flex; align-items: center; gap: var(--ui-space-1); height: var(--ui-control-size-compact); min-width: 0; }
-.submission-caption label { flex: none; font-size: 0.85rem; color: var(--ui-muted); }
+.submission-caption label { flex: none; font-size: 1rem; font-weight: 600; line-height: 1.4; color: var(--ui-foreground); white-space: nowrap; }
 .environment-retry { flex: none; width: var(--ui-control-size-compact); height: var(--ui-control-size-compact); }
 .submission-feedback { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ui-muted); font-size: 0.85rem; }
 .submission-feedback--error { color: var(--ui-danger); }
