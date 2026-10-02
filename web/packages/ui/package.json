@@ -12,6 +12,7 @@
     "typecheck": "vue-tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@lucide/vue": "1.49.0",
     "@sectile/form": "0.14.9",
     "@sectile/vue": "0.18.2",
     "@shikijs/langs": "4.4.3",

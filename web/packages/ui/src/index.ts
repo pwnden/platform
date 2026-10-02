@@ -5,6 +5,8 @@ export { default as UISubmitButton } from './UISubmitButton.vue';
 export { default as UIPagination } from './UIPagination.vue';
 export type { UIToggleButtonProps, UIFormProps, UISubmitButtonProps, UIPaginationProps } from './props';
 export { default as UIIconButton } from './UIIconButton.vue';
+export { default as UIIcon } from './UIIcon.vue';
+export type { UIIconName, UIIconProps } from './props';
 export { default as UIBadge } from './UIBadge.vue';
 export { default as UIDifficultyBadge } from './UIDifficultyBadge.vue';
 export { difficultyLevels } from './difficulty';

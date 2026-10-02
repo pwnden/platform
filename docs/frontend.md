@@ -23,6 +23,14 @@ use ES libraries without browser, framework or transport dependencies. The UI
 package alone imports Sectile; its public props and events belong to pwnden.
 Progress packages are introduced with their actual capabilities.
 
+The UI package also owns `@lucide/vue` with an exact version. Consumers use
+`UIIcon` and its semantic `UIIconName` through `@pwnden/ui`; third-party icon
+components stay private. Individual imports keep the icon set bounded.
+Icons accompany briefing roles, requester names and tool tabs, and represent
+toolbar actions and states. The shared default is a 16px box with a 1.75 stroke
+using current color. Icons are decorative (`aria-hidden`, unfocusable); parent
+controls retain their labels. Loading changes the icon within its existing box.
+
 Use public package exports between packages and relative imports inside one
 package. `web/tools/boundaries.mjs` keeps the allowlist independently of package
 manifests. It checks manifests, static/type imports, re-exports, literal dynamic

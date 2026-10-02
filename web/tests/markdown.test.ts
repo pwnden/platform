@@ -38,7 +38,7 @@ it('highlights fenced code using its language and leaves inline code plain under
 
 it('renders md4x message blocks with a sender and formatted dialogue', async () => {
   const html = await render('::message{from="moru17"}\n복구 키 파일이 공개됐어요. **확인해 주세요.**\n\n[안내](https://example.com/help)도 보냈어요.\n::\n\n일반 본문');
-  expect(html).toContain('<blockquote class="markdown-message"><p class="markdown-message-from">moru17</p><div class="markdown-message-body">');
+  expect(html).toMatch(/<blockquote class="markdown-message"><p class="markdown-message-from"><svg[^>]*ui-icon--message[^>]*aria-hidden="true"[^>]*>.*?<\/svg><span>moru17<\/span><\/p><div class="markdown-message-body">/);
   expect(html).toContain('<strong>확인해 주세요.</strong>');
   expect(html).toContain('href="https://example.com/help" target="_blank" rel="noopener noreferrer"');
   expect(html).toContain('</div></blockquote><p>일반 본문</p>');
@@ -57,7 +57,7 @@ it('renders briefing roles with distinct sections and headings below the panel t
   const html = await renderToString(createSSRApp({ render: () => h(UIMarkdown, { source, headingOffset: 1 }) }));
   for (const [role, title] of [['objective', '의뢰 목표'], ['resources', '전달받은 자료'], ['knowledge', '시작 전 알아둘 것'], ['submission', '제출할 값']]) {
     expect(html).toContain(`class="markdown-section markdown-section--${role}" aria-label="${title}"`);
-    expect(html).toContain(`<h3 class="markdown-section-title">${title}</h3>`);
+    expect(html).toMatch(new RegExp(`<h3 class="markdown-section-title"><svg[^>]*ui-icon--${role}[^>]*aria-hidden="true"[^>]*>.*?</svg><span>${title}</span></h3>`));
   }
   expect(html).toContain('<li><code>files/recovery.txt</code></li>');
   expect(html).toContain('class="ui-code"');

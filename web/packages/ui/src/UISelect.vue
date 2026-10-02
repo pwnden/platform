@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import UIIcon from './UIIcon.vue';
 import { SelectRoot, SelectTrigger, SelectValue, SelectPortal, SelectContent, SelectViewport, SelectItem, SelectItemText, SelectItemIndicator } from '@sectile/vue/select';
 import type { UISelectProps } from './props';
 const props = defineProps<UISelectProps>();
@@ -18,14 +19,14 @@ function select(id: string | null) {
     <label :for="id">{{ label }}</label>
     <SelectTrigger :id="id" class="ui-input ui-select">
       <SelectValue class="ui-select-value" />
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6" /></svg>
+      <UIIcon name="chevron-down" />
     </SelectTrigger>
     <SelectPortal>
       <SelectContent class="ui-select-content ui-radius-outer">
         <SelectViewport class="ui-select-viewport">
           <SelectItem v-for="option in options" :key="option.value" :value="optionID(option.value)" class="ui-select-item ui-radius-inner">
             <SelectItemText class="ui-select-item-text">{{ option.label }}</SelectItemText>
-            <span class="ui-select-indicator" aria-hidden="true"><SelectItemIndicator><svg viewBox="0 0 24 24" focusable="false"><path d="m5 12 4 4 10-10" /></svg></SelectItemIndicator></span>
+            <span class="ui-select-indicator" aria-hidden="true"><SelectItemIndicator><UIIcon name="check" /></SelectItemIndicator></span>
           </SelectItem>
         </SelectViewport>
       </SelectContent>

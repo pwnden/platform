@@ -23,7 +23,7 @@ const allowed = ref<readonly ProblemTool[]>([]);
 const visited = ref<readonly string[]>([]);
 const tool = ref('');
 const labels: Record<ProblemTool, string> = { terminal: '터미널', files: '파일', web: '웹' };
-const tools = computed(() => allowed.value.map(value => ({ value, label: labels[value] })));
+const tools = computed(() => allowed.value.map(value => ({ value, label: labels[value], icon: value })));
 watch(tool, value => { if (value && !visited.value.includes(value)) visited.value = [...visited.value, value]; });
 function loaded(detail: ProblemDetails) {
   files.value = detail.files; allowed.value = detail.tools;

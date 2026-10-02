@@ -35,6 +35,7 @@ vi.mock('../packages/ui/src/index.ts', async () => {
     difficultyLevels: (await import('../packages/ui/src/difficulty')).difficultyLevels,
     UILink: (await import('../packages/ui/src/UILink.vue')).default,
     UIIconButton: (await import('../packages/ui/src/UIIconButton.vue')).default,
+    UIIcon: (await import('../packages/ui/src/UIIcon.vue')).default,
     UITerminalControls: (await import('../packages/ui/src/UITerminalControls.vue')).default,
     UIFile: (await import('../packages/ui/src/UIFile.vue')).default,
     UITabs: (await import('../packages/ui/src/UITabs.vue')).default,
@@ -480,6 +481,8 @@ const renderer = createRenderer<Node, Node>({
 });
 const text = (item: Node): string => (item.type === 'comment' ? '' : item.text) + item.children.map(text).join('');
 const flatten = (item: Node): Node[] => [item, ...item.children.flatMap(flatten)];
+// SVG drawing nodes change with state; the fixed SVG box and surrounding layout stay.
+const layoutStructure = (item: Node): string[] => [item.type, ...(item.type === 'svg' ? [] : item.children.flatMap(layoutStructure))];
 const button = (root: Node, label: string) => flatten(root).find(item => item.type === 'button' && (text(item) === label || item.props['aria-label'] === label))!;
 const click = (item: Node) => {
   const event = new Event('click');
@@ -655,7 +658,7 @@ it.each(['file', 'service'] as const)('keeps accepted %s answers readonly and pr
   const field = flatten(root).find(item => item.type === 'input')!;
   const form = flatten(root).find(item => item.type === 'form')!;
   const feedback = flatten(root).find(item => item.props.id === 'submission-feedback')!;
-  const structure = flatten(root).map(item => item.type);
+  const structure = layoutStructure(root);
   const submitButton = flatten(root).find(item => item.type === 'button' && item.props.type === 'submit')!;
   expect(submitButton.children.map(item => item.type)).toEqual(['span', 'svg']);
   expect(button(root, '실행 상태 새로고침')).toBeUndefined();
@@ -664,7 +667,7 @@ it.each(['file', 'service'] as const)('keeps accepted %s answers readonly and pr
   await (form.props.onSubmit as (event: Event) => Promise<unknown>)(new Event('submit')); await settle();
   expect(field.props.modelValue).toBe('pwnden{wrong}');
   expect(field.props.readonly).toBe(false);
-  expect(flatten(root).map(item => item.type)).toEqual(structure);
+  expect(layoutStructure(root)).toEqual(structure);
   (field.props['onUpdate:modelValue'] as (value: string) => void)('pwnden{correct}'); await settle();
   await (form.props.onSubmit as (event: Event) => Promise<unknown>)(new Event('submit')); await settle();
   expect(field.props.modelValue).toBe('pwnden{correct}');
@@ -672,7 +675,9 @@ it.each(['file', 'service'] as const)('keeps accepted %s answers readonly and pr
   expect(field.props.tone).toBe('success');
   expect(text(root)).toContain('해결 완료');
   expect(flatten(root).find(item => item.type === 'button' && item.props.type === 'submit')?.props.disabled).toBe(true);
-  expect(flatten(root).map(item => item.type)).toEqual(structure);
+  expect(layoutStructure(root)).toEqual(structure);
+  expect(submitButton.children[1]!.props).toMatchObject({ width: 16, height: 16 });
+  expect(submitButton.children[1]!.props.class).toContain('ui-icon--check');
   expect(flatten(root).find(item => item.props.id === 'submission-feedback')).toBe(feedback);
   failed('network_error'); await settle();
   expect(button(root, '풀이 환경 다시 연결')).toBeDefined();
@@ -683,7 +688,7 @@ it.each(['file', 'service'] as const)('keeps accepted %s answers readonly and pr
   expect(field.props.modelValue).toBe('pwnden{correct}');
   expect(field.props.readonly).toBe(true);
   expect(text(root)).toContain('해결 완료');
-  expect(flatten(root).map(item => item.type)).toEqual(structure);
+  expect(layoutStructure(root)).toEqual(structure);
   await (form.props.onSubmit as (event: Event) => Promise<unknown>)(new Event('submit'));
   expect(player.submit).toHaveBeenCalledTimes(2);
   renderer.render(null, root);
@@ -698,19 +703,22 @@ it('serializes submissions and preserves the editable flag after a failed reques
   const field = flatten(root).find(item => item.type === 'input')!;
   const form = flatten(root).find(item => item.type === 'form')!;
   (field.props['onUpdate:modelValue'] as (value: string) => void)('pwnden{retry}'); await settle();
-  const structure = flatten(root).map(item => item.type);
+  const structure = layoutStructure(root);
   const submit = form.props.onSubmit as (event: Event) => Promise<unknown>;
   const request = submit(new Event('submit'));
   void submit(new Event('submit')); await settle();
   expect(player.submit).toHaveBeenCalledOnce();
   expect(field.props.disabled).toBe(true);
-  expect(flatten(root).map(item => item.type)).toEqual(structure);
+  expect(layoutStructure(root)).toEqual(structure);
+  const progress = flatten(root).find(item => item.type === 'svg')!;
+  expect(progress.props).toMatchObject({ width: 16, height: 16 });
+  expect(progress.props.class).toContain('ui-icon--loader');
   reject(new Error('offline')); await request; await settle();
   expect(field.props.modelValue).toBe('pwnden{retry}');
   expect(field.props.readonly).toBe(false);
   expect(field.props.disabled).toBe(false);
   expect(text(root)).toContain('제출하지 못했습니다.');
-  expect(flatten(root).map(item => item.type)).toEqual(structure);
+  expect(layoutStructure(root)).toEqual(structure);
   renderer.render(null, root);
 });
 

@@ -32,6 +32,16 @@ export interface UILinkProps {
   readonly size?: 'default' | 'compact';
 }
 
+export type UIIconName = 'back' | 'forward' | 'refresh' | 'download' | 'external' | 'check'
+  | 'chevron-down' | 'chevron-right' | 'loader' | 'link' | 'link-off' | 'power'
+  | 'plug' | 'unplug' | 'error' | 'objective' | 'resources' | 'knowledge' | 'submission'
+  | 'message' | 'terminal' | 'files' | 'web';
+
+export interface UIIconProps {
+  readonly name: UIIconName;
+  readonly size?: number;
+}
+
 export interface UIIconButtonProps {
   readonly label: string;
   readonly icon: 'refresh' | 'download' | 'back' | 'forward';
@@ -55,7 +65,7 @@ export interface UISplitProps {
 export interface UITabsProps {
   readonly label: string;
   readonly modelValue: string;
-  readonly items: readonly { value: string; label: string }[];
+  readonly items: readonly { value: string; label: string; icon?: UIIconName }[];
 }
 
 export interface UIWebFrameProps {

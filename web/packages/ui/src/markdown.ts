@@ -1,6 +1,8 @@
 import { h, type VNodeChild } from 'vue';
 import type { ComarkNode } from 'md4x/standalone';
 import UICode from './UICode.vue';
+import UIIcon from './UIIcon.vue';
+import type { UIIconName } from './props';
 
 let parser: Promise<typeof import('md4x/standalone')> | undefined;
 
@@ -13,11 +15,11 @@ export async function parseMarkdown(source: string): Promise<ComarkNode[]> {
 }
 
 const elements = new Set(['p', 'ul', 'ol', 'li', 'blockquote', 'pre', 'code', 'strong', 'em', 'del', 's', 'hr', 'br', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'span', 'div', 'mark']);
-const sections = new Map([
-  ['objective', '의뢰 목표'],
-  ['resources', '전달받은 정보'],
-  ['knowledge', '시작 전 알아둘 것'],
-  ['submission', '제출할 값'],
+const sections = new Map<string, { title: string; icon: UIIconName }>([
+  ['objective', { title: '의뢰 목표', icon: 'objective' }],
+  ['resources', { title: '전달받은 정보', icon: 'resources' }],
+  ['knowledge', { title: '시작 전 알아둘 것', icon: 'knowledge' }],
+  ['submission', { title: '제출할 값', icon: 'submission' }],
 ]);
 
 function linkTarget(value: unknown, prefix: string): string | undefined {
@@ -40,18 +42,18 @@ export function renderMarkdownNode(node: ComarkNode, prefix: string, headingOffs
     }
   }
   const children = content.map(child => renderMarkdownNode(child, prefix, headingOffset));
-  const sectionTitle = tag ? sections.get(tag) : undefined;
-  if (sectionTitle) {
-    const title = typeof attributes.title === 'string' && attributes.title.trim() ? attributes.title.trim() : sectionTitle;
+  const section = tag ? sections.get(tag) : undefined;
+  if (section) {
+    const title = typeof attributes.title === 'string' && attributes.title.trim() ? attributes.title.trim() : section.title;
     return h('section', { class: `markdown-section markdown-section--${tag}`, 'aria-label': title }, [
-      h(`h${Math.min(2 + headingOffset, 6)}`, { class: 'markdown-section-title' }, title),
+      h(`h${Math.min(2 + headingOffset, 6)}`, { class: 'markdown-section-title' }, [h(UIIcon, { name: section.icon }), h('span', title)]),
       h('div', { class: 'markdown-section-body' }, children),
     ]);
   }
   if (tag === 'message') {
     const from = typeof attributes.from === 'string' ? attributes.from.trim() : '';
     return h('blockquote', { class: 'markdown-message' }, [
-      ...(from ? [h('p', { class: 'markdown-message-from' }, from)] : []),
+      ...(from ? [h('p', { class: 'markdown-message-from' }, [h(UIIcon, { name: 'message' }), h('span', from)])] : []),
       h('div', { class: 'markdown-message-body' }, children),
     ]);
   }

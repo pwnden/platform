@@ -21,9 +21,11 @@ import UIWebFrame from '../packages/ui/src/UIWebFrame.vue';
 
 it('keeps inactive tool panels mounted and inaccessible with linked Sectile tabs', async () => {
   const html = await renderToString(createSSRApp({ render: () => h(UITabs, {
-    label: '풀이 도구', modelValue: 'terminal', items: [{ value: 'terminal', label: '터미널' }, { value: 'web', label: '웹' }],
+    label: '풀이 도구', modelValue: 'terminal', items: [{ value: 'terminal', label: '터미널', icon: 'terminal' }, { value: 'web', label: '웹', icon: 'web' }],
   }, { terminal: () => 'shell state', web: () => 'web state', actions: () => h(UIIconButton, { label: '터미널 새로고침', icon: 'refresh' }) }) }));
   expect(html).toContain('role="tablist"');
+  expect(html).toMatch(/<button[^>]*role="tab"[^>]*><span[^>]*><svg[^>]*ui-icon--terminal[^>]*aria-hidden="true"[^>]*>.*?<\/svg><span[^>]*>터미널<\/span>/);
+  expect(html).toContain('ui-icon--web');
   expect(html).toContain('aria-label="풀이 도구"');
   expect(html.match(/role="tab"/g)).toHaveLength(2);
   expect(html.match(/role="tabpanel"/g)).toHaveLength(2);
@@ -176,7 +178,7 @@ it('uses compact named terminal controls with distinct thumb icons in every stat
     expect(html).toContain('aria-hidden="true" focusable="false"');
     const thumb = html.match(/class="ui-switch-thumb ui-radius-inner"[^>]*>(.*?)<\/span>/s)![1];
     expect(thumb).toContain('<svg');
-    thumbIcons.push(thumb.match(/<path d="([^"]+)"/)![1]);
+    thumbIcons.push(thumb.match(/ui-icon--([a-z-]+)/)![1]);
   }
   expect(new Set(thumbIcons.slice(0, 3)).size).toBe(3);
   expect(thumbIcons[3]).toBe(thumbIcons[2]);

@@ -58,10 +58,10 @@ const MarkdownContent = () => nodes.value.map(node => renderMarkdownNode(node, p
 .ui-markdown :deep(li > ul), .ui-markdown :deep(li > ol) { margin-block: var(--ui-space-1); }
 .ui-markdown :deep(blockquote) { margin-inline: 0; padding: var(--ui-space-2); border-left: 1px solid var(--ui-border-active); color: var(--ui-muted); }
 .ui-markdown :deep(.markdown-message) { padding: var(--ui-space-3); border: 0; border-radius: var(--ui-radius-surface); color: var(--ui-foreground); background: var(--ui-accent-surface); }
-.ui-markdown :deep(.markdown-message-from) { margin-bottom: var(--ui-space-1); color: var(--ui-accent); font-weight: 600; }
+.ui-markdown :deep(.markdown-message-from) { display: flex; align-items: center; gap: var(--ui-space-1); margin-bottom: var(--ui-space-1); color: var(--ui-accent); font-weight: 600; }
 .ui-markdown :deep(.markdown-message-body) { font-size: 1.05rem; }
 .ui-markdown :deep(.markdown-section) { margin-block: var(--ui-space-3); padding: var(--ui-space-3); }
-.ui-markdown :deep(.markdown-section-title) { margin-block: 0 var(--ui-space-1); font-size: 1.05rem; font-weight: 600; }
+.ui-markdown :deep(.markdown-section-title) { display: flex; align-items: center; gap: var(--ui-space-1); margin-block: 0 var(--ui-space-1); font-size: 1.05rem; font-weight: 600; }
 .ui-markdown :deep(.markdown-section--objective) { border-radius: var(--ui-radius-surface); background: var(--ui-surface-hover); }
 .ui-markdown :deep(.markdown-section--objective > .markdown-section-title) { color: var(--ui-accent); }
 .ui-markdown :deep(.markdown-section--objective > .markdown-section-body) { font-size: 1.05rem; }

@@ -9,7 +9,7 @@ export const policy = {
   '@pwnden/catalog': { directory: 'domains/catalog', dependencies: [] },
   '@pwnden/play': { directory: 'domains/play', dependencies: [] },
   '@pwnden/terminal': { directory: 'domains/terminal', dependencies: [] },
-  '@pwnden/ui': { directory: 'packages/ui', dependencies: ['vue', '@sectile/vue', '@sectile/form', '@xterm/xterm', '@xterm/addon-fit', 'md4x', 'shiki', '@shikijs/langs'] },
+  '@pwnden/ui': { directory: 'packages/ui', dependencies: ['vue', '@sectile/vue', '@sectile/form', '@lucide/vue', '@xterm/xterm', '@xterm/addon-fit', 'md4x', 'shiki', '@shikijs/langs'] },
   '@pwnden/api': { directory: 'packages/api', dependencies: ['@pwnden/catalog', '@pwnden/play', '@pwnden/terminal'] },
   '@pwnden/catalog-feature': { directory: 'features/catalog', dependencies: ['vue', '@pwnden/catalog', '@pwnden/ui'] },
   '@pwnden/play-feature': { directory: 'features/play', dependencies: ['vue', '@pwnden/play', '@pwnden/ui'] },
@@ -45,6 +45,7 @@ export function checkBoundaries(root) {
       const pinnedVersion = version.startsWith('npm:') ? version.slice(version.lastIndexOf('@') + 1) : version;
       if (!exactVersion.test(pinnedVersion)) report(workspaceManifestFile, `dependency must have an exact version: ${name}`);
       if (name.startsWith('@sectile/')) report(workspaceManifestFile, 'Sectile dependencies belong to the UI package');
+      if (name.startsWith('@lucide/')) report(workspaceManifestFile, 'Lucide dependencies belong to the UI package');
     }
   }
   const packages = Object.entries(policy).map(([name, rule]) => {
@@ -117,6 +118,9 @@ export function checkBoundaries(root) {
         checkSpecifier(item, file, node.moduleSpecifier.text);
         if (item.name === '@pwnden/ui' && ts.isExportDeclaration(node) && node.moduleSpecifier.text.startsWith('@sectile/')) {
           report(file, 'UI owns its public API; Sectile exports must stay private');
+        }
+        if (item.name === '@pwnden/ui' && ts.isExportDeclaration(node) && node.moduleSpecifier.text.startsWith('@lucide/')) {
+          report(file, 'UI owns its public API; Lucide exports must stay private');
         }
       }
       if (ts.isImportEqualsDeclaration(node) && ts.isExternalModuleReference(node.moduleReference) && node.moduleReference.expression) {

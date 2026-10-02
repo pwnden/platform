@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { TabsRoot, TabsList, TabsTrigger, TabsContent } from '@sectile/vue/tabs';
 import type { UITabsProps } from './props';
+import UIIcon from './UIIcon.vue';
 const props = defineProps<UITabsProps>();
 defineEmits<{ 'update:modelValue': [value: string] }>();
 const values = computed(() => props.items.map(item => item.value));
@@ -11,7 +12,7 @@ const values = computed(() => props.items.map(item => item.value));
   <TabsRoot class="ui-tabs" :items="values" :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)">
     <div class="ui-tabs-heading">
       <TabsList class="ui-tabs-list" :label="label">
-        <TabsTrigger v-for="item in items" :key="item.value" class="ui-tab" :value="item.value"><span class="ui-tab-label">{{ item.label }}</span></TabsTrigger>
+        <TabsTrigger v-for="item in items" :key="item.value" class="ui-tab" :value="item.value"><span class="ui-tab-label"><UIIcon v-if="item.icon" :name="item.icon" /><span>{{ item.label }}</span></span></TabsTrigger>
       </TabsList>
       <div v-if="$slots.actions" class="ui-tabs-actions"><slot name="actions" /></div>
     </div>
@@ -31,7 +32,7 @@ const values = computed(() => props.items.map(item => item.value));
 .ui-tab[aria-selected='true'] { color: var(--ui-accent); }
 .ui-tab[aria-selected='true']::after { background: var(--ui-accent); }
 .ui-tab:focus-visible { outline: none; }
-.ui-tab-label { border-radius: var(--ui-radius-inline); }
+.ui-tab-label { display: inline-flex; align-items: center; gap: var(--ui-space-1); border-radius: var(--ui-radius-inline); }
 .ui-tab:focus-visible .ui-tab-label { outline: var(--ui-focus-width) solid var(--ui-focus-color); outline-offset: 3px; }
 @media (hover: hover) { .ui-tab:hover:enabled { color: var(--ui-foreground); background: var(--ui-surface-raised); } }
 .ui-tab:active:enabled { background: var(--ui-surface-pressed); }

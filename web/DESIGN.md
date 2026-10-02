@@ -241,6 +241,16 @@ sibling positions. Material download retains its label and uses the existing
 icon box for progress. The control stays disabled and semantically busy during
 the request. Reduced-motion preferences keep the progress icon static.
 
+**The Shared Icon Rule.** `packages/ui` owns `@lucide/vue` at the exact version
+in its manifest. `UIIcon` maps semantic names to individual named imports and
+exports pwnden-owned props. Icons use current color, a (1.75) stroke and a
+default (1rem) box. They are decorative, hidden from assistive technology and
+unfocusable; their button, link, tab or heading supplies the accessible name.
+Progress uses the same box as the resting icon and respects reduced motion.
+Briefing headings pair target, folder, book and send icons with their role
+labels; requester names use a message icon. Tool tabs pair terminal, files and
+globe icons with their labels. Repeated prose and list rows retain plain text.
+
 **The Bounded Terminal Rule.** Keep terminal measurement inside a positioned, bounded viewport. The terminal screen can shrink to (6rem) on short desktop windows, with its renderer positioned within that screen.
 
 At desktop heights of (32rem) or less, catalog filters, rows and pagination scroll together beneath the list header so every control remains reachable. The terminal body also scrolls when its controls and error messages exceed the available height.

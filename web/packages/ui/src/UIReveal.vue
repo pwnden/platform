@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { DisclosureRoot, DisclosureTrigger, DisclosureContent } from '@sectile/vue/disclosure';
 import type { UIRevealProps } from './props';
+import UIIcon from './UIIcon.vue';
 defineProps<UIRevealProps>();
 defineEmits<{ 'update:modelValue': [value: boolean] }>();
 </script>
 
 <template>
   <DisclosureRoot class="ui-reveal" :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)">
-    <DisclosureTrigger class="ui-disclosure"><span class="ui-disclosure-label"><svg class="ui-disclosure-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 5 7 7-7 7" /></svg><span>{{ label }}</span></span></DisclosureTrigger>
+    <DisclosureTrigger class="ui-disclosure"><span class="ui-disclosure-label"><UIIcon name="chevron-right" class="ui-disclosure-chevron" /><span>{{ label }}</span></span></DisclosureTrigger>
     <DisclosureContent class="ui-reveal-content"><slot v-if="modelValue" /></DisclosureContent>
   </DisclosureRoot>
 </template>

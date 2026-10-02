@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { DisclosureRoot, DisclosureTrigger, DisclosureContent } from '@sectile/vue/disclosure';
 import type { UIFileProps } from './props';
 import UIButton from './UIButton.vue';
+import UIIcon from './UIIcon.vue';
 
 const props = defineProps<UIFileProps>();
 defineEmits<{ 'update:modelValue': [value: boolean]; download: [] }>();
@@ -21,17 +22,14 @@ const sizeLabel = computed(() => {
     <div class="ui-file-header">
       <DisclosureTrigger class="ui-disclosure ui-file-toggle" :aria-label="`${name} ${modelValue ? '미리보기 닫기' : '미리보기 열기'}`" :title="name">
         <span class="ui-disclosure-label ui-file-identity">
-          <svg class="ui-disclosure-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 5 7 7-7 7" /></svg>
+          <UIIcon name="chevron-right" class="ui-disclosure-chevron" />
           <span v-if="directory" class="ui-file-directory">{{ directory }}</span>
           <span class="ui-file-name">{{ filename }}</span>
         </span>
         <span class="ui-file-size" :title="`${size.toLocaleString('ko-KR')} 바이트`">{{ sizeLabel }}</span>
       </DisclosureTrigger>
       <UIButton variant="ghost" size="compact" class="ui-file-download" :busy="busy" :disabled="disabled" :aria-label="`${name} 다운로드`" :title="`${name} 다운로드`" @click="$emit('download')">
-        <svg :class="{ 'ui-file-progress': busy }" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path v-if="busy" d="M20 12a8 8 0 1 1-8-8" />
-          <path v-else d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4" />
-        </svg>
+        <UIIcon :name="busy ? 'loader' : 'download'" :class="{ 'ui-file-progress': busy }" />
         <span>다운로드</span>
       </UIButton>
     </div>
