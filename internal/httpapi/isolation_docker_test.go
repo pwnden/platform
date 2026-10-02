@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -40,6 +41,28 @@ func TestIsolatedNoteVaultDocker(t *testing.T) {
 	}
 	if err := os.CopyFS(filepath.Join(repo, "challenges", "note-vault"), os.DirFS(filepath.Join(source, "challenges", "note-vault"))); err != nil {
 		t.Fatal(err)
+	}
+	_, frontendErr := os.Stat(filepath.Join(source, "web", "package.json"))
+	vueTarget := frontendErr == nil
+	if frontendErr != nil && !os.IsNotExist(frontendErr) {
+		t.Fatal(frontendErr)
+	}
+	if vueTarget {
+		if err := os.Mkdir(filepath.Join(repo, "web"), 0755); err != nil {
+			t.Fatal(err)
+		}
+		for _, name := range []string{"package.json", "pnpm-lock.yaml", "vite.config.ts", "tsconfig.json", "index.html", "server.py", "__init__.py"} {
+			data, err := os.ReadFile(filepath.Join(source, "web", name))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(repo, "web", name), data, 0644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := os.CopyFS(filepath.Join(repo, "web", "src"), os.DirFS(filepath.Join(source, "web", "src"))); err != nil {
+			t.Fatal(err)
+		}
 	}
 	t.Setenv("XDG_CACHE_HOME", t.TempDir())
 	t.Setenv("LOCALAPPDATA", t.TempDir())
@@ -98,6 +121,40 @@ func TestIsolatedNoteVaultDocker(t *testing.T) {
 	response.Body.Close()
 	if response.StatusCode != 200 || !strings.Contains(string(body), "개인 메모 사이트") {
 		t.Fatal("problem home unavailable", response.StatusCode, string(body))
+	}
+	request, err := http.NewRequestWithContext(ctx, "GET", browser.Target+"/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request.Header.Set("Accept", "text/html")
+	response, err = client.Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ = io.ReadAll(response.Body)
+	response.Body.Close()
+	if response.StatusCode != 200 || (vueTarget && !strings.Contains(string(body), `type="module"`)) {
+		t.Fatal("Vue document unavailable", response.StatusCode, string(body))
+	}
+	if vueTarget {
+		assets := regexp.MustCompile(`(?:src|href)="(/assets/[^" ]+)"`).FindAllStringSubmatch(string(body), -1)
+		if len(assets) < 2 {
+			t.Fatal("Vue script and style declarations missing")
+		}
+		for _, asset := range assets {
+			r, err := client.Get(browser.Target + asset[1])
+			if err != nil {
+				t.Fatal(err)
+			}
+			payload, _ := io.ReadAll(r.Body)
+			r.Body.Close()
+			if r.StatusCode != 200 || len(payload) == 0 {
+				t.Fatal("Vue asset unavailable", asset[1], r.StatusCode)
+			}
+			if strings.HasSuffix(asset[1], ".js") && !strings.HasPrefix(r.Header.Get("Content-Type"), "text/javascript") {
+				t.Fatal("Vue module MIME", r.Header)
+			}
+		}
 	}
 	// Compare identical warm routes with live endpoint inspection versus the full
 	// environment observer. Both modes keep identity and isolation enforcement.
