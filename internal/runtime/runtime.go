@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
@@ -577,14 +576,7 @@ func composeArgs(c *challenge.Loaded, project string, files []string, tail ...st
 }
 
 func command(ctx context.Context, dir string, extraEnv []string, name string, args ...string) (string, string, error) {
-	cmd := exec.CommandContext(ctx, name, args...)
-	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), extraEnv...)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	return stdout.String(), stderr.String(), err
+	return commandInput(ctx, dir, extraEnv, nil, name, args...)
 }
 
 func newFlag() (string, error) {
