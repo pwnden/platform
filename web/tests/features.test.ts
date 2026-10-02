@@ -19,6 +19,24 @@ import * as syntax from '../packages/ui/src/syntax';
 
 function browserSession(target: string) { return { target, url: target + '/__pwnden_browser/' + 'a'.repeat(64) }; }
 const unusedBrowser = vi.fn();
+
+it('restores an accepted answer without submitting again and marks saved completions', async () => {
+  const problem = { slug: 'test', title: '복원 문제', category: 'web', kind: 'file' as const, solvedAt: '2026-10-02T00:00:00Z' };
+  const player: Player = { browser: vi.fn(), status: vi.fn(), run: vi.fn(), stop: vi.fn(), submit: vi.fn() };
+  const root = node('root');
+  renderer.render(h(PlayPanel, { player, workspaces: workspace({ slug: 'test', kind: 'file', state: 'ready', endpoints: [] }), slug: 'test', kind: 'file', answer: 'pwnden{saved}' }), root);
+  await settle();
+  const input = flatten(root).find(item => item.type === 'input')!;
+  expect(input.props.modelValue).toBe('pwnden{saved}');
+  expect(input.props.readonly).toBe(true);
+  expect(text(root)).toContain('해결 완료');
+  expect(player.submit).not.toHaveBeenCalled();
+  renderer.render(null, root);
+  renderer.render(h(ProblemList, { catalog: { list: async () => [problem], detail: vi.fn(), download: vi.fn(), guidance: vi.fn() } }), root);
+  await settle();
+  expect(text(root)).toContain('해결 완료');
+  renderer.render(null, root);
+});
 function workspace(status: RunStatus): Workspaces {
   return { connect: vi.fn(() => ({ ready: Promise.resolve(status), close: vi.fn() })), list: vi.fn(async () => []), stop: vi.fn() };
 }

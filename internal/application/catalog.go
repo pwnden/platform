@@ -14,6 +14,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/pwnden/platform/internal/challenge"
+	"github.com/pwnden/platform/internal/progress"
 )
 
 // Details and Files are read capabilities; downloaded streams belong to callers.
@@ -42,6 +43,7 @@ type ProblemDetail struct {
 	HintCount   int
 	Walkthrough bool
 	Tools       []string
+	Completion  *progress.Completion
 }
 
 type Download struct {
@@ -148,6 +150,14 @@ func (s *Service) Detail(ctx context.Context, slug string) (ProblemDetail, error
 		return ProblemDetail{}, loadError(ctx, "detail", slug, err)
 	}
 	result := ProblemDetail{Problem: problem(c), Files: make([]ProblemFile, 0, len(files)), Tools: c.PlayerTools()}
+	completed, err := s.Completions(ctx)
+	if err != nil {
+		return ProblemDetail{}, err
+	}
+	if saved, ok := completed[slug]; ok {
+		result.Completion = &saved
+		result.SolvedAt = &saved.SolvedAt
+	}
 	for _, file := range files {
 		result.Files = append(result.Files, file.ProblemFile)
 	}

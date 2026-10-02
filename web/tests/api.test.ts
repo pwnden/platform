@@ -2,6 +2,17 @@ import { describe, expect, it, vi } from 'vitest';
 import { APIError, createAPI } from '../packages/api/src/index';
 
 const token = 'a'.repeat(64);
+
+it('maps durable completion state and rejects a missing saved answer', async () => {
+  const problem = { slug: 'test', title: 'Test', category: 'web', kind: 'service', solved_at: '2026-10-02T00:00:00Z' };
+  const detail = { ...problem, description: '', files: [], tools: ['web'], hint_count: 0, walkthrough: false, answer: 'pwnden{saved}' };
+  const replies = [response({ problems: [problem] }), response(detail), response({ ...detail, answer: undefined }), response({ ...detail, solved_at: 'bad' })];
+  const client = createAPI({ token, fetch: async () => replies.shift()! });
+  expect((await client.catalog.list())[0]?.solvedAt).toBe(problem.solved_at);
+  expect((await client.catalog.detail('test')).answer).toBe('pwnden{saved}');
+  await expect(client.catalog.detail('test')).rejects.toMatchObject({ code: 'invalid_response' });
+  await expect(client.catalog.detail('test')).rejects.toMatchObject({ code: 'invalid_response' });
+});
 const response = (payload: unknown, status = 200) => new Response(JSON.stringify(payload), { status, headers: { 'Content-Type': 'application/json' } });
 
 it.each([1, 2, 3, 4, 5] as const)('maps difficulty %i for list and detail', async difficulty => {

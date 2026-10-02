@@ -38,7 +38,8 @@ environments are retained; the player explicitly ends one when capacity is reach
 Shell exit removes the toolbox while a visible problem retains its services.
 Inactivity cleanup and normal server shutdown remove both. TCP endpoints are
 displayed as addresses for terminal tools. Answer checking remains in Go through
-the implemented [API](web-api.md). Progress history is a subsequent capability.
+the implemented [API](web-api.md). Accepted answers and first-completion times
+persist in the platform's [SQLite state store](storage.md).
 HTML, JavaScript and CSS are embedded in the executable; serving them requires
 neither a separate asset directory nor Node. See [frontend](frontend.md) for build
 preparation.

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/pwnden/platform/internal/application"
 )
@@ -30,6 +31,7 @@ type Problem struct {
 	Category   string           `json:"category"`
 	Difficulty int              `json:"difficulty,omitempty"`
 	Kind       application.Kind `json:"kind"`
+	SolvedAt   *time.Time       `json:"solved_at,omitempty"`
 }
 
 type ProblemList struct {
@@ -49,6 +51,7 @@ type ProblemDetail struct {
 	HintCount   int           `json:"hint_count"`
 	Walkthrough bool          `json:"walkthrough"`
 	Tools       []string      `json:"tools"`
+	Answer      string        `json:"answer,omitempty"`
 }
 
 type Guidance struct {
@@ -102,7 +105,7 @@ type ErrorResponse struct {
 func ProblemsFrom(result []application.Problem) ProblemList {
 	response := ProblemList{Problems: make([]Problem, 0, len(result))}
 	for _, p := range result {
-		response.Problems = append(response.Problems, Problem{Slug: p.Slug, Title: p.Title, Category: p.Category, Kind: p.Kind, Difficulty: p.Difficulty})
+		response.Problems = append(response.Problems, Problem{Slug: p.Slug, Title: p.Title, Category: p.Category, Kind: p.Kind, Difficulty: p.Difficulty, SolvedAt: p.SolvedAt})
 	}
 	return response
 }
@@ -110,6 +113,10 @@ func ProblemsFrom(result []application.Problem) ProblemList {
 func DetailFrom(result application.ProblemDetail) ProblemDetail {
 	response := ProblemDetail{Problem: Problem{Slug: result.Slug, Title: result.Title, Category: result.Category, Kind: result.Kind, Difficulty: result.Difficulty}, Description: result.Description, Files: make([]ProblemFile, 0, len(result.Files))}
 	response.HintCount, response.Walkthrough = result.HintCount, result.Walkthrough
+	response.SolvedAt = result.SolvedAt
+	if result.Completion != nil {
+		response.Answer = result.Completion.Answer
+	}
 	response.Tools = append([]string{}, result.Tools...)
 	for _, file := range result.Files {
 		response.Files = append(response.Files, ProblemFile{file.ID, file.Name, file.Size})
@@ -164,6 +171,8 @@ func ErrorFrom(err error) (int, ErrorResponse) {
 		status, message = http.StatusServiceUnavailable, "Run setup first."
 	case application.SetupFailed:
 		status, message = http.StatusServiceUnavailable, "The problem installation is unavailable."
+	case application.StorageFailed:
+		status, message = http.StatusServiceUnavailable, "Player progress could not be saved or loaded."
 	case application.Canceled:
 		status, message = http.StatusServiceUnavailable, "The operation was canceled."
 	case application.DeadlineExceeded:

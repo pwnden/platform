@@ -25,6 +25,11 @@ func serve(ctx context.Context, invocation Invocation) error {
 	if err != nil {
 		return err
 	}
+	store, err := playerStorage(ctx, service, "")
+	if err != nil {
+		return err
+	}
+	defer store.Close()
 	if _, err := service.List(ctx); err != nil {
 		return err
 	}

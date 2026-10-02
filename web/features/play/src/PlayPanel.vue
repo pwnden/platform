@@ -1,18 +1,21 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import type { Player, RunStatus, Workspaces, WorkspaceConnection, WorkspaceInfo } from '@pwnden/play';
 import { UIForm, UISubmitButton, UITextField, UIIcon } from '@pwnden/ui';
 import EnvironmentStatus from './EnvironmentStatus.vue';
 import type { EnvironmentState } from './props';
 
-const props = defineProps<{ player: Player; workspaces: Workspaces; slug: string; kind: RunStatus['kind'] }>();
-const emit = defineEmits<{ busy: [value: boolean]; status: [value: RunStatus | undefined] }>();
+const props = defineProps<{ player: Player; workspaces: Workspaces; slug: string; kind: RunStatus['kind']; answer?: string | undefined }>();
+const emit = defineEmits<{ busy: [value: boolean]; status: [value: RunStatus | undefined]; completed: [] }>();
 const pending = ref(false);
 const preparing = ref(false);
 const status = ref<RunStatus>();
 const flag = ref('');
 const result = ref<'idle' | 'accepted' | 'rejected' | 'error'>('idle');
 const message = ref('');
+watch(() => props.answer, answer => {
+  if (answer !== undefined && result.value !== 'accepted') { flag.value = answer; result.value = 'accepted'; message.value = '해결 완료'; }
+}, { immediate: true });
 const environmentError = ref('');
 const retained = ref<readonly WorkspaceInfo[]>([]);
 const ending = ref(false);
@@ -68,7 +71,7 @@ async function submit() {
   pending.value = true; emit('busy', true); message.value = '';
   try {
     const answer = await props.player.submit(props.slug, flag.value);
-    if (active) { result.value = answer.accepted ? 'accepted' : 'rejected'; message.value = answer.accepted ? '해결 완료' : '플래그를 다시 확인하세요.'; }
+    if (active) { result.value = answer.accepted ? 'accepted' : 'rejected'; message.value = answer.accepted ? '해결 완료' : '플래그를 다시 확인하세요.'; if (answer.accepted) emit('completed'); }
   } catch { if (active) { result.value = 'error'; message.value = '제출하지 못했습니다. 다시 시도하세요.'; } }
   finally { if (active) { pending.value = false; emit('busy', false); } }
 }

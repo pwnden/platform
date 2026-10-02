@@ -8,6 +8,7 @@ export interface Problem {
   readonly category: string;
   readonly kind: ProblemKind;
   readonly difficulty?: Difficulty;
+  readonly solvedAt?: string;
 }
 
 export interface Catalog {
@@ -24,6 +25,7 @@ export interface ProblemFile {
 }
 
 export interface ProblemDetail extends Problem {
+  readonly answer?: string;
   readonly tools: readonly ProblemTool[];
   readonly description: string;
   readonly files: readonly ProblemFile[];

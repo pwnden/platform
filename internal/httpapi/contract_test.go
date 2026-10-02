@@ -7,9 +7,24 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/pwnden/platform/internal/application"
+	"github.com/pwnden/platform/internal/progress"
 )
+
+func TestCompletionResponseIncludesOnlyAcceptedPlayerState(t *testing.T) {
+	solved := time.Date(2026, 10, 2, 0, 0, 0, 0, time.UTC)
+	p := application.Problem{Slug: "test", SolvedAt: &solved}
+	list, err := json.Marshal(ProblemsFrom([]application.Problem{p}))
+	if err != nil || !strings.Contains(string(list), "solved_at") || strings.Contains(string(list), "answer") {
+		t.Fatal(string(list), err)
+	}
+	detail, err := json.Marshal(DetailFrom(application.ProblemDetail{Problem: p, Completion: &progress.Completion{Slug: "test", Answer: "pwnden{saved}", SolvedAt: solved}}))
+	if err != nil || !strings.Contains(string(detail), `"answer":"pwnden{saved}"`) {
+		t.Fatal(string(detail), err)
+	}
+}
 
 func TestPlayerResponsesDoNotExposeExecutionInternals(t *testing.T) {
 	result := application.RunInfo{Slug: "example", Kind: application.KindService, Project: "private-project",
@@ -43,7 +58,8 @@ func TestPublicErrorClassificationAndPrivacy(t *testing.T) {
 		application.AlreadyRunning: http.StatusConflict, application.NotRunning: http.StatusConflict,
 		application.IncompatibleContract: http.StatusUnprocessableEntity, application.ValidationFailed: http.StatusUnprocessableEntity,
 		application.SetupRequired: http.StatusServiceUnavailable, application.SetupFailed: http.StatusServiceUnavailable,
-		application.Canceled: http.StatusServiceUnavailable, application.DeadlineExceeded: http.StatusGatewayTimeout,
+		application.StorageFailed: http.StatusServiceUnavailable,
+		application.Canceled:      http.StatusServiceUnavailable, application.DeadlineExceeded: http.StatusGatewayTimeout,
 		application.ExecutionFailed: http.StatusInternalServerError, application.CleanupFailed: http.StatusInternalServerError,
 	} {
 		t.Run(string(code), func(t *testing.T) {

@@ -13,6 +13,8 @@ import { UIBadge, UIDifficultyBadge, UIIconButton, UILink, UISplit, UIStatus, UI
 
 defineProps<{ client?: APIClient | undefined; sessionRejected?: boolean }>();
 const selected = ref<Problem>();
+const answer = ref<string>();
+const completedSlug = ref('');
 const busy = ref(false);
 const terminal = ref<TerminalPanelHandle>();
 const materials = ref<ProblemFilesHandle>();
@@ -26,6 +28,7 @@ const labels: Record<ProblemTool, string> = { terminal: '터미널', files: '파
 const tools = computed(() => allowed.value.map(value => ({ value, label: labels[value], icon: value })));
 watch(tool, value => { if (value && !visited.value.includes(value)) visited.value = [...visited.value, value]; });
 function loaded(detail: ProblemDetails) {
+  answer.value = detail.answer;
   files.value = detail.files; allowed.value = detail.tools;
   if (!detail.tools.includes(tool.value as ProblemTool)) tool.value = detail.tools[0] ?? '';
 }
@@ -38,6 +41,7 @@ function select(problem: Problem) {
   if (!busy.value && selected.value?.slug !== problem.slug) {
     files.value = []; runStatus.value = undefined; allowed.value = []; visited.value = []; tool.value = '';
     selected.value = problem;
+    answer.value = undefined;
   }
 }
 </script>
@@ -53,7 +57,7 @@ function select(problem: Problem) {
       <p role="alert">실행 중인 pwnden 서버가 출력한 전체 주소로 접속하세요.</p>
     </div>
     <UISplit v-else v-model="catalogWidth" class="workspace" label="문제 목록 너비" :min="14" :max="36">
-      <template #before><aside class="catalog"><ProblemList :catalog="client.catalog" :selected-slug="selected?.slug" :selection-disabled="busy" @select="select" /></aside></template>
+      <template #before><aside class="catalog"><ProblemList :catalog="client.catalog" :selected-slug="selected?.slug" :completed-slug="completedSlug" :selection-disabled="busy" @select="select" /></aside></template>
       <template #after>
         <UISplit v-if="selected" :key="selected.slug" v-model="briefingWidth" class="selected-problem" label="설명과 작업 영역 너비" :min="30" :max="70">
           <template #before><div class="briefing">
@@ -70,7 +74,7 @@ function select(problem: Problem) {
           </div></template>
           <template #after>
             <div class="tool-workspace">
-              <PlayPanel :player="client.player" :workspaces="client.workspaces" :slug="selected.slug" :kind="selected.kind" @busy="busy = $event" @status="observe">
+              <PlayPanel :player="client.player" :workspaces="client.workspaces" :slug="selected.slug" :kind="selected.kind" :answer="answer" @completed="completedSlug = selected.slug" @busy="busy = $event" @status="observe">
                 <template #default="{ environment, blocked }">
                   <UITabs v-model="tool" :items="tools" :blocked="blocked" label="풀이 도구" class="tool-pane">
                     <template #overlay><EnvironmentStatus :state="environment" /></template>

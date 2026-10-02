@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/pwnden/platform/internal/challenge"
+	"github.com/pwnden/platform/internal/progress"
 	"github.com/pwnden/platform/internal/runtime"
 	"github.com/pwnden/platform/internal/verify"
 )
@@ -70,8 +71,15 @@ type StopInfo struct {
 
 // Service binds operations to one challenges checkout. Construction performs no IO.
 type Service struct {
-	repo    string
-	journal *workspaceJournal
+	repo     string
+	journal  *workspaceJournal
+	progress progress.Store
+}
+
+// WithProgress injects the durable state capability; callers own its lifetime.
+func (s *Service) WithProgress(store progress.Store) *Service {
+	s.progress = store
+	return s
 }
 
 func New(repo string) (*Service, error) {

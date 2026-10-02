@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import type { Catalog, Problem } from '@pwnden/catalog';
-import { UIButton, UIToggleButton, UIPagination, UITextField, UISelect, UIPanel, UIIconButton, UIDifficultyBadge, difficultyLevels } from '@pwnden/ui';
+import { UIButton, UIToggleButton, UIPagination, UITextField, UISelect, UIPanel, UIIconButton, UIIcon, UIDifficultyBadge, difficultyLevels } from '@pwnden/ui';
 import { categoryLabel, filterProblems } from './browse';
 
-const props = defineProps<{ catalog: Catalog; selectionDisabled?: boolean; selectedSlug?: string | undefined }>();
+const props = defineProps<{ catalog: Catalog; selectionDisabled?: boolean; selectedSlug?: string | undefined; completedSlug?: string }>();
 const emit = defineEmits<{ select: [problem: Problem] }>();
 const problems = ref<readonly Problem[]>([]);
+watch(() => props.completedSlug, slug => { if (slug) problems.value = problems.value.map(problem => problem.slug === slug ? { ...problem, solvedAt: new Date().toISOString() } : problem); });
 const pending = ref(false);
 const failed = ref(false);
 const query = ref('');
@@ -87,6 +88,7 @@ onMounted(load);
           <li v-for="problem in group.problems" :key="problem.slug">
             <UIToggleButton variant="row" :model-value="selectedSlug === problem.slug" :disabled="selectionDisabled" @update:model-value="emit('select', problem)">
               <span class="problem-title" :title="problem.title">{{ problem.title }}</span>
+              <span class="completion-mark" :class="{ 'completion-mark--solved': problem.solvedAt }" :title="problem.solvedAt ? '해결 완료' : undefined"><UIIcon name="check" /><span v-if="problem.solvedAt" class="ui-sr-only">해결 완료</span></span>
               <UIDifficultyBadge v-if="problem.difficulty" :level="problem.difficulty" class="problem-difficulty" />
             </UIToggleButton>
           </li>
@@ -111,6 +113,8 @@ onMounted(load);
 .problem-list { padding: 0; margin: 0; list-style: none; display: grid; gap: 0.25rem; }
 .problem-list :deep(.ui-button--row) { min-height: calc(var(--ui-control-size) + var(--ui-space-1)); }
 .problem-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.completion-mark { flex: none; width: 1rem; color: var(--ui-success); visibility: hidden; }
+.completion-mark--solved { visibility: visible; }
 .catalog-results > p, .no-results { padding: 0; }
 .no-results { display: grid; gap: var(--ui-space-1); }
 @media (width > 48rem) and (height <= 32rem) {

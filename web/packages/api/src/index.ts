@@ -54,6 +54,12 @@ function difficulty(value: unknown): { difficulty?: Difficulty } {
   return { difficulty: value as Difficulty };
 }
 
+function completion(value: unknown): { solvedAt?: string } {
+  if (value === undefined) return {};
+  if (typeof value !== 'string' || !Number.isFinite(Date.parse(value))) throw new APIError('invalid_response', 0);
+  return { solvedAt: value };
+}
+
 function route(slug: string): string {
   if (slug.length > 40 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
     throw new APIError('invalid_argument', 0);
@@ -172,7 +178,7 @@ export function createAPI(options: APIOptions): APIClient {
         const payload = await request('/problems');
         return array(payload.problems).map(value => {
           const item = object(value);
-          return { slug: string(item.slug), title: string(item.title), category: string(item.category), kind: kind(item.kind), ...difficulty(item.difficulty) };
+          return { slug: string(item.slug), title: string(item.title), category: string(item.category), kind: kind(item.kind), ...difficulty(item.difficulty), ...completion(item.solved_at) };
         });
       },
       async detail(slug): Promise<ProblemDetail> {
@@ -183,6 +189,8 @@ export function createAPI(options: APIOptions): APIClient {
         return {
           slug, title: string(item.title), category: string(item.category), kind: kind(item.kind),
           ...difficulty(item.difficulty),
+          ...completion(item.solved_at),
+          ...(item.solved_at === undefined ? {} : { answer: string(item.answer) }),
           description: string(item.description),
           tools: array(item.tools).map(tool => {
             if (tool !== 'web' && tool !== 'files' && tool !== 'terminal') throw new APIError('invalid_response', 0);

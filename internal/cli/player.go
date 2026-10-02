@@ -78,6 +78,11 @@ func submit(ctx context.Context, invocation Invocation) error {
 	if err != nil {
 		return err
 	}
+	store, err := playerStorage(ctx, service, invocation.Repo)
+	if err != nil {
+		return err
+	}
+	defer store.Close()
 	result, err := service.Submit(ctx, args[0], args[1])
 	if err != nil {
 		return err

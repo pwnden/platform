@@ -6,6 +6,13 @@ The API version is independent of the challenges-owned problem contract. Version
 
 ## Operations
 
+Completed problems add `solved_at` (UTC RFC 3339) to summaries and details. Their
+authenticated detail also includes `answer`, the player's previously accepted
+input, for readonly restoration. Unsolved problems omit both fields. Listing
+problems never includes accepted inputs. A correct submission returns success
+after its durable write commits; storage failures return `503 storage_failed`.
+See [durable state](storage.md) for ownership and catalog identity.
+
 | Method and path | Application capability | Success |
 | --- | --- | --- |
 | `GET /api/v1/problems` | `Catalog.List` | `200`, problem summaries sorted by slug. |

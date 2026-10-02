@@ -6,7 +6,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"strings"
+	"time"
 
+	"github.com/pwnden/platform/internal/progress"
 	"github.com/pwnden/platform/internal/runtime"
 )
 
@@ -25,6 +27,7 @@ type Problem struct {
 	Category   string
 	Difficulty int
 	Kind       Kind
+	SolvedAt   *time.Time
 }
 
 type Execution struct {
@@ -38,6 +41,17 @@ type Submission struct {
 	Accepted bool
 }
 
+func (s *Service) Completions(ctx context.Context) (map[string]progress.Completion, error) {
+	if s.progress == nil {
+		return map[string]progress.Completion{}, nil
+	}
+	items, err := s.progress.List(ctx)
+	if err != nil {
+		return nil, operationError(ctx, "progress", "", StorageFailed, err)
+	}
+	return items, nil
+}
+
 func (s *Service) List(ctx context.Context) ([]Problem, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, operationError(ctx, "list", "", InvalidArgument, err)
@@ -47,8 +61,16 @@ func (s *Service) List(ctx context.Context) ([]Problem, error) {
 		return nil, loadError(ctx, "list", "", err)
 	}
 	results := make([]Problem, 0, len(challenges))
+	completed, err := s.Completions(ctx)
+	if err != nil {
+		return nil, err
+	}
 	for _, c := range challenges {
-		results = append(results, problem(c))
+		item := problem(c)
+		if saved, ok := completed[c.Slug]; ok {
+			item.SolvedAt = &saved.SolvedAt
+		}
+		results = append(results, item)
 	}
 	return results, nil
 }
@@ -95,6 +117,11 @@ func (s *Service) Submit(ctx context.Context, slug, flag string) (Submission, er
 			return Submission{}, operationError(ctx, "submit", slug, ExecutionFailed, err)
 		}
 		accepted = flag == state.Flag
+	}
+	if accepted && s.progress != nil {
+		if err := s.progress.Save(ctx, progress.Completion{Slug: c.Slug, Answer: flag, SolvedAt: time.Now().UTC()}); err != nil {
+			return Submission{}, operationError(ctx, "submit", slug, StorageFailed, err)
+		}
 	}
 	return Submission{Slug: c.Slug, Accepted: accepted}, nil
 }

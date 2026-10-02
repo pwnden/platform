@@ -134,6 +134,12 @@ field, with success color and a check icon on the completed button; it remains
 selectable for copying. Button icons follow their labels. Submission success remains confirmed when a later
 environment connection fails. TCP endpoints appear beside the terminal tab actions.
 
+Authenticated details restore a completed problem's readonly answer after a
+problem switch, page reload or server restart. The catalog reserves an icon slot
+in every row and displays a check for completed problems; a new success updates
+the row immediately. Durable state belongs to the Go storage port, independently
+of browser credentials and problem environments.
+
 Shared interaction styles live in `packages/ui/src/theme.css`. Buttons, fields,
 links, disclosures, code scroll regions and split handles share focus tokens and
 140ms state transitions. Keyboard focus stays inside bounded controls; disclosure

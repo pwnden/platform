@@ -4,6 +4,13 @@
 
 ## Construction and capabilities
 
+`Service.WithProgress(progress.Store)` injects durable player state before the
+service is used. The caller owns the store lifetime. CLI `serve`, `dev` and
+`submit` compose the SQLite implementation; pure application construction
+retains its existing no-IO behavior. `List` includes completion times, `Detail`
+restores an accepted input, and `Submit` commits correct answers through this
+port. Storage failures use `StorageFailed`. See [storage](storage.md).
+
 `application.New(repo)` binds a service to an explicit challenges checkout. The path is required; construction performs no filesystem or Docker operations. `application.Open()` instead resolves the managed problem snapshot installed by `application.NewSetup().Setup(ctx)`. Each problem operation loads the current problem through the existing contract consumer and execution policy. Callers provide a non-nil `context.Context`. Repository-relative paths resolve using the process working directory, so callers keep that directory stable during operations.
 
 Consumers depend on the capabilities they need. Core execution capabilities are:

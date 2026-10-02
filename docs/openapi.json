@@ -216,6 +216,8 @@
           "slug": {"$ref": "#/components/schemas/Slug"}, "title": {"type": "string", "minLength": 1}, "category": {"type": "string"},
           "kind": {"$ref": "#/components/schemas/Kind"}, "description": {"type": "string"},
           "difficulty": {"$ref": "#/components/schemas/Difficulty"},
+          "solved_at": {"type": "string", "format": "date-time"},
+          "answer": {"type": "string", "description": "Previously accepted input; present only for a completed problem."},
           "tools": {"type": "array", "minItems": 1, "maxItems": 3, "uniqueItems": true, "items": {"enum": ["web", "files", "terminal"]}},
           "files": {"type": "array", "items": {"$ref": "#/components/schemas/ProblemFile"}},
           "hint_count": {"type": "integer", "minimum": 0, "maximum": 10}, "walkthrough": {"type": "boolean"}
@@ -242,7 +244,8 @@
           "title": {"type": "string", "minLength": 1},
           "category": {"type": "string"},
           "kind": {"$ref": "#/components/schemas/Kind"},
-          "difficulty": {"$ref": "#/components/schemas/Difficulty"}
+          "difficulty": {"$ref": "#/components/schemas/Difficulty"},
+          "solved_at": {"type": "string", "format": "date-time"}
         }
       },
       "WorkspaceList": {
@@ -330,7 +333,7 @@
             "properties": {
               "code": {
                 "type": "string",
-                "enum": ["invalid_argument", "not_found", "already_running", "not_running", "workspace_full", "terminal_busy", "workspace_busy", "incompatible_contract", "validation_failed", "setup_required", "setup_failed", "canceled", "deadline_exceeded", "execution_failed", "cleanup_failed", "internal_error", "invalid_request", "unauthorized", "forbidden", "method_not_allowed", "payload_too_large", "unsupported_media_type"]
+                "enum": ["invalid_argument", "not_found", "already_running", "not_running", "workspace_full", "terminal_busy", "workspace_busy", "incompatible_contract", "validation_failed", "setup_required", "setup_failed", "storage_failed", "canceled", "deadline_exceeded", "execution_failed", "cleanup_failed", "internal_error", "invalid_request", "unauthorized", "forbidden", "method_not_allowed", "payload_too_large", "unsupported_media_type"]
               },
               "message": {"type": "string"},
               "operation": {"type": "string"},

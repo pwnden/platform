@@ -10,6 +10,8 @@ import (
 )
 
 func TestPlayerCommands(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("APPDATA", t.TempDir())
 	repo := fileRepository(t)
 	testutil.Docker(t,
 		testutil.Reply{Match: []string{"image", "inspect"}},

@@ -28,6 +28,7 @@ const (
 	DeadlineExceeded     Code = "deadline_exceeded"
 	SetupRequired        Code = "setup_required"
 	SetupFailed          Code = "setup_failed"
+	StorageFailed        Code = "storage_failed"
 )
 
 func loadError(ctx context.Context, operation, slug string, cause error) error {

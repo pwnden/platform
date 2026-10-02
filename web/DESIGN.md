@@ -311,11 +311,15 @@ Each reading panel is a semantic section with a labelled heading and optional ac
 
 The submission bar groups its fixed submission feedback slot above the form. Environment recovery belongs to the tool viewport, with a reconnect action alongside the connection error and a retained-environment cleanup list when capacity is reached. Reconnect retries problem presence without resetting the environment. Submission labels precede their progress, completion and action icons. TCP addresses occupy the terminal tab actions when present. The tool pane has one fixed tab strip; selected-tool actions occupy its right edge, outside the tablist. Content and its environment overlay share the remaining bounded area above submission.
 
+Completion persists in SQLite. Reopening a solved problem or restarting the platform restores the accepted answer in the readonly flag field, the success feedback and the completed button with its check icon. The restored state uses the same submission geometry and success treatment as a newly accepted answer.
+
 Source: [UIPanel.vue](packages/ui/src/UIPanel.vue), [PlayPanel.vue](features/play/src/PlayPanel.vue).
 
 ### Navigation
 
 Problem rows are compact full-width title buttons, grouped under readable Korean category headings. Search matches all words across titles, identifiers and categories; a category filter narrows results. Pages contain at most (20) rows, with the result range and previous/next controls below. `aria-pressed` identifies the current selection through accent fill and stroke. Keyboard focus remains a separate indicator. Search and pagination preserve the current problem and terminal session. The responsive sidebar behavior follows Layout.
+
+Every catalog row reserves a (1rem) completion slot. Solved problems show a success-colored check there with “해결 완료” tooltip and screen-reader text. The slot keeps titles and badges aligned across completion states. Catalog data restores saved completion; accepting an answer updates its row immediately.
 
 Source: [ProblemList.vue](features/catalog/src/ProblemList.vue), [App.vue](apps/player/src/App.vue).
 
