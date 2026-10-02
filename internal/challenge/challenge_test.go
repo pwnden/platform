@@ -132,16 +132,16 @@ func TestLoadRejectsUnsupportedVersionBeforeExecutionFieldDecoding(t *testing.T)
 				t.Fatal(err)
 			}
 			definition := "version = 1\nsolve_network = 'default'\nsolve_timeout_seconds = 60\nattack_rejected_exit = 3\n"
-			metadata := "schema = 5\n[solve]\nimage = 123\n"
+			metadata := "schema = 6\n[solve]\nimage = 123\n"
 			if repository {
-				definition = "version = 5\nsolve_network = 123\n"
-				metadata = "schema = 5\n"
+				definition = "version = 6\nsolve_network = 123\n"
+				metadata = "schema = 6\n"
 			}
 			writeContract(t, root, definition)
 			if err := os.WriteFile(filepath.Join(dir, "challenge.toml"), []byte(metadata), 0600); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := Load(root, "sample"); err == nil || !strings.Contains(err.Error(), "contract version 5") {
+			if _, err := Load(root, "sample"); err == nil || !strings.Contains(err.Error(), "contract version 6") {
 				t.Fatalf("unsupported contract not rejected first: %v", err)
 			}
 		})

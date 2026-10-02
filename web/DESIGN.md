@@ -16,6 +16,11 @@ colors:
   success: "#8fdbba"
   warning: "#e7c38e"
   danger: "#ff9eac"
+  difficulty-intro: "#CBD5E1"
+  difficulty-easy: "#64D6A4"
+  difficulty-medium: "#70A5FF"
+  difficulty-hard: "#B79AFF"
+  difficulty-expert: "#F27C9B"
   terminal-background: "#050a12"
   terminal-selection: "#234367"
   terminal-magenta: "#c5acff"
@@ -255,6 +260,26 @@ Buttons, inputs, disclosures and switch tracks share `rounded.control`. Inline c
 Nested contours derive the inner radius from the outer radius minus the complete border and padding inset, clamped to zero. `theme.css` provides `.ui-radius-outer` and `.ui-radius-inner`, with inherited `--ui-radius-outer` and `--ui-radius-inset` values. The calculation stays on the child so local overrides work. The switch applies it to its track and thumb. Material lists apply it only to the first and last exposed edges; preview content follows those corners while focus indicators remain visible.
 
 ## Components
+
+### Difficulty badges
+
+Challenges declare levels 1–5: Intro, Easy, Medium, Hard and Expert. The UI owns
+their quartz, emerald, sapphire, amethyst and ruby colors, respectively
+`#CBD5E1`, `#64D6A4`, `#70A5FF`, `#B79AFF` and `#F27C9B`. Each badge uses the
+full color for text, a 10% background and a 30% border. Shared control corners
+and equal four-sided padding apply. Labels and a screen-reader difficulty prefix
+convey the level independently of color.
+
+`UIDifficultyBadge.vue` composes `UIBadge.vue`; `difficulty.ts` owns the UI labels
+and tones, while `theme.css` owns the palette. Badges appear beside catalog titles
+and beside the category in the fixed problem header. Long titles truncate.
+Catalog rows share a minimum height that accommodates badges. Legacy problems
+without a declared level have no difficulty badge.
+
+Search, category and difficulty filters combine. Ordering selects name,
+easiest or hardest within each category; unrated problems sort last in either
+difficulty direction. Changing a filter or order resets pagination and scroll
+while preserving the current problem selection.
 
 ### Buttons
 

@@ -13,7 +13,7 @@ import (
 
 var slugPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 
-const SupportedContractVersion = 4
+const SupportedContractVersion = 5
 
 // Installed snapshots remain readable with the consumer's current isolation.
 func supportedVersion(version int) bool { return version >= 1 && version <= SupportedContractVersion }
@@ -42,18 +42,19 @@ type Contract struct {
 }
 
 type Challenge struct {
-	Schema    int        `toml:"schema"`
-	Slug      string     `toml:"slug"`
-	Title     any        `toml:"title"`
-	Category  any        `toml:"category"`
-	Files     []string   `toml:"files"`
-	Compose   string     `toml:"compose"`
-	Endpoints []Endpoint `toml:"endpoints"`
-	Flag      Flag       `toml:"flag"`
-	Solve     Solve      `toml:"solve"`
-	Patched   *Patched   `toml:"patched"`
-	Content   Content    `toml:"content"`
-	Player    Player     `toml:"player"`
+	Schema     int        `toml:"schema"`
+	Slug       string     `toml:"slug"`
+	Title      any        `toml:"title"`
+	Category   any        `toml:"category"`
+	Difficulty int        `toml:"difficulty"`
+	Files      []string   `toml:"files"`
+	Compose    string     `toml:"compose"`
+	Endpoints  []Endpoint `toml:"endpoints"`
+	Flag       Flag       `toml:"flag"`
+	Solve      Solve      `toml:"solve"`
+	Patched    *Patched   `toml:"patched"`
+	Content    Content    `toml:"content"`
+	Player     Player     `toml:"player"`
 }
 
 type Player struct {

@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
 import { categoryLabel, filterProblems } from '../features/catalog/src/browse';
+import type { Problem } from '../domains/catalog/src/index';
 
 it('searches all words across titles, identifiers and readable categories without mutating input', () => {
   const problems = [
@@ -13,4 +14,19 @@ it('searches all words across titles, identifiers and readable categories withou
   expect(filterProblems(problems, '', 'new-category')).toEqual([problems[2]]);
   expect(categoryLabel('new-category')).toBe('new-category');
   expect(problems.map(p => p.slug)).toEqual(['rotor-lock', 'note-vault', 'test-new']);
+});
+
+it('combines difficulty with search and category, sorts within categories and keeps unrated problems last', () => {
+  const problems: readonly Problem[] = [
+    { slug: 'a-hard', title: 'A', category: 'web', kind: 'service', difficulty: 4 },
+    { slug: 'b-easy', title: 'B', category: 'web', kind: 'service', difficulty: 2 },
+    { slug: 'c-intro', title: 'C', category: 'rev', kind: 'file', difficulty: 1 },
+    { slug: 'd-legacy', title: 'D', category: 'web', kind: 'service' },
+  ];
+  expect(filterProblems(problems, '', 'web', '', 'easiest').map(p => p.slug)).toEqual(['b-easy', 'a-hard', 'd-legacy']);
+  expect(filterProblems(problems, '', 'web', '', 'hardest').map(p => p.slug)).toEqual(['a-hard', 'b-easy', 'd-legacy']);
+  expect(filterProblems(problems, 'b', 'web', '2').map(p => p.slug)).toEqual(['b-easy']);
+  expect(filterProblems(problems, '', 'rev', '2')).toEqual([]);
+  expect(filterProblems(problems, '', '', 'unrated').map(p => p.slug)).toEqual(['d-legacy']);
+  expect(problems.map(p => p.slug)).toEqual(['a-hard', 'b-easy', 'c-intro', 'd-legacy']);
 });

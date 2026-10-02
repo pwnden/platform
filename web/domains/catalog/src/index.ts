@@ -1,11 +1,13 @@
 export type ProblemKind = 'file' | 'service';
 export type ProblemTool = 'web' | 'files' | 'terminal';
+export type Difficulty = 1 | 2 | 3 | 4 | 5;
 
 export interface Problem {
   readonly slug: string;
   readonly title: string;
   readonly category: string;
   readonly kind: ProblemKind;
+  readonly difficulty?: Difficulty;
 }
 
 export interface Catalog {

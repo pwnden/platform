@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"mime"
 	"net/http/httptest"
@@ -11,6 +12,37 @@ import (
 
 	"github.com/pwnden/platform/internal/application"
 )
+
+func TestProblemDifficultyResponses(t *testing.T) {
+	for level := 0; level <= 5; level++ {
+		problem := application.Problem{Slug: "example", Title: "Example", Kind: application.KindFile, Difficulty: level}
+		backend := fakeBackend{
+			list: func(context.Context) ([]application.Problem, error) { return []application.Problem{problem}, nil },
+			detail: func(context.Context, string) (application.ProblemDetail, error) {
+				return application.ProblemDetail{Problem: problem}, nil
+			},
+		}
+		h := newHandler(context.Background(), backend, testHost, testToken, io.Discard)
+		for _, path := range []string{"/problems", "/problems/example"} {
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, request("GET", BasePath+path, ""))
+			var data map[string]any
+			if err := json.Unmarshal(w.Body.Bytes(), &data); err != nil || w.Code != 200 {
+				t.Fatalf("response: %d %s %v", w.Code, w.Body.String(), err)
+			}
+			if path == "/problems" {
+				data = data["problems"].([]any)[0].(map[string]any)
+			}
+			if level == 0 {
+				if _, present := data["difficulty"]; present {
+					t.Fatal("legacy problem given a difficulty", data)
+				}
+			} else if data["difficulty"] != float64(level) {
+				t.Fatal("difficulty lost", data)
+			}
+		}
+	}
+}
 
 type downloaded struct {
 	*strings.Reader

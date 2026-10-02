@@ -104,8 +104,16 @@ from the containing surface and border.
 
 The selected problem header uses the same compact title scale and control-based
 height as its neighboring workspace headers. Its title stays on one line with a
-full-title tooltip; the category appears in a right-aligned `UIBadge`, with a
-screen-reader category prefix. The body scrolls independently below it.
+full-title tooltip; the category and declared difficulty appear in right-aligned
+badges, each with a screen-reader prefix. The body scrolls independently below it.
+
+Contract v5 declares difficulty as an integer from 1 to 5. List and detail responses
+preserve that value; legacy catalogs without it remain unrated. The catalog domain
+owns the numeric type. The UI package owns Intro, Easy, Medium, Hard and Expert
+labels and their gemstone color tokens through `UIDifficultyBadge`.
+Search, category and difficulty filters combine, and name/easiest/hardest ordering
+applies within categories. Unrated problems sort last by difficulty. Filter and
+order changes reset the result page and scrolling while retaining the selection.
 
 The submission bar stays outside the scrolling tool pane at its lower edge.
 Its caption contains a fixed feedback slot and a reserved compact action slot.

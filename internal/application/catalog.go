@@ -61,7 +61,7 @@ func problem(c *challenge.Loaded) Problem {
 	if title == "" {
 		title = c.Slug
 	}
-	return Problem{Slug: c.Slug, Title: title, Category: category, Kind: kind(c)}
+	return Problem{Slug: c.Slug, Title: title, Category: category, Kind: kind(c), Difficulty: c.Difficulty}
 }
 
 // Root keeps even a file replaced by a symlink confined while opening it.

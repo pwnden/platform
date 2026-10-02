@@ -1,6 +1,9 @@
 export { default as UIButton } from './UIButton.vue';
 export { default as UIIconButton } from './UIIconButton.vue';
 export { default as UIBadge } from './UIBadge.vue';
+export { default as UIDifficultyBadge } from './UIDifficultyBadge.vue';
+export { difficultyLevels } from './difficulty';
+export type { UIBadgeProps, UIDifficultyBadgeProps } from './props';
 export { default as UILink } from './UILink.vue';
 export { default as UITextField } from './UITextField.vue';
 export { default as UISelect } from './UISelect.vue';

@@ -1,4 +1,4 @@
-import type { Catalog, Problem, ProblemDetail, ProblemTool } from '@pwnden/catalog';
+import type { Catalog, Problem, ProblemDetail, ProblemTool, Difficulty } from '@pwnden/catalog';
 import type { Endpoint, Player, Run, RunStatus, Submission, Workspaces } from '@pwnden/play';
 import type { Terminals } from '@pwnden/terminal';
 import { connectTerminal } from './terminal';
@@ -46,6 +46,12 @@ function kind(value: unknown): 'file' | 'service' {
 function array(value: unknown): unknown[] {
   if (!Array.isArray(value)) throw new APIError('invalid_response', 0);
   return value;
+}
+
+function difficulty(value: unknown): { difficulty?: Difficulty } {
+  if (value === undefined) return {};
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > 5) throw new APIError('invalid_response', 0);
+  return { difficulty: value as Difficulty };
 }
 
 function route(slug: string): string {
@@ -166,7 +172,7 @@ export function createAPI(options: APIOptions): APIClient {
         const payload = await request('/problems');
         return array(payload.problems).map(value => {
           const item = object(value);
-          return { slug: string(item.slug), title: string(item.title), category: string(item.category), kind: kind(item.kind) };
+          return { slug: string(item.slug), title: string(item.title), category: string(item.category), kind: kind(item.kind), ...difficulty(item.difficulty) };
         });
       },
       async detail(slug): Promise<ProblemDetail> {
@@ -176,6 +182,7 @@ export function createAPI(options: APIOptions): APIClient {
         if (hintCount > 10 || typeof item.walkthrough !== 'boolean') throw new APIError('invalid_response', 0);
         return {
           slug, title: string(item.title), category: string(item.category), kind: kind(item.kind),
+          ...difficulty(item.difficulty),
           description: string(item.description),
           tools: array(item.tools).map(tool => {
             if (tool !== 'web' && tool !== 'files' && tool !== 'terminal') throw new APIError('invalid_response', 0);

@@ -4,6 +4,22 @@ import { APIError, createAPI } from '../packages/api/src/index';
 const token = 'a'.repeat(64);
 const response = (payload: unknown, status = 200) => new Response(JSON.stringify(payload), { status, headers: { 'Content-Type': 'application/json' } });
 
+it.each([1, 2, 3, 4, 5] as const)('maps difficulty %i for list and detail', async difficulty => {
+  const problem = { slug: 'test', title: 'Test', category: 'web', kind: 'service', difficulty };
+  const replies = [response({ problems: [problem] }), response({ ...problem, description: '', files: [], tools: ['web'], hint_count: 0, walkthrough: false })];
+  const client = createAPI({ token, fetch: async () => replies.shift()! });
+  expect(await client.catalog.list()).toEqual([problem]);
+  expect((await client.catalog.detail('test')).difficulty).toBe(difficulty);
+});
+
+it.each([0, 6, -1, 2.5, '2', true, null])('rejects invalid difficulty %j in list and detail', async difficulty => {
+  const problem = { slug: 'test', title: 'Test', category: 'web', kind: 'service', difficulty };
+  const replies = [response({ problems: [problem] }), response({ ...problem, description: '', files: [], tools: ['web'], hint_count: 0, walkthrough: false })];
+  const client = createAPI({ token, fetch: async () => replies.shift()! });
+  await expect(client.catalog.list()).rejects.toMatchObject({ code: 'invalid_response' });
+  await expect(client.catalog.detail('test')).rejects.toMatchObject({ code: 'invalid_response' });
+});
+
 it('invalidates a rejected credential even for malformed 401 bodies and retains it on network failures', async () => {
   const onUnauthorized = vi.fn();
   const client = createAPI({ token, onUnauthorized, fetch: vi.fn().mockResolvedValueOnce(new Response('unauthorized', { status: 401 }))

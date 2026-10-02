@@ -20,10 +20,11 @@ type Player interface {
 }
 
 type Problem struct {
-	Slug     string
-	Title    string
-	Category string
-	Kind     Kind
+	Slug       string
+	Title      string
+	Category   string
+	Difficulty int
+	Kind       Kind
 }
 
 type Execution struct {

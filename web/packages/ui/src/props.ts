@@ -106,6 +106,14 @@ export interface UIStatusProps {
   readonly tone?: 'muted' | 'info' | 'success' | 'danger';
 }
 
+export interface UIBadgeProps {
+  readonly tone?: 'accent' | 'quartz' | 'emerald' | 'sapphire' | 'amethyst' | 'ruby';
+}
+
+export interface UIDifficultyBadgeProps {
+  readonly level: 1 | 2 | 3 | 4 | 5;
+}
+
 export interface UITextFieldProps {
   readonly id: string;
   readonly label: string;

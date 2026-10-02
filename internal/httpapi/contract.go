@@ -25,10 +25,11 @@ type Backend interface {
 }
 
 type Problem struct {
-	Slug     string           `json:"slug"`
-	Title    string           `json:"title"`
-	Category string           `json:"category"`
-	Kind     application.Kind `json:"kind"`
+	Slug       string           `json:"slug"`
+	Title      string           `json:"title"`
+	Category   string           `json:"category"`
+	Difficulty int              `json:"difficulty,omitempty"`
+	Kind       application.Kind `json:"kind"`
 }
 
 type ProblemList struct {
@@ -101,13 +102,13 @@ type ErrorResponse struct {
 func ProblemsFrom(result []application.Problem) ProblemList {
 	response := ProblemList{Problems: make([]Problem, 0, len(result))}
 	for _, p := range result {
-		response.Problems = append(response.Problems, Problem{p.Slug, p.Title, p.Category, p.Kind})
+		response.Problems = append(response.Problems, Problem{Slug: p.Slug, Title: p.Title, Category: p.Category, Kind: p.Kind, Difficulty: p.Difficulty})
 	}
 	return response
 }
 
 func DetailFrom(result application.ProblemDetail) ProblemDetail {
-	response := ProblemDetail{Problem: Problem{result.Slug, result.Title, result.Category, result.Kind}, Description: result.Description, Files: make([]ProblemFile, 0, len(result.Files))}
+	response := ProblemDetail{Problem: Problem{Slug: result.Slug, Title: result.Title, Category: result.Category, Kind: result.Kind, Difficulty: result.Difficulty}, Description: result.Description, Files: make([]ProblemFile, 0, len(result.Files))}
 	response.HintCount, response.Walkthrough = result.HintCount, result.Walkthrough
 	response.Tools = append([]string{}, result.Tools...)
 	for _, file := range result.Files {

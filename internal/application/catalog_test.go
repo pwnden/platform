@@ -2,12 +2,51 @@ package application
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestDifficultySurvivesCatalogAndDetailWithLegacyUnrated(t *testing.T) {
+	for level := 0; level <= 5; level++ {
+		t.Run(fmt.Sprint(level), func(t *testing.T) {
+			s, c := fixture(t, false)
+			if err := os.WriteFile(filepath.Join(c.Dir, "README.md"), []byte("A player brief."), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if level > 0 {
+				path := filepath.Join(c.RepoRoot, "contract.toml")
+				definition, err := os.ReadFile(path)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(path, []byte(strings.Replace(string(definition), "version=1", "version=5", 1)), 0600); err != nil {
+					t.Fatal(err)
+				}
+				path = filepath.Join(c.Dir, "challenge.toml")
+				manifest, err := os.ReadFile(path)
+				if err != nil {
+					t.Fatal(err)
+				}
+				updated := strings.Replace(string(manifest), "schema=1", fmt.Sprintf("schema=5\ndifficulty=%d", level), 1) + "\n[content]\ndescription='README.md'\n[player]\ntools=['files','terminal']\n"
+				if err := os.WriteFile(path, []byte(updated), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			items, err := s.List(context.Background())
+			if err != nil || len(items) != 1 || items[0].Difficulty != level {
+				t.Fatalf("catalog difficulty: %+v %v", items, err)
+			}
+			detail, err := s.Detail(context.Background(), c.Slug)
+			if err != nil || detail.Difficulty != level {
+				t.Fatalf("detail difficulty: %+v %v", detail, err)
+			}
+		})
+	}
+}
 
 func TestDetailAndDeclaredDownload(t *testing.T) {
 	s, c := fixture(t, false)

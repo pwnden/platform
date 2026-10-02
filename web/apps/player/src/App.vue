@@ -9,7 +9,7 @@ import { PlayPanel, ProblemWeb } from '@pwnden/play-feature';
 import type { ProblemWebHandle } from '@pwnden/play-feature';
 import { TerminalPanel } from '@pwnden/terminal-feature';
 import type { TerminalPanelHandle } from '@pwnden/terminal-feature';
-import { UIBadge, UIIconButton, UILink, UISplit, UIStatus, UITabs } from '@pwnden/ui';
+import { UIBadge, UIDifficultyBadge, UIIconButton, UILink, UISplit, UIStatus, UITabs } from '@pwnden/ui';
 
 defineProps<{ client?: APIClient | undefined; sessionRejected?: boolean }>();
 const selected = ref<Problem>();
@@ -59,7 +59,10 @@ function select(problem: Problem) {
           <template #before><div class="briefing">
             <header class="problem-header">
               <h2 id="problem-heading" :title="selected.title">{{ selected.title }}</h2>
-              <UIBadge :title="`분야: ${categoryLabel(selected.category)}`"><span class="ui-sr-only">분야: </span>{{ categoryLabel(selected.category) }}</UIBadge>
+              <div class="problem-badges">
+                <UIBadge :title="`분야: ${categoryLabel(selected.category)}`"><span class="ui-sr-only">분야: </span>{{ categoryLabel(selected.category) }}</UIBadge>
+                <UIDifficultyBadge v-if="selected.difficulty" :level="selected.difficulty" />
+              </div>
             </header>
             <div class="briefing-scroll" tabindex="0" role="region" aria-labelledby="problem-heading">
               <ProblemDetail :catalog="client.catalog" :slug="selected.slug" @loaded="loaded" />
@@ -107,6 +110,7 @@ h1 { font-family: var(--ui-font-mono); font-size: 1.2rem; font-weight: 500; colo
 .briefing { height: 100%; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .problem-header { flex: none; display: flex; align-items: center; justify-content: space-between; min-height: var(--ui-workspace-header-size); gap: var(--ui-space-1); padding: var(--ui-space-2); border-bottom: 1px solid var(--ui-border); background: var(--ui-surface); }
 .problem-header h2 { min-width: 0; font-size: 1rem; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.problem-badges { flex: none; display: flex; align-items: center; gap: var(--ui-space-1); }
 .briefing-scroll { flex: 1; min-height: 0; min-width: 0; overflow: auto; }
 .tool-workspace { height: 100%; min-height: 0; min-width: 0; display: flex; flex-direction: column; }
 .tool-pane { flex: 1; min-height: 0; }

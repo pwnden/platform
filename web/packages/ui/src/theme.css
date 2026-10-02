@@ -41,6 +41,11 @@
   --ui-success: #8fdbba;
   --ui-warning: #e7c38e;
   --ui-danger: #ff9eac;
+  --ui-difficulty-intro: #cbd5e1;
+  --ui-difficulty-easy: #64d6a4;
+  --ui-difficulty-medium: #70a5ff;
+  --ui-difficulty-hard: #b79aff;
+  --ui-difficulty-expert: #f27c9b;
   --ui-terminal-background: #050a12;
   --ui-terminal-selection: #234367;
   --ui-syntax-keyword: #c5acff;

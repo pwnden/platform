@@ -29,6 +29,8 @@ vi.mock('../packages/ui/src/index.ts', async () => {
     UIPanel: (await import('../packages/ui/src/UIPanel.vue')).default,
     UIStatus: (await import('../packages/ui/src/UIStatus.vue')).default,
     UIBadge: (await import('../packages/ui/src/UIBadge.vue')).default,
+    UIDifficultyBadge: (await import('../packages/ui/src/UIDifficultyBadge.vue')).default,
+    difficultyLevels: (await import('../packages/ui/src/difficulty')).difficultyLevels,
     UILink: (await import('../packages/ui/src/UILink.vue')).default,
     UIIconButton: (await import('../packages/ui/src/UIIconButton.vue')).default,
     UITerminalControls: (await import('../packages/ui/src/UITerminalControls.vue')).default,
@@ -78,7 +80,7 @@ it('automatically connects and releases pending and ready attachments on unmount
 });
 
 it('opens only the declared web tool for Note Vault and retains its view during resize', async () => {
-  const problem = { slug: 'note-vault', title: 'Note Vault', category: 'web', kind: 'service' as const };
+  const problem = { slug: 'note-vault', title: 'Note Vault', category: 'web', kind: 'service' as const, difficulty: 1 as const };
   const status: RunStatus = { ...problem, state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:43123' }] };
   const environments = workspace(status);
   const client = {
@@ -96,8 +98,9 @@ it('opens only the declared web tool for Note Vault and retains its view during 
   const frame = flatten(root).find(item => item.type === 'iframe')!;
   expect(frame).toBeDefined();
   const heading = flatten(root).find(item => item.props.class === 'problem-header')!;
-  expect(text(heading)).toBe('Note Vault분야: 웹');
-  expect(flatten(heading).find(item => item.props.class === 'ui-badge')?.props.title).toBe('분야: 웹');
+  expect(text(heading)).toBe('Note Vault분야: 웹난이도: Intro');
+  expect(flatten(heading).find(item => item.props.title === '분야: 웹')).toBeDefined();
+  expect(flatten(heading).find(item => item.props.title === '난이도: Intro')).toBeDefined();
   for (const split of flatten(root).filter(item => item.type === 'split')) (split.props['onUpdate:modelValue'] as (value: number) => void)(30);
   await settle();
   expect(flatten(root).find(item => item.type === 'iframe')).toBe(frame);
@@ -502,6 +505,29 @@ it('browses a large catalog by category, search and bounded pages without repeat
   await click(button(root, '검색 조건 초기화')); await settle();
   expect(rows()).toHaveLength(20);
   expect(text(root)).toContain('1–20 / 501개');
+  renderer.render(null, root);
+});
+
+it('filters difficulty, sorts problem rows and resets pagination without changing selection', async () => {
+  const problems = Array.from({ length: 45 }, (_, index) => ({ slug: `problem-${index}`, title: `Problem ${String(index).padStart(2, '0')}`, category: 'web', kind: 'service' as const, difficulty: ((index % 5) + 1) as 1 | 2 | 3 | 4 | 5 }));
+  const selected = vi.fn();
+  const catalog: Catalog = { list: vi.fn(async () => problems), detail: vi.fn(), download: vi.fn(), guidance: vi.fn() };
+  const root = node('root');
+  renderer.render(h(ProblemList, { catalog, onSelect: selected }), root); await settle();
+  const rows = () => flatten(root).filter(item => item.type === 'button' && item.props.variant === 'row');
+  await click(button(root, '다음')); await settle();
+  const filter = flatten(root).find(item => item.props.id === 'problem-difficulty')!;
+  (filter.props['onUpdate:modelValue'] as (value: string) => void)('3'); await settle();
+  expect(rows()).toHaveLength(9);
+  expect(rows().every(row => !!flatten(row).find(item => item.props.title === '난이도: Medium'))).toBe(true);
+  expect(text(root)).toContain('1–9 / 9개');
+  (filter.props['onUpdate:modelValue'] as (value: string) => void)('');
+  const order = flatten(root).find(item => item.props.id === 'problem-order')!;
+  (order.props['onUpdate:modelValue'] as (value: string) => void)('hardest'); await settle();
+  expect(flatten(rows()[0]!).find(item => item.props.title === '난이도: Expert')).toBeDefined();
+  expect(selected).not.toHaveBeenCalled();
+  await click(rows()[0]!);
+  expect(selected).toHaveBeenCalledWith(problems[4]);
   renderer.render(null, root);
 });
 
