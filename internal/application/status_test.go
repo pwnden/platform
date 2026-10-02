@@ -54,7 +54,7 @@ func TestFileStatusAndRecordedServiceObservation(t *testing.T) {
 			}
 			for _, call := range fake() {
 				for _, arg := range call {
-					if arg == "up" || arg == "down" {
+					if arg == "create" || arg == "start" || arg == "down" {
 						t.Fatal("observation mutated Docker", call)
 					}
 				}

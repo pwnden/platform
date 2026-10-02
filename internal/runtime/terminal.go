@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -63,6 +62,13 @@ func OpenTerminal(ctx context.Context, c *challenge.Loaded, project string, cols
 	if err := prepareToolImage(ctx, c, c.Solve.Image); err != nil {
 		return nil, err
 	}
+	workspace := ""
+	if c.Solve.Writable {
+		workspace, err = ensureWorkspace(ctx, c, Project(c))
+		if err != nil {
+			return nil, err
+		}
+	}
 	network := "none"
 	if c.Compose != "" {
 		if project != Project(c) {
@@ -109,20 +115,25 @@ func OpenTerminal(ctx context.Context, c *challenge.Loaded, project string, cols
 		// startup and pass the value as data before launching interactive Bash.
 		Cmd: []string{"--noprofile", "--norc", "-c", `(umask 077; printf '%s' "$1" > "$INPUTRC") || exit; stty iutf8 || exit; export PS1="$2"; exec /bin/bash --noprofile --norc -i`, "pwnden-terminal", terminalReadline, prompt},
 		Tty: true, OpenStdin: true, StdinOnce: true, AttachStdin: true, AttachStdout: true, AttachStderr: true,
-		WorkingDir: "/challenge", Env: []string{"TERM=xterm-256color", "LANG=C.UTF-8", "LC_ALL=C.UTF-8", "INPUTRC=/tmp/pwnden.inputrc", "HISTFILE=/dev/null"},
-		Labels: map[string]string{"pwnden.kind": "terminal", "pwnden.problem": c.Slug, "pwnden.project": Project(c), "pwnden.repository": repositoryID(c.RepoRoot)},
-	}
-	if c.Solve.Writable && os.Geteuid() >= 0 && os.Getegid() >= 0 {
-		config.User = fmt.Sprintf("%d:%d", os.Geteuid(), os.Getegid())
+		WorkingDir: "/challenge", User: toolUser(c.Solve.Writable), Env: append(toolEnv(), "TERM=xterm-256color", "LANG=C.UTF-8", "LC_ALL=C.UTF-8", "INPUTRC=/tmp/pwnden.inputrc", "HISTFILE=/dev/null"),
+		Labels: map[string]string{managedLabel: "true", "pwnden.kind": "terminal", "pwnden.problem": c.Slug, "pwnden.project": Project(c), "pwnden.repository": repositoryID(c.RepoRoot)},
 	}
 	// Claim the random name before the request: an interrupted response may have
 	// created the container even when its ID was never delivered.
 	owned = true
-	created, err := engine.ContainerCreate(ctx, client.ContainerCreateOptions{Name: name, Config: config, HostConfig: &dockerContainer.HostConfig{
-		NetworkMode: dockerContainer.NetworkMode(network), CapDrop: []string{"ALL"}, SecurityOpt: []string{"no-new-privileges"},
-		Mounts:      []mount.Mount{{Type: mount.TypeBind, Source: source, Target: "/challenge", ReadOnly: !c.Solve.Writable}},
-		ConsoleSize: [2]uint{uint(rows), uint(cols)},
-	}})
+	host := limitedHostConfig(network, false)
+	host.Tmpfs["/home/pwnden"] = toolHomeOptions(c.Solve.Writable)
+	host.Mounts = []mount.Mount{{Type: mount.TypeBind, Source: source, Target: "/challenge", ReadOnly: true}}
+	if workspace != "" {
+		host.Mounts = []mount.Mount{{Type: mount.TypeVolume, Source: workspace, Target: "/challenge", VolumeOptions: &mount.VolumeOptions{NoCopy: true}}}
+	}
+	host.ConsoleSize = [2]uint{uint(rows), uint(cols)}
+	var created client.ContainerCreateResult
+	err = admitCreation(ctx, toolboxCost(), func(ctx context.Context) error {
+		var failure error
+		created, failure = engine.ContainerCreate(ctx, client.ContainerCreateOptions{Name: name, Config: config, HostConfig: host})
+		return failure
+	})
 	if err != nil {
 		return nil, err
 	}

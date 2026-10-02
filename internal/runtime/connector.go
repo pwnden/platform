@@ -96,14 +96,18 @@ func ensureConnector(ctx context.Context, c *challenge.Loaded, engine *client.Cl
 		return "", err
 	}
 	claim := hex.EncodeToString(nonce)
-	created, err := engine.ContainerCreate(ctx, client.ContainerCreateOptions{
-		Name: name,
-		Config: &dockerContainer.Config{Image: connectorImage, User: "65534:65534", Entrypoint: []string{"/bin/sleep"}, Cmd: []string{"2147483647"},
-			Labels: map[string]string{"com.docker.compose.project": project, "com.docker.compose.service": "pwnden-connector",
-				"com.docker.compose.config-hash": "pwnden-connector-v1", "com.docker.compose.oneoff": "False",
-				"pwnden.kind": "connector", "pwnden.repository": repositoryID(c.RepoRoot), "pwnden.claim": claim}},
-		HostConfig: &dockerContainer.HostConfig{NetworkMode: dockerContainer.NetworkMode(network), ReadonlyRootfs: true,
-			CapDrop: []string{"ALL"}, SecurityOpt: []string{"no-new-privileges"}},
+	var created client.ContainerCreateResult
+	err = admitCreation(ctx, connectorCost(), func(ctx context.Context) error {
+		var failure error
+		created, failure = engine.ContainerCreate(ctx, client.ContainerCreateOptions{
+			Name: name,
+			Config: &dockerContainer.Config{Image: connectorImage, User: "65534:65534", Entrypoint: []string{"/bin/sleep"}, Cmd: []string{"2147483647"},
+				Labels: map[string]string{"com.docker.compose.project": project, "com.docker.compose.service": "pwnden-connector",
+					"com.docker.compose.config-hash": "pwnden-connector-v2", "com.docker.compose.oneoff": "False",
+					managedLabel: "true", "pwnden.kind": "connector", "pwnden.repository": repositoryID(c.RepoRoot), "pwnden.claim": claim}},
+			HostConfig: limitedHostConfig(network, true),
+		})
+		return failure
 	})
 	if err == nil {
 		_, err = engine.ContainerStart(ctx, created.ID, client.ContainerStartOptions{})
@@ -132,10 +136,13 @@ func checkConnector(container dockerContainer.InspectResponse, c *challenge.Load
 	if cfg == nil || host == nil || container.State == nil || !container.State.Running || container.NetworkSettings == nil ||
 		cfg.Image != connectorImage || cfg.User != "65534:65534" || cfg.Labels["pwnden.kind"] != "connector" ||
 		cfg.Labels["pwnden.repository"] != repositoryID(c.RepoRoot) || cfg.Labels["com.docker.compose.project"] != project ||
+		cfg.Labels["com.docker.compose.config-hash"] != "pwnden-connector-v2" ||
 		strings.Join(cfg.Entrypoint, "\x00") != "/bin/sleep" || strings.Join(cfg.Cmd, "\x00") != "2147483647" ||
 		!host.ReadonlyRootfs || host.Privileged || len(host.CapAdd) != 0 || strings.Join(host.CapDrop, "") != "ALL" ||
 		strings.Join(host.SecurityOpt, "") != "no-new-privileges" || len(container.Mounts) != 0 || len(host.PortBindings) != 0 ||
-		len(container.NetworkSettings.Networks) != 1 {
+		len(container.NetworkSettings.Networks) != 1 || host.CgroupnsMode != "private" || host.NanoCPUs != 5e8 ||
+		host.Memory != 128<<20 || host.MemorySwap != host.Memory || host.PidsLimit == nil || *host.PidsLimit != 64 ||
+		host.LogConfig.Type != "local" || host.LogConfig.Config["max-size"] != "10m" || host.LogConfig.Config["max-file"] != "3" {
 		return errors.New("existing connector does not match the isolated platform configuration")
 	}
 	for _, settings := range container.NetworkSettings.Networks {

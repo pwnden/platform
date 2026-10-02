@@ -32,7 +32,7 @@ func TestPreparationUsesExecutionPolicyAndStartsNoServices(t *testing.T) {
 			}
 			for _, call := range calls() {
 				for _, arg := range call {
-					if arg == "up" || arg == "run" || (unsafe && (arg == "pull" || arg == "build")) {
+					if arg == "create" || arg == "start" || (unsafe && (arg == "pull" || arg == "build")) {
 						t.Fatalf("unexpected preparation action: %v", call)
 					}
 				}

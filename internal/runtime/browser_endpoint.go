@@ -92,6 +92,12 @@ func resolveEndpoint(ctx context.Context, c *challenge.Loaded, engine *client.Cl
 		service.Config.Labels["com.docker.compose.project"] != state.Project || service.Config.Labels["com.docker.compose.service"] != endpoint.Service {
 		return resolvedEndpoint{}, errors.New("endpoint service does not belong to this running problem")
 	}
+	if service.Config.Labels["pwnden.runtime-policy"] != servicePolicyVersion {
+		return resolvedEndpoint{}, errors.New("problem resource policy is outdated; stop and restart its environment")
+	}
+	if err := checkServicePolicy(service.HostConfig); err != nil {
+		return resolvedEndpoint{}, err
+	}
 	address := ""
 	for _, settings := range service.NetworkSettings.Networks {
 		if settings == nil || !allowed[settings.NetworkID] {

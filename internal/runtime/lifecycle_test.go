@@ -91,7 +91,7 @@ func TestStartupRejectsImplicitHostAccess(t *testing.T) {
 				}
 				for _, args := range calls() {
 					for _, arg := range args {
-						if arg == "up" {
+						if arg == "create" || arg == "start" {
 							t.Fatalf("host access reached startup: %v", args)
 						}
 					}
@@ -176,7 +176,7 @@ func TestToolCleanupFailureIsExecutionFailure(t *testing.T) {
 		testutil.Reply{Match: []string{"image", "inspect"}},
 		testutil.Reply{Match: []string{"run"}, Err: "launch failure", Code: 125},
 		testutil.Reply{Match: []string{"rm"}, Err: "removal failure", Code: 1},
-		testutil.Reply{Match: []string{"container", "ls"}, Out: "leftover-container"},
+		testutil.Reply{Match: []string{"container", "ls", "--filter"}, Out: "leftover-container"},
 	)
 	_, err := RunTool(context.Background(), c, "", "image", []string{"solve"})
 	if err == nil || !strings.Contains(err.Error(), "launch failure") || !strings.Contains(err.Error(), "removal failure") {
@@ -199,10 +199,10 @@ func TestToolAlreadyRemovedIsSuccessfulCleanup(t *testing.T) {
 	}
 }
 
-func TestToolImageArgumentsAndWritableUser(t *testing.T) {
+func TestToolImageArgumentsAndFixedUser(t *testing.T) {
 	c := fixture(t)
 	c.Compose = ""
-	c.Solve.Writable = true
+	c.Solve.Writable = false
 	calls := testutil.Docker(t,
 		testutil.Reply{Match: []string{"image", "inspect"}, Code: 1},
 		testutil.Reply{Match: []string{"pull"}},
@@ -217,7 +217,7 @@ func TestToolImageArgumentsAndWritableUser(t *testing.T) {
 				t.Fatalf("image parsed as options: %v", args)
 			}
 		}
-		if args[0] == "run" && os.Geteuid() >= 0 && os.Getegid() >= 0 && !strings.Contains(strings.Join(args, " "), fmt.Sprintf("--user %d:%d", os.Geteuid(), os.Getegid())) {
+		if args[0] == "create" && !strings.Contains(strings.Join(args, " "), "--user 10001:10001") {
 			t.Fatalf("caller ownership missing: %v", args)
 		}
 	}

@@ -52,7 +52,7 @@ func TestCheckConfigRepositoryBoundary(t *testing.T) {
 	project := Project(c)
 	config := func(source string) *Config {
 		return &Config{
-			Services: map[string]Service{"app": {Volumes: []Mount{{Type: "bind", Source: source}}}},
+			Services: map[string]Service{"app": {Volumes: []Mount{{Type: "bind", Source: source, ReadOnly: true}}}},
 			Networks: map[string]Network{"default": {Name: project + "_default"}},
 		}
 	}

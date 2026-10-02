@@ -28,6 +28,12 @@ type Config struct {
 }
 
 type Service struct {
+	Image  string   `json:"image"`
+	Tmpfs  []string `json:"tmpfs"`
+	Scale  *int     `json:"scale"`
+	Deploy struct {
+		Replicas *int `json:"replicas"`
+	} `json:"deploy"`
 	Build        *Build          `json:"build"`
 	Volumes      []Mount         `json:"volumes"`
 	Networks     map[string]any  `json:"networks"`
@@ -42,6 +48,21 @@ type Service struct {
 	IPC          string          `json:"ipc"`
 	Credential   json.RawMessage `json:"credential_spec"`
 	Ports        []Port          `json:"ports"`
+	GPUs         json.RawMessage `json:"gpus"`
+	DeviceRules  []string        `json:"device_cgroup_rules"`
+	PreStart     []Hook          `json:"pre_start"`
+	PostStart    []Hook          `json:"post_start"`
+	PreStop      []Hook          `json:"pre_stop"`
+	SecurityOpt  []string        `json:"security_opt"`
+	UsernsMode   string          `json:"userns_mode"`
+	Cgroup       string          `json:"cgroup"`
+	CgroupParent string          `json:"cgroup_parent"`
+	Runtime      string          `json:"runtime"`
+	UTS          string          `json:"uts"`
+}
+
+type Hook struct {
+	Privileged bool `json:"privileged"`
 }
 
 type Port struct {
@@ -61,8 +82,10 @@ type Build struct {
 }
 
 type Mount struct {
-	Type   string `json:"type"`
-	Source string `json:"source"`
+	Target   string `json:"target"`
+	Type     string `json:"type"`
+	Source   string `json:"source"`
+	ReadOnly bool   `json:"read_only"`
 }
 
 type Volume struct {
@@ -157,6 +180,12 @@ func checkConfig(c *challenge.Loaded, cfg *Config, project string) error {
 	if err := checkResources(cfg, project); err != nil {
 		return err
 	}
+	if _, ok := cfg.Volumes["pwnden-workspace"]; ok {
+		return errors.New("volume name pwnden-workspace is reserved for the temporary toolbox workspace")
+	}
+	if len(cfg.Volumes) > 8 {
+		return errors.New("problem has too many temporary volumes")
+	}
 	for name, network := range cfg.Networks {
 		for key, value := range network.DriverOpts {
 			if (key != gatewayIPv4 && key != gatewayIPv6) || value != "isolated" {
@@ -165,12 +194,38 @@ func checkConfig(c *challenge.Loaded, cfg *Config, project string) error {
 		}
 	}
 	for name, service := range cfg.Services {
-		if service.Privileged || service.UseAPISocket || len(service.Devices) != 0 || len(service.CapAdd) != 0 || service.PID == "host" || service.IPC == "host" || (service.NetworkMode != "" && service.NetworkMode != "none") || len(service.Provider) != 0 || len(service.VolumesFrom) != 0 || len(service.Credential) != 0 {
+		if (service.Scale != nil && *service.Scale != 1) || (service.Deploy.Replicas != nil && *service.Deploy.Replicas != 1) {
+			return fmt.Errorf("service %q must have one replica", name)
+		}
+		if len(service.Volumes)+len(service.Tmpfs) > 16 {
+			return fmt.Errorf("service %q has too many mounts", name)
+		}
+		if service.Privileged || service.UseAPISocket || len(service.Devices) != 0 || len(service.CapAdd) != 0 ||
+			service.PID != "" || (service.IPC != "" && service.IPC != "private" && service.IPC != "shareable") ||
+			(service.NetworkMode != "" && service.NetworkMode != "none") || len(service.Provider) != 0 ||
+			len(service.VolumesFrom) != 0 || len(service.Credential) != 0 || len(service.GPUs) != 0 || len(service.DeviceRules) != 0 ||
+			service.UsernsMode != "" || (service.Cgroup != "" && service.Cgroup != "private") ||
+			service.CgroupParent != "" || service.Runtime != "" || service.UTS != "" {
 			return fmt.Errorf("service %q requests host privileges", name)
+		}
+		for _, hooks := range [][]Hook{service.PreStart, service.PostStart, service.PreStop} {
+			for _, hook := range hooks {
+				if hook.Privileged {
+					return fmt.Errorf("service %q requests privileged hooks", name)
+				}
+			}
+		}
+		for _, option := range service.SecurityOpt {
+			if !securityOptionAllowed(option) {
+				return fmt.Errorf("service %q requests a custom security profile", name)
+			}
 		}
 		for _, mount := range service.Volumes {
 			switch mount.Type {
 			case "bind":
+				if !mount.ReadOnly {
+					return fmt.Errorf("service %q requires read-only repository binds; use temporary volumes for writes", name)
+				}
 				if mount.Source == "" {
 					return fmt.Errorf("service %q has bind mount without source", name)
 				}
@@ -373,7 +428,7 @@ func Stop(ctx context.Context, c *challenge.Loaded) (err error) {
 		}
 	}()
 	if c.Compose == "" {
-		return nil
+		return removeWorkspace(context.WithoutCancel(ctx), c, Project(c))
 	}
 	state, err := ReadState(c)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -424,7 +479,7 @@ func Down(ctx context.Context, c *challenge.Loaded, project, flag string, patche
 		return fmt.Errorf("validate cleanup for %s: %w", project, err)
 	}
 	if cfg == nil {
-		return nil
+		return removeWorkspace(downCtx, c, project)
 	}
 	// Down removes project resources; deleted startup inputs must not block it.
 	if err := checkResources(cfg, project); err != nil {
@@ -438,7 +493,7 @@ func Down(ctx context.Context, c *challenge.Loaded, project, flag string, patche
 	if err != nil {
 		return fmt.Errorf("docker compose down %s: %w: %s", project, err, stderr)
 	}
-	return nil
+	return removeWorkspace(downCtx, c, project)
 }
 
 func StartPatched(ctx context.Context, c *challenge.Loaded, flag string) (string, error) {
@@ -490,8 +545,6 @@ func runTool(ctx context.Context, c *challenge.Loaded, project, image string, ar
 	if err := prepareToolImage(ctx, c, image); err != nil {
 		return "", "", err
 	}
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(c.Solve.TimeoutSeconds)*time.Second)
-	defer cancel()
 	id := make([]byte, 8)
 	if _, err := rand.Read(id); err != nil {
 		return "", "", err
@@ -506,13 +559,35 @@ func runTool(ctx context.Context, c *challenge.Loaded, project, image string, ar
 		}
 	}
 	mount := toolboxMount(c.Dir, c.Solve.Writable)
-	options := []string{"run", "--rm", "--name", container, "--network", network, "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--mount", mount, "--workdir", "/challenge"}
-	if c.Solve.Writable && os.Geteuid() >= 0 && os.Getegid() >= 0 {
-		options = append(options, "--user", fmt.Sprintf("%d:%d", os.Geteuid(), os.Getegid()))
+	if c.Solve.Writable {
+		if project == "" {
+			project = Project(c)
+		}
+		volume, err := ensureWorkspace(ctx, c, project)
+		if err != nil {
+			return "", "", err
+		}
+		mount = "type=volume,source=" + volume + ",target=/challenge,volume-nocopy"
 	}
+	options := []string{"create", "--rm", "--name", container, "--label", managedLabel + "=true", "--label", "pwnden.kind=tool", "--network", network, "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--mount", mount, "--workdir", "/challenge"}
+	options = append(options, toolOptions(c.Solve.Writable)...)
 	options = append(options, "--", image)
 	options = append(options, args...)
-	out, stderr, err := command(ctx, c.Dir, nil, "docker", options...)
+	err := admitCreation(ctx, toolboxCost(), func(ctx context.Context) error {
+		_, stderr, err := command(ctx, c.Dir, nil, "docker", options...)
+		if err != nil {
+			return fmt.Errorf("create toolbox: %w: %s", err, stderr)
+		}
+		return nil
+	})
+	if err != nil {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cleanupCancel()
+		return "", "", errors.Join(err, removeTool(cleanupCtx, c, container))
+	}
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(c.Solve.TimeoutSeconds)*time.Second)
+	defer cancel()
+	out, stderr, err := command(ctx, c.Dir, nil, "docker", "start", "--attach", container)
 	if err != nil {
 		var exit *exec.ExitError
 		if ctx.Err() == nil && errors.As(err, &exit) && exit.ExitCode() > 0 && exit.ExitCode() < 125 {

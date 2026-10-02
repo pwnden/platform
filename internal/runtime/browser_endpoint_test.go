@@ -15,7 +15,7 @@ import (
 )
 
 func TestBrowserEndpointChecksLiveIdentityAndIsolationWithoutCompose(t *testing.T) {
-	for _, test := range []struct{ name string }{{"running"}, {"restarted"}, {"stopped"}, {"unhealthy"}, {"external network"}, {"foreign service network"}, {"missing solve network"}, {"undeclared endpoint"}, {"run changed during observation"}} {
+	for _, test := range []struct{ name string }{{"running"}, {"restarted"}, {"stopped"}, {"unhealthy"}, {"external network"}, {"foreign service network"}, {"missing solve network"}, {"undeclared endpoint"}, {"run changed during observation"}, {"old policy"}, {"removed memory limit"}} {
 		t.Run(test.name, func(t *testing.T) {
 			c := fixture(t)
 			c.Endpoints = []challenge.Endpoint{{Name: "web", Service: "app", Port: 8000, Protocol: "http"}}
@@ -45,7 +45,15 @@ func TestBrowserEndpointChecksLiveIdentityAndIsolationWithoutCompose(t *testing.
 			if test.name == "unhealthy" {
 				serviceState["Health"] = map[string]string{"Status": "unhealthy"}
 			}
-			service := map[string]any{"Id": "container-id", "Config": map[string]any{"Labels": map[string]string{"com.docker.compose.project": state.Project, "com.docker.compose.service": "app"}},
+			labels := map[string]string{"com.docker.compose.project": state.Project, "com.docker.compose.service": "app", "pwnden.runtime-policy": servicePolicyVersion}
+			host := limitedHostConfig("network-id", false)
+			if test.name == "old policy" {
+				delete(labels, "pwnden.runtime-policy")
+			}
+			if test.name == "removed memory limit" {
+				host.Memory = 0
+			}
+			service := map[string]any{"Id": "container-id", "Config": map[string]any{"Labels": labels}, "HostConfig": host,
 				"State": serviceState, "NetworkSettings": map[string]any{"Networks": map[string]any{"default": map[string]string{"NetworkID": attached, "IPAddress": "172.31.0.2"}}}}
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "application/json")

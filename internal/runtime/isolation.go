@@ -6,10 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"os/exec"
 	"strconv"
 	"strings"
+
+	dockerContainer "github.com/moby/moby/api/types/container"
 
 	"github.com/pwnden/platform/internal/challenge"
 )
@@ -48,16 +48,21 @@ func isolatedConfig(raw string, c *challenge.Loaded, project string) ([]byte, er
 		// Endpoints remain declarations. Host access uses a fixed-destination
 		// Docker stream rather than opening a network path out of the exercise.
 		delete(service, "ports")
-		service["cap_drop"] = []string{"ALL"}
-		existing, _ := service["security_opt"].([]any)
-		security := make([]any, 0, len(existing)+1)
-		for _, option := range existing {
-			value, _ := option.(string)
-			if !strings.HasPrefix(value, "no-new-privileges") {
-				security = append(security, option)
-			}
+		servicePolicy(service)
+	}
+	var volumes map[string]map[string]any
+	if len(document["volumes"]) > 0 {
+		if err := json.Unmarshal(document["volumes"], &volumes); err != nil {
+			return nil, err
 		}
-		service["security_opt"] = append(security, "no-new-privileges:true")
+		if len(volumes) > 8 {
+			return nil, errors.New("problem has too many temporary volumes")
+		}
+		for _, volume := range volumes {
+			volume["driver"] = "local"
+			volume["driver_opts"] = map[string]string{"type": "tmpfs", "device": "tmpfs", "o": "size=256m,nosuid,nodev,nr_inodes=32768,mode=1777"}
+		}
+		document["volumes"], _ = json.Marshal(volumes)
 	}
 	document["networks"], _ = json.Marshal(networks)
 	document["services"], _ = json.Marshal(services)
@@ -82,13 +87,45 @@ func startIsolated(ctx context.Context, c *challenge.Loaded, flag string, patche
 	}
 	// The full resolved configuration uses absolute repository paths. Passing it
 	// on stdin keeps generated flags and configuration out of temporary files.
-	args := []string{"compose", "--project-directory", c.Dir, "-p", project, "-f", "-", "up", "-d", "--build", "--wait"}
-	cmd := exec.CommandContext(ctx, "docker", args...)
-	cmd.Dir, cmd.Env, cmd.Stdin = c.Dir, append(os.Environ(), "FLAG="+flag), bytes.NewReader(data)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("docker compose up: %w: %s", err, stderr.String())
+	var cfg Config
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return err
+	}
+	base := []string{"compose", "--project-directory", c.Dir, "-p", project, "-f", "-"}
+	for _, step := range [][]string{{"pull", "--ignore-buildable"}, {"build"}} {
+		_, stderr, err := commandInput(ctx, c.Dir, []string{"FLAG=" + flag}, bytes.NewReader(data), "docker", append(append([]string{}, base...), step...)...)
+		if err != nil {
+			return fmt.Errorf("prepare services: %w: %s", err, stderr)
+		}
+	}
+	for name, service := range cfg.Services {
+		image := service.Image
+		if image == "" {
+			image = project + "-" + name
+		}
+		mounts := append([]Mount{}, service.Volumes...)
+		for _, entry := range service.Tmpfs {
+			target, _, _ := strings.Cut(entry, ":")
+			mounts = append(mounts, Mount{Type: "tmpfs", Target: target})
+		}
+		if err := checkImageStorage(ctx, c, image, mounts); err != nil {
+			return err
+		}
+	}
+	err = admitCreation(ctx, resourceCost{int64(len(cfg.Services)) * 2e9, int64(len(cfg.Services)) * (2 << 30), int64(len(cfg.Services)) * 256, int64(len(cfg.Services))}, func(ctx context.Context) error {
+		_, stderr, err := commandInput(ctx, c.Dir, []string{"FLAG=" + flag}, bytes.NewReader(data), "docker", append(append([]string{}, base...), "create", "--no-build")...)
+		if err != nil {
+			return fmt.Errorf("docker compose create: %w: %s", err, stderr)
+		}
+		return checkServiceMounts(ctx, c, project, cfg.Volumes)
+	})
+	if err != nil {
+		return err
+	}
+	args := append(base, "start", "--wait")
+	_, stderr, err := commandInput(ctx, c.Dir, []string{"FLAG=" + flag}, bytes.NewReader(data), "docker", args...)
+	if err != nil {
+		return fmt.Errorf("docker compose start: %w: %s", err, stderr)
 	}
 	return checkLiveNetworks(ctx, c, project)
 }
@@ -101,6 +138,53 @@ func checkIsolationEngine(ctx context.Context) error {
 	major, err := strconv.Atoi(strings.SplitN(strings.TrimSpace(out), ".", 2)[0])
 	if err != nil || major < 28 {
 		return errors.New("Docker Engine 28 or newer is required for isolated problem networks")
+	}
+	return nil
+}
+
+func checkLiveServicePolicy(ctx context.Context, c *challenge.Loaded, project string) error {
+	out, stderr, err := command(ctx, c.Dir, nil, "docker", "container", "ls", "--all", "--filter", "label=com.docker.compose.project="+project, "--format", "{{.ID}}")
+	if err != nil {
+		return fmt.Errorf("find problem containers: %w: %s", err, stderr)
+	}
+	ids := strings.Fields(out)
+	if len(ids) == 0 {
+		return errors.New("problem has no service containers")
+	}
+	out, stderr, err = command(ctx, c.Dir, nil, "docker", append([]string{"container", "inspect"}, ids...)...)
+	if err != nil {
+		return fmt.Errorf("inspect problem policy: %w: %s", err, stderr)
+	}
+	var containers []dockerContainer.InspectResponse
+	if err := json.Unmarshal([]byte(out), &containers); err != nil {
+		return err
+	}
+	if len(containers) != len(ids) {
+		return errors.New("incomplete problem container inspection")
+	}
+	for _, container := range containers {
+		if container.Config == nil || container.Config.Labels["com.docker.compose.project"] != project {
+			return errors.New("problem container ownership changed")
+		}
+		if container.Config.Labels["pwnden.kind"] == "connector" {
+			if container.Name != "/"+project+"-connector" || container.NetworkSettings == nil {
+				return errors.New("problem connector ownership changed")
+			}
+			network := container.NetworkSettings.Networks[project+"_"+c.Solve.Network]
+			if network == nil {
+				return errors.New("problem connector network changed")
+			}
+			if err := checkConnector(container, c, project, network.NetworkID); err != nil {
+				return err
+			}
+			continue
+		}
+		if container.Config.Labels["pwnden.runtime-policy"] != servicePolicyVersion {
+			return errors.New("problem resource policy is outdated; stop and restart its environment")
+		}
+		if err := checkServicePolicy(container.HostConfig); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -137,7 +221,7 @@ func checkLiveNetworks(ctx context.Context, c *challenge.Loaded, project string)
 			return err
 		}
 	}
-	return nil
+	return checkLiveServicePolicy(ctx, c, project)
 }
 
 func checkIsolatedNetwork(network liveNetwork, project string) error {

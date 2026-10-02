@@ -147,7 +147,7 @@ func TestServiceRunAndStop(t *testing.T) {
 	ups := 0
 	for _, call := range calls() {
 		for _, arg := range call {
-			if arg == "up" {
+			if arg == "create" {
 				ups++
 			}
 		}
@@ -165,6 +165,8 @@ func TestUnsafeNetworkRollsBackStartup(t *testing.T) {
 		testutil.Reply{Match: []string{"up"}},
 		testutil.Reply{Match: []string{"network", "ls"}, Out: "network-id"},
 		testutil.Reply{Match: []string{"network", "inspect"}, Out: `[{"Name":"unsafe","Driver":"bridge","Internal":false}]`},
+		testutil.Reply{Match: []string{"container", "ls", "--filter"}, Out: "service-id"},
+		testutil.Reply{Match: []string{"container", "inspect", "service-id"}, Out: `[{"Mounts":[]}]`},
 		testutil.Reply{Match: []string{"down"}},
 	)
 	r, err := s.Run(context.Background(), c.Slug)

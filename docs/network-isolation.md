@@ -15,11 +15,33 @@ preserves the complete resolved exercise configuration while applying:
 - Service host port mappings removed from the effective configuration.
 - All capabilities dropped and `no-new-privileges` enabled for every service,
   toolbox and connector. File toolboxes use network mode `none`.
+- Custom security profiles, host namespaces, GPU/device access, extra capabilities
+  and privileged lifecycle hooks rejected before startup. The engine's default
+  seccomp and security profiles remain active.
+- Services, command toolboxes and terminals limited to 2 CPUs, 2 GiB RAM,
+  no additional swap and 256 processes. These are per-container ceilings,
+  rather than reserved resources. Root filesystems are read-only; `/tmp` is
+  a writable 128 MiB tmpfs with execution permitted for compiled exercises.
+- Command toolboxes and terminals run as UID/GID `10001:10001` in both modes.
+  A separate 64 MiB `/home/pwnden` tmpfs provides their writable home.
+  Services retain their authored image/user, so authors should provide a
+  non-root service user and declare temporary data mounts for writes.
+- Writable problems use a shared 256 MiB tmpfs copy of their directory, capped
+  at 32768 inodes. Originals remain unchanged. A networkless keeper retains the
+  copy between commands and PTYs; cleanup removes it. Its ceilings are 0.25 CPU,
+  512 MiB RAM and 32 processes. Patched environments have separate copies.
+- Service binds are read-only. Named volumes use bounded 256 MiB tmpfs with no
+  image copy; other tmpfs mounts are capped at 256 MiB and shared memory at 64 MiB.
+  Implicit image volumes and multiple service replicas are rejected.
+- The `local` logging driver rotates 10 MiB files with a maximum of 3 files.
+  Each captured command output stream is limited to 8 MiB; exceeding it fails
+  execution and triggers cleanup. Interactive terminal output is streamed.
 
 The effective configuration is supplied to Compose on stdin. Generated flags
 stay out of temporary configuration files. Live Docker networks are inspected
 after startup and before service observation, endpoint access or toolbox
-attachment. An older, unisolated environment must be stopped and restarted.
+attachment. Live service limits and policy ownership are checked too. An older
+environment must be stopped and restarted to apply the current policy.
 
 Services and tools communicate within their own problem networks. Internet
 destinations, host services and other problem networks are blocked. Repository
@@ -46,7 +68,9 @@ the pinned multi-architecture image
 runs as `65534:65534` with a read-only root filesystem, and has only the isolated
 problem network. It has no host mounts, Docker socket or published ports. The
 platform checks an existing connector's ownership and immutable configuration
-before reuse. Problems provide no ingress code or additional external network.
+before reuse. The connector is limited to 0.5 CPU, 128 MiB RAM, no additional
+swap and 64 processes, with the same log rotation. Problems provide no ingress
+code or additional external network.
 
 The destination comes from the contract and inspected service ownership;
 requests supply paths rather than arbitrary destination URLs. Each origin is
@@ -62,5 +86,15 @@ controls, same-problem HTTP, command and PTY behavior, web solving, patched
 verification and cleanup. Linux/WSL is the current verified execution target;
 actual Windows and macOS host checks remain scheduled for a later stage.
 
-This policy protects ordinary container network and mount access. Docker and
-its kernel remain trusted; it is not a guarantee against kernel or daemon exploits.
+On Linux/WSL, Python and Go controllers running as the same OS user share a
+per-daemon admission lock in `/tmp`. Container creation reserves actual resource
+ceilings before start: by default 8 CPUs, 8 GiB RAM, 1024 processes and 12
+containers in total, including connectors and workspace keepers. Docker-reported
+CPU/RAM capacity clips those limits. Created and stopped managed containers count
+until removal; unrelated applications do not count. Positive integer settings
+`PWNDEN_RUNTIME_CPUS`, `PWNDEN_RUNTIME_MEMORY_MIB`, `PWNDEN_RUNTIME_PIDS` and
+`PWNDEN_RUNTIME_CONTAINERS` let the operator set the budget. A rejected creation
+leaves current environments running. Controllers on other hosts or OS users do
+not share this admission lock. Builds and image caches are outside the runtime
+budget. Docker and its kernel remain trusted; this policy does not establish
+resistance to kernel or daemon exploits.

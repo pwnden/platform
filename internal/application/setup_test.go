@@ -79,7 +79,7 @@ func setupFixture(t *testing.T, service bool) (*SetupService, *challenge.Loaded)
 
 func setupReplies(c *challenge.Loaded) []testutil.Reply {
 	return []testutil.Reply{
-		{Match: []string{"info"}, Out: "linux\n"},
+		{Match: []string{"info", "{{.OSType}}"}, Out: "linux\n"},
 		{Match: []string{"version", "{{.Server.Version}}"}, Out: "29.4.1"},
 		{Match: []string{"compose", "version"}, Out: "5.1.3\n"},
 		{Match: []string{"config"}, Out: config(c)},
@@ -106,7 +106,7 @@ func TestSetupPreparesAndActivates(t *testing.T) {
 			}
 			for _, call := range calls() {
 				for _, arg := range call {
-					if arg == "up" || arg == "run" {
+					if arg == "create" || arg == "start" {
 						t.Fatalf("setup started a problem: %v", call)
 					}
 				}
@@ -126,7 +126,7 @@ func TestPrepareLiveCheckoutPreservesFilesAndDoesNotStartServices(t *testing.T) 
 			}
 			for _, call := range calls() {
 				for _, arg := range call {
-					if arg == "up" || arg == "run" {
+					if arg == "create" || arg == "start" {
 						t.Fatal("prepare started services", call)
 					}
 				}
@@ -141,7 +141,7 @@ func TestPrepareLiveCheckoutPreservesFilesAndDoesNotStartServices(t *testing.T) 
 func TestSetupFailurePublishesNoInstallation(t *testing.T) {
 	s, c := setupFixture(t, false)
 	testutil.Docker(t,
-		testutil.Reply{Match: []string{"info"}, Out: "linux"},
+		testutil.Reply{Match: []string{"info", "{{.OSType}}"}, Out: "linux"},
 		testutil.Reply{Match: []string{"version", "{{.Server.Version}}"}, Out: "29.4.1"},
 		testutil.Reply{Match: []string{"compose", "version"}},
 		testutil.Reply{Match: []string{"image", "inspect"}, Code: 1},

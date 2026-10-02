@@ -105,7 +105,7 @@ func TestToolRejectsPreviouslyUnisolatedNetwork(t *testing.T) {
 		t.Fatal("tool joined an unisolated environment")
 	}
 	for _, call := range calls() {
-		if call[0] == "run" {
+		if call[0] == "create" || call[0] == "start" {
 			t.Fatal("tool container started", call)
 		}
 	}

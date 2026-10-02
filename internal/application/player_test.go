@@ -54,7 +54,7 @@ func TestPlayerToolExecution(t *testing.T) {
 				t.Fatalf("execution: %+v %v", result, err)
 			}
 			for _, call := range calls() {
-				if len(call) > 0 && call[0] == "run" {
+				if len(call) > 0 && call[0] == "create" {
 					if call[len(call)-3] != "python3" || call[len(call)-2] != "files/checker.py" || call[len(call)-1] != "candidate" {
 						t.Fatalf("command args changed: %v", call)
 					}

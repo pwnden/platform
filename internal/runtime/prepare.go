@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -64,6 +65,29 @@ func prepareToolImage(ctx context.Context, c *challenge.Loaded, image string) er
 	if _, _, err := command(ctx, c.Dir, nil, "docker", "image", "inspect", "--format", "{{.Id}}", "--", image); err != nil {
 		if _, stderr, err := command(ctx, c.Dir, nil, "docker", "pull", "--", image); err != nil {
 			return fmt.Errorf("prepare toolbox image: %w: %s", err, stderr)
+		}
+	}
+	return checkImageStorage(ctx, c, image, nil)
+}
+
+func checkImageStorage(ctx context.Context, c *challenge.Loaded, image string, declared []Mount) error {
+	out, stderr, err := command(ctx, c.Dir, nil, "docker", "image", "inspect", "--format", "{{json .Config.Volumes}}", "--", image)
+	if err != nil {
+		return fmt.Errorf("inspect toolbox storage: %w: %s", err, stderr)
+	}
+	var volumes map[string]any
+	if err := json.Unmarshal([]byte(out), &volumes); err != nil {
+		return err
+	}
+	for target := range volumes {
+		allowed := false
+		for _, mount := range declared {
+			if mount.Target == target {
+				allowed = true
+			}
+		}
+		if !allowed {
+			return fmt.Errorf("image %s declares anonymous VOLUME storage at %s; declare bounded service storage explicitly", image, target)
 		}
 	}
 	return nil

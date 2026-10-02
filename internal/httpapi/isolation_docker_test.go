@@ -205,7 +205,22 @@ func TestIsolatedNoteVaultDocker(t *testing.T) {
 		t.Fatal("proxy solution rejected", err)
 	}
 	t.Log("Web home, login cookie, vulnerable endpoint and submission passed")
-	probe := `import socket, urllib.request
+	probe := `import errno, os, pathlib, socket, urllib.request
+assert os.geteuid() == 10001, 'toolbox must use a non-root UID'
+assert pathlib.Path('/sys/fs/cgroup/cpu.max').read_text().split() == ['200000', '100000']
+assert pathlib.Path('/sys/fs/cgroup/memory.max').read_text().strip() == str(2*1024**3)
+assert pathlib.Path('/sys/fs/cgroup/memory.swap.max').read_text().strip() == '0'
+assert pathlib.Path('/sys/fs/cgroup/pids.max').read_text().strip() == '256'
+assert os.statvfs('/tmp').f_blocks * os.statvfs('/tmp').f_frsize == 128*1024**2
+pathlib.Path('/tmp/pwnden-resource-check').write_text('writable')
+for path in ['/var/tmp/pwnden-forbidden', '/challenge/pwnden-forbidden']:
+    try:
+        pathlib.Path(path).write_text('forbidden')
+    except OSError as error:
+        assert error.errno in (errno.EROFS, errno.EACCES)
+    else:
+        raise SystemExit('read-only write succeeded: '+path)
+print('non-root, cgroup limits, bounded tmpfs and read-only root passed')
 for host, port in [('1.1.1.1',443),('example.com',443),('2606:4700:4700::1111',443)]:
     try:
         connection = socket.create_connection((host,port),timeout=2)
