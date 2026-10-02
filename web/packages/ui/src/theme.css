@@ -107,6 +107,7 @@ a:not(.ui-button):active { color: var(--ui-accent); background: var(--ui-accent-
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--ui-space-1);
   min-height: var(--ui-control-size);
   padding: var(--ui-inset-control);
   border: 1px solid var(--ui-border);

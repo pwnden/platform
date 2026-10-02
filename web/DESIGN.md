@@ -295,6 +295,8 @@ while preserving the current problem selection.
 
 The shared button has a minimum height of (2.75rem), a thin border, font size of (1rem) and line height of (1.4). Its four-sided inset is `(height - line height) / 2 - border`. Primary, secondary, ghost, danger and row variants use the assignments in the frontmatter. Hover, pressing, selection and keyboard focus follow Elevation & Depth. Compact buttons use a fixed height of (2.5rem), label size of (0.85rem), content line height of (1.19rem) and the same inset calculation. Icon-only controls center their icon in a square. Disabled or busy buttons are disabled, muted and rendered at (0.5) opacity; busy controls expose `aria-busy`.
 
+Buttons and button links use `ui-space-1` (0.5rem) between their icon and label. The shared button class owns this gap for every size and variant.
+
 Source: [UIButton.vue](packages/ui/src/UIButton.vue), [theme.css](packages/ui/src/theme.css).
 
 ### Inputs / Fields
