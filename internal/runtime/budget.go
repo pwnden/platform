@@ -28,10 +28,25 @@ func (r resourceCost) add(other resourceCost) resourceCost {
 	return resourceCost{r.CPUs + other.CPUs, r.Memory + other.Memory, r.PIDs + other.PIDs, r.Containers + other.Containers}
 }
 
-func toolboxCost() resourceCost   { return resourceCost{2e9, 2 << 30, 256, 1} }
+// Operators may tighten the per-container ceiling without increasing it.
+func containerCPUs() int64 {
+	switch os.Getenv("PWNDEN_CONTAINER_CPUS") {
+	case "", "2":
+		return 2e9
+	case "1":
+		return 1e9
+	default:
+		return 0
+	}
+}
+
+func toolboxCost() resourceCost   { return resourceCost{containerCPUs(), 2 << 30, 256, 1} }
 func connectorCost() resourceCost { return resourceCost{5e8, 128 << 20, 64, 1} }
 
 func runtimeBudget(cpus int64, memory int64) (resourceCost, error) {
+	if containerCPUs() == 0 {
+		return resourceCost{}, errors.New("PWNDEN_CONTAINER_CPUS must be 1 or 2")
+	}
 	limits := resourceCost{8e9, 8 << 30, 1024, 12}
 	for _, setting := range []struct {
 		name       string

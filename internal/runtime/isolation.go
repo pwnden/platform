@@ -20,6 +20,9 @@ const gatewayIPv6 = "com.docker.network.bridge.gateway_mode_ipv6"
 // isolatedConfig preserves the resolved exercise configuration. Network policy
 // and ingress belong to the consumer, so authors need no platform-specific glue.
 func isolatedConfig(raw string, c *challenge.Loaded, project string) ([]byte, error) {
+	if containerCPUs() == 0 {
+		return nil, errors.New("PWNDEN_CONTAINER_CPUS must be 1 or 2")
+	}
 	var cfg Config
 	if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
 		return nil, err
@@ -112,7 +115,7 @@ func startIsolated(ctx context.Context, c *challenge.Loaded, flag string, patche
 			return err
 		}
 	}
-	err = admitCreation(ctx, resourceCost{int64(len(cfg.Services)) * 2e9, int64(len(cfg.Services)) * (2 << 30), int64(len(cfg.Services)) * 256, int64(len(cfg.Services))}, func(ctx context.Context) error {
+	err = admitCreation(ctx, resourceCost{int64(len(cfg.Services)) * containerCPUs(), int64(len(cfg.Services)) * (2 << 30), int64(len(cfg.Services)) * 256, int64(len(cfg.Services))}, func(ctx context.Context) error {
 		_, stderr, err := commandInput(ctx, c.Dir, []string{"FLAG=" + flag}, bytes.NewReader(data), "docker", append(append([]string{}, base...), "create", "--no-build")...)
 		if err != nil {
 			return fmt.Errorf("docker compose create: %w: %s", err, stderr)

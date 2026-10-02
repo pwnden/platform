@@ -6,7 +6,51 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/pwnden/platform/internal/testutil"
 )
+
+func TestTighterContainerCPUCeiling(t *testing.T) {
+	t.Setenv("PWNDEN_CONTAINER_CPUS", "1")
+	c := fixture(t)
+	data, err := isolatedConfig(configJSON(c, false), c, Project(c))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cfg map[string]any
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		t.Fatal(err)
+	}
+	host := limitedHostConfig("none", false)
+	if cfg["services"].(map[string]any)["app"].(map[string]any)["cpus"] != float64(1) || host.NanoCPUs != 1e9 || toolboxCost().CPUs != host.NanoCPUs || !strings.Contains(strings.Join(toolOptions(false), " "), "--cpus 1 ") {
+		t.Fatal("service, command, terminal and admission ceilings differ")
+	}
+	if err := checkServicePolicy(host); err != nil {
+		t.Fatal(err)
+	}
+	host.NanoCPUs = 2e9
+	if err := checkServicePolicy(host); err == nil {
+		t.Fatal("running container exceeds the selected CPU ceiling")
+	}
+}
+
+func TestInvalidContainerCPUCeilingPreventsCreation(t *testing.T) {
+	for _, value := range []string{"0", "3", "-1", "1.5", " 1", "one"} {
+		t.Run(value, func(t *testing.T) {
+			t.Setenv("PWNDEN_CONTAINER_CPUS", value)
+			c := fixture(t)
+			if _, err := isolatedConfig(configJSON(c, false), c, Project(c)); err == nil {
+				t.Fatal("invalid service CPU ceiling accepted")
+			}
+			testutil.Docker(t)
+			created := false
+			err := admitCreation(context.Background(), toolboxCost(), func(context.Context) error { created = true; return nil })
+			if err == nil || created {
+				t.Fatalf("invalid CPU ceiling reached creation: %v", err)
+			}
+		})
+	}
+}
 
 func TestRejectsDeviceNamespaceHookAndSecurityOverrides(t *testing.T) {
 	c := fixture(t)

@@ -27,7 +27,7 @@ func toolHomeOptions(writable bool) string {
 }
 
 func limitedHostConfig(network string, connector bool) *dockerContainer.HostConfig {
-	pidLimit, memory, cpus := int64(256), int64(2<<30), int64(2e9)
+	pidLimit, memory, cpus := int64(256), int64(2<<30), containerCPUs()
 	if connector {
 		pidLimit, memory, cpus = 64, 128<<20, 5e8
 	}
@@ -45,7 +45,7 @@ func limitedHostConfig(network string, connector bool) *dockerContainer.HostConf
 
 func toolOptions(writable bool) []string {
 	options := []string{"--user", toolUser(writable), "--read-only", "--cgroupns", "private",
-		"--cpus", "2", "--memory", "2g", "--memory-swap", "2g", "--pids-limit", "256",
+		"--cpus", fmt.Sprint(containerCPUs() / 1e9), "--memory", "2g", "--memory-swap", "2g", "--pids-limit", "256",
 		"--tmpfs", "/tmp:" + tmpOptions, "--tmpfs", "/home/pwnden:" + toolHomeOptions(writable),
 		"--log-driver", "local", "--log-opt", "max-size=10m", "--log-opt", "max-file=3"}
 	for _, env := range toolEnv() {
@@ -61,7 +61,7 @@ func servicePolicy(service map[string]any) {
 	if deploy, ok := service["deploy"].(map[string]any); ok {
 		delete(deploy, "resources")
 	}
-	service["cpus"], service["mem_limit"], service["memswap_limit"] = 2, "2g", "2g"
+	service["cpus"], service["mem_limit"], service["memswap_limit"] = containerCPUs()/1e9, "2g", "2g"
 	service["pids_limit"], service["oom_kill_disable"], service["read_only"] = 256, false, true
 	service["shm_size"] = "64m"
 	service["cgroup"], service["cap_drop"], service["security_opt"] = "private", []string{"ALL"}, []string{"no-new-privileges:true"}
@@ -101,7 +101,7 @@ func servicePolicy(service map[string]any) {
 func checkServicePolicy(host *dockerContainer.HostConfig) error {
 	if host == nil || !host.ReadonlyRootfs || host.Privileged || len(host.CapAdd) != 0 ||
 		len(host.CapDrop) != 1 || host.CapDrop[0] != "ALL" || host.CgroupnsMode != "private" ||
-		host.NanoCPUs != 2e9 || host.Memory != 2<<30 || host.MemorySwap != host.Memory ||
+		containerCPUs() == 0 || host.NanoCPUs != containerCPUs() || host.Memory != 2<<30 || host.MemorySwap != host.Memory ||
 		host.PidsLimit == nil || *host.PidsLimit != 256 || host.Tmpfs["/tmp"] != tmpOptions ||
 		host.LogConfig.Type != "local" || host.LogConfig.Config["max-size"] != "10m" || host.LogConfig.Config["max-file"] != "3" {
 		return fmt.Errorf("problem resource policy is outdated; stop and restart its environment")

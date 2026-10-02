@@ -16,6 +16,13 @@ checked before startup. CI installs checksum-verified Compose 5.1.3 and builds t
 selected basic and pcap CLI images from the challenges checkout. For local checks,
 prepare those images using the catalog's `images/cli/README.md` first.
 
+CI sets `PWNDEN_CONTAINER_CPUS=1` for execution checks on its four-core runner.
+This tightens the service, command and terminal CPU ceilings, leaving room for
+both target variants, toolboxes and workspace keepers within the aggregate budget.
+The local default is 2; the only accepted values are 1 and 2. Restart existing
+problems after changing this setting. Unit tests exercise the default and the
+tighter policy separately.
+
 The CLI implements [problem contract version 5](https://github.com/pwnden/challenges/blob/main/docs/contract.md), retains version 1, 2, 3 and 4 execution compatibility with the current isolation policy, checks each problem's version, and reads execution defaults and the attack rejection exit code from the challenges checkout's `contract.toml`. Problem format and learning-content validation belong to the challenges repository. The CLI checks real paths and Docker resource policy before execution, verifies flags and patch behavior, and cleans up its projects.
 
 Start with the problems stopped before running the complete check. After a successful start, the verifier stops the problem even if verification fails. On interruption it signals the active CLI, waits for its cleanup, and stops the problem it started. A failed start performs its own cleanup; a pre-existing run remains owned by its original caller.

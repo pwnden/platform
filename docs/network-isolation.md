@@ -91,8 +91,14 @@ per-daemon admission lock in `/tmp`. Container creation reserves actual resource
 ceilings before start: by default 8 CPUs, 8 GiB RAM, 1024 processes and 12
 containers in total, including connectors and workspace keepers. Docker-reported
 CPU/RAM capacity clips those limits. Created and stopped managed containers count
-until removal; unrelated applications do not count. Positive integer settings
-`PWNDEN_RUNTIME_CPUS`, `PWNDEN_RUNTIME_MEMORY_MIB`, `PWNDEN_RUNTIME_PIDS` and
+until removal; unrelated applications do not count.
+
+`PWNDEN_CONTAINER_CPUS` selects a per-service, command and terminal CPU ceiling
+of 1 or 2 (default 2). This can tighten the policy on a smaller machine; restart
+existing problems after changing it. Connectors and workspace keepers retain
+their smaller limits.
+
+Positive integer settings `PWNDEN_RUNTIME_CPUS`, `PWNDEN_RUNTIME_MEMORY_MIB`, `PWNDEN_RUNTIME_PIDS` and
 `PWNDEN_RUNTIME_CONTAINERS` let the operator set the budget. A rejected creation
 leaves current environments running. Controllers on other hosts or OS users do
 not share this admission lock. Builds and image caches are outside the runtime

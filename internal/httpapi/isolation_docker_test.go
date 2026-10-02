@@ -205,9 +205,13 @@ func TestIsolatedNoteVaultDocker(t *testing.T) {
 		t.Fatal("proxy solution rejected", err)
 	}
 	t.Log("Web home, login cookie, vulnerable endpoint and submission passed")
-	probe := `import errno, os, pathlib, socket, urllib.request
+	cpuQuota := "200000"
+	if os.Getenv("PWNDEN_CONTAINER_CPUS") == "1" {
+		cpuQuota = "100000"
+	}
+	probe := fmt.Sprintf(`import errno, os, pathlib, socket, urllib.request
 assert os.geteuid() == 10001, 'toolbox must use a non-root UID'
-assert pathlib.Path('/sys/fs/cgroup/cpu.max').read_text().split() == ['200000', '100000']
+assert pathlib.Path('/sys/fs/cgroup/cpu.max').read_text().split() == ['%s', '100000']
 assert pathlib.Path('/sys/fs/cgroup/memory.max').read_text().strip() == str(2*1024**3)
 assert pathlib.Path('/sys/fs/cgroup/memory.swap.max').read_text().strip() == '0'
 assert pathlib.Path('/sys/fs/cgroup/pids.max').read_text().strip() == '256'
@@ -231,7 +235,7 @@ for host, port in [('1.1.1.1',443),('example.com',443),('2606:4700:4700::1111',4
         raise SystemExit('external connection succeeded: '+host)
 assert urllib.request.urlopen('http://app:8000/healthz',timeout=2).status == 200
 print('internal HTTP passed')
-`
+`, cpuQuota)
 	c, err := challenge.Load(repo, "note-vault")
 	if err != nil {
 		t.Fatal(err)
