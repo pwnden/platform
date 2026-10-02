@@ -67,9 +67,8 @@ const MarkdownContent = () => nodes.value.map(node => renderMarkdownNode(node, p
 .ui-markdown :deep(.markdown-section--objective > .markdown-section-body) { font-size: 1.05rem; }
 .ui-markdown :deep(.markdown-section--resources) { border-radius: var(--ui-radius-surface); background: var(--ui-surface-raised); }
 .ui-markdown :deep(.markdown-section--knowledge) { border-top: 1px solid var(--ui-border); }
-.ui-markdown :deep(.markdown-section--submission) { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--ui-space-1) var(--ui-space-2); padding: var(--ui-space-2); border-top: 1px solid var(--ui-border); }
-.ui-markdown :deep(.markdown-section--submission > .markdown-section-title) { margin: 0; color: var(--ui-muted); font-size: 0.9rem; }
-.ui-markdown :deep(.markdown-section--submission > .markdown-section-body) { flex: 1 1 16rem; min-width: 0; font-size: 0.9rem; }
+.ui-markdown :deep(.markdown-section--submission) { border-top: 1px solid var(--ui-border); }
+.ui-markdown :deep(.markdown-section--submission > .markdown-section-title) { color: var(--ui-muted); }
 .ui-markdown :deep(pre) { min-width: 0; overflow: auto; padding: var(--ui-space-2); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-surface); background: var(--ui-terminal-background); white-space: pre; line-height: 1.6; }
 .ui-markdown :deep(code) { padding: 0.2rem; border-radius: var(--ui-radius-inline); color: var(--ui-accent); background: var(--ui-surface-raised); }
 .ui-markdown :deep(pre code) { padding: 0; color: var(--ui-foreground); background: transparent; }

@@ -19,7 +19,7 @@ const sections = new Map<string, { title: string; icon: UIIconName }>([
   ['objective', { title: '의뢰 목표', icon: 'objective' }],
   ['resources', { title: '전달받은 정보', icon: 'resources' }],
   ['knowledge', { title: '시작 전 알아둘 것', icon: 'knowledge' }],
-  ['submission', { title: '제출할 값', icon: 'submission' }],
+  ['submission', { title: '정답 형식', icon: 'submission' }],
 ]);
 
 function linkTarget(value: unknown, prefix: string): string | undefined {

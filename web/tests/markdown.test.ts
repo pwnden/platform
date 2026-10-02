@@ -55,7 +55,7 @@ it('supports unnamed messages while preserving ordinary blockquotes', async () =
 it('renders briefing roles with distinct sections and headings below the panel title', async () => {
   const source = '::objective\n복구 키를 찾자.\n::\n\n::resources{title="전달받은 자료"}\n- `files/recovery.txt`\n::\n\n::knowledge\nBase64 예제\n\n```sh\nprintf hello\n```\n::\n\n::submission\n`pwnden{...}` 전체를 제출하자.\n::';
   const html = await renderToString(createSSRApp({ render: () => h(UIMarkdown, { source, headingOffset: 1 }) }));
-  for (const [role, title] of [['objective', '의뢰 목표'], ['resources', '전달받은 자료'], ['knowledge', '시작 전 알아둘 것'], ['submission', '제출할 값']]) {
+  for (const [role, title] of [['objective', '의뢰 목표'], ['resources', '전달받은 자료'], ['knowledge', '시작 전 알아둘 것'], ['submission', '정답 형식']]) {
     expect(html).toContain(`class="markdown-section markdown-section--${role}" aria-label="${title}"`);
     expect(html).toMatch(new RegExp(`<h3 class="markdown-section-title"><svg[^>]*ui-icon--${role}[^>]*aria-hidden="true"[^>]*>.*?</svg><span>${title}</span></h3>`));
   }
