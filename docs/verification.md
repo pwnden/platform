@@ -1,6 +1,8 @@
-# Execution verification
+# Platform integration verification
 
-The platform verifies the problems it consumes. With `platform` and `challenges` checked out as siblings, run this command from the platform repository:
+Challenges completes [authoring, execution verification and publication](https://github.com/pwnden/challenges/blob/main/docs/publishing.md) in its own repository using Python and Docker. Platform independently consumes published catalogs and verifies their integration with its own runtime, CLI and player. These platform checks require the platform's development toolchain; challenge authors finish their publication gates with the challenges tools.
+
+With `platform` and a published `challenges` catalog checked out as siblings, run this command from the platform repository:
 
 ```sh
 docker build --file Dockerfile.web --target assets --output type=local,dest=internal/playerweb/dist .
@@ -34,7 +36,7 @@ The test leaves the player's running projects untouched. See [network isolation]
 
 `.github/workflows/verify.yml` checks out the platform revision under test and `pwnden/challenges` at `main`, builds embedded player assets in Docker, runs Go tests and vet, and runs the same execution verifier. It uses read-only repository permissions and checkouts without persisted credentials. Action versions are pinned to exact commits.
 
-The workflow runs on pushes to the platform's `main`, pull requests, manual dispatches, and daily at 18:00 UTC (03:00 Korea time). The daily run checks changes to the consumed problem repository. Publish both repositories' implementations before confirming GitHub-hosted execution. The platform workflow uses its own checked-out code for the runner.
+The workflow runs on pushes to the platform's `main`, pull requests, manual dispatches, and daily at 18:00 UTC (03:00 Korea time). The daily run checks changes to the published problem repository. Each repository owns its implementation and CI; the platform workflow uses its own checked-out code for the consumer runtime. GitHub-hosted execution is confirmed by the respective workflow runs after publication.
 
 After problem verification, the workflow builds a native Linux platform package and runs `tools/smoke_package.py`. That check uses the package with only Docker on its child PATH, exercising managed setup and player commands without Go, Git, or a separately supplied problem path. See [distribution](distribution.md) for local package checks.
 

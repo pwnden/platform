@@ -1,4 +1,4 @@
-name: Verify platform and challenges
+name: Verify platform integration
 
 on:
   push:
@@ -21,7 +21,7 @@ jobs:
         with:
           path: platform
           persist-credentials: false
-      - name: Check out challenges
+      - name: Check out published challenges
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: pwnden/challenges
@@ -55,7 +55,7 @@ jobs:
       - name: Verify catalog selection without host development tools
         working-directory: platform
         run: python3 -B tools/smoke_catalog.py
-      - name: Verify every challenge
+      - name: Verify published catalog integration
         run: python3 platform/tools/verify.py --challenges challenges
       - name: Verify actual problem network isolation and local web ingress
         working-directory: platform

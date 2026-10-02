@@ -1,4 +1,4 @@
-"""Run the same challenge lifecycle locally and on disposable CI runners."""
+"""Verify the platform runtime's integration with a consumed challenge catalog."""
 
 import argparse
 import os

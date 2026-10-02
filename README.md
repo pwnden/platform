@@ -67,7 +67,14 @@ edits need no commit or package build. The official installation stays separate.
 Host Go, Node and pnpm are unnecessary. On native Windows, use `./pwnden.ps1`
 with the same commands; actual Windows and macOS execution checks are deferred.
 
-Maintainer validation commands below require Go 1.27.1, Docker with Compose and
+## Platform integration checks
+
+Problem authors complete creation, verification and publication in the
+[challenges repository](https://github.com/pwnden/challenges/blob/main/docs/publishing.md)
+using Python and Docker. Platform consumes a published catalog independently.
+The commands below test the platform's implementation of that contract.
+
+Platform integration commands below require Go 1.27.1, Docker with Compose and
 Buildx, and the local problem checkout.
 
 ```sh
@@ -80,7 +87,7 @@ go run ./cmd/pwnden --repo ../challenges stop <slug>
 
 Run these commands from this repository. `--repo` names the root of the challenges checkout. The [problem contract](https://github.com/pwnden/challenges/blob/main/docs/contract.md) defines the metadata, execution, solution and patch results, and resource lifecycle.
 
-The challenges checkout owns the complete specification in `docs/contract.md` and its machine-readable version, defaults, and result code in `contract.toml`. It validates problem metadata in its own CI. This runner supports contract version 5, including declared difficulty, isolated problem networks and shared browser ingress; versions 1, 2, 3 and 4 remain supported for installed snapshots with the current isolation policy. It checks the repository version and each problem's `schema` before reading execution fields, and reads solution defaults and the attack rejection exit code from the TOML file. Unsupported versions produce a compatibility error. Supporting a new version requires implementing its rules in the runner.
+The challenges checkout owns the complete specification in `docs/contract.md` and its machine-readable version, defaults, and result code in `contract.toml`. Its own author tooling and CI verify problem metadata, isolation, solutions, patches and cleanup before catalog publication. This runner supports contract version 5, including declared difficulty, isolated problem networks and shared browser ingress; versions 1, 2, 3 and 4 remain supported for installed snapshots with the current isolation policy. It checks the repository version and each problem's `schema` before reading execution fields, and reads solution defaults and the attack rejection exit code from the TOML file. Unsupported versions produce a compatibility error. Supporting a new version requires implementing its rules in the runner.
 
 `validate` checks contract compatibility, repository paths, and the resolved Compose execution policy. `run` starts service challenges with a new flag; file challenges have no service to start. `verify` runs the declared solution in its toolbox image, checks the flag, and, when configured, checks the patched version. `stop` removes the challenge's Compose containers, networks, and volumes. The generated flag stays in the local user cache until `stop`; that cache is never mounted into a problem container.
 
@@ -88,13 +95,14 @@ Standalone `run` reports private service addresses accessible from the problem t
 
 The runner checks resolved bind mount sources before `up`. Only paths inside the supplied challenges repository are accepted. It also confines build contexts, Dockerfiles, local build cache paths, file-backed configs, and secrets to that repository. Named volumes and bridge networks are project-scoped. Compose services cannot use automatic Docker API socket access, and the toolbox does not mount a Docker socket. Compose files are authored by the challenge owner.
 
-Run every problem's execution, solution, patch, and cleanup check from this repository:
+Check the platform's execution, solution, patch and cleanup integration against
+the supplied published catalog from this repository:
 
 ```sh
 python3 tools/verify.py --challenges ../challenges
 ```
 
-See [execution verification and CI](docs/verification.md) for prerequisites and workflow behavior.
+See [platform integration verification and CI](docs/verification.md) for prerequisites and workflow behavior.
 
 The [application interface](docs/application-interface.md) defines shared callable operations, typed results, error codes, and cancellation and cleanup rules for command and HTTP adapters.
 
