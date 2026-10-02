@@ -1,30 +1,46 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { SelectRoot, SelectTrigger, SelectValue, SelectPortal, SelectContent, SelectViewport, SelectItem, SelectItemText, SelectItemIndicator } from '@sectile/vue/select';
 import type { UISelectProps } from './props';
 const props = defineProps<UISelectProps>();
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
-const selection = computed({ get: () => props.modelValue, set: value => emit('update:modelValue', value) });
-const selectedLabel = computed(() => props.options.find(option => option.value === props.modelValue)?.label ?? '');
+const values = computed(() => props.options.map(option => option.value));
+function textValue(value: string) { return props.options.find(option => option.value === value)?.label ?? ''; }
+function select(value: string | null) { if (value !== null) emit('update:modelValue', value); }
 </script>
 
 <template>
-  <div class="ui-field">
+  <SelectRoot class="ui-field" :items="values" :model-value="modelValue" :disabled="disabled" :label="label" :text-value="textValue" strategy="fixed" hide-when-detached @update:model-value="select">
     <label :for="id">{{ label }}</label>
-    <div class="ui-input ui-select">
-      <span class="ui-select-value" aria-hidden="true">{{ selectedLabel }}</span>
-      <select :id="id" v-model="selection" :disabled="disabled">
-        <option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option>
-      </select>
+    <SelectTrigger :id="id" class="ui-input ui-select">
+      <SelectValue class="ui-select-value" />
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6" /></svg>
-    </div>
-  </div>
+    </SelectTrigger>
+    <SelectPortal>
+      <SelectContent class="ui-select-content ui-radius-outer">
+        <SelectViewport class="ui-select-viewport">
+          <SelectItem v-for="option in options" :key="option.value" :value="option.value" class="ui-select-item ui-radius-inner">
+            <SelectItemText class="ui-select-item-text">{{ option.label }}</SelectItemText>
+            <span class="ui-select-indicator" aria-hidden="true"><SelectItemIndicator><svg viewBox="0 0 24 24" focusable="false"><path d="m5 12 4 4 10-10" /></svg></SelectItemIndicator></span>
+          </SelectItem>
+        </SelectViewport>
+      </SelectContent>
+    </SelectPortal>
+  </SelectRoot>
 </template>
 
 <style scoped>
-.ui-select { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--ui-space-1); }
+.ui-select { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--ui-space-1); text-align: start; cursor: pointer; }
 .ui-select-value { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-select { position: absolute; inset: 0; min-width: 0; width: 100%; height: 100%; opacity: 0; padding: 0; margin: 0; border: 0; outline: none; color: inherit; font: inherit; cursor: pointer; }
-select:disabled { cursor: not-allowed; }
-option { color: var(--ui-foreground); background: var(--ui-surface); }
-svg { width: 1.4rem; height: 1.4rem; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.ui-select[data-state='open'] { border-color: var(--ui-accent); }
+.ui-select-content { --ui-radius-outer: var(--ui-radius-surface); --ui-select-inset: calc(var(--ui-space-1) / 2); --ui-radius-inset: calc(var(--ui-select-inset) + 1px); z-index: 10; width: min(var(--sectile-position-anchor-width), var(--sectile-position-available-width)); padding: var(--ui-select-inset); border: 1px solid var(--ui-border-active); background: var(--ui-surface-raised); color: var(--ui-foreground); }
+.ui-select-viewport { max-height: min(20rem, calc(var(--sectile-position-available-height) - 2 * var(--ui-radius-inset))); overflow-y: auto; overscroll-behavior: contain; }
+.ui-select-item { display: grid; grid-template-columns: minmax(0, 1fr) 1.4rem; align-items: center; gap: var(--ui-space-1); min-height: var(--ui-control-size); padding: var(--ui-inset-control); cursor: pointer; font-size: 1rem; line-height: 1.4rem; transition: background-color var(--ui-state-duration) var(--ui-state-easing), color var(--ui-state-duration) var(--ui-state-easing); }
+.ui-select-item-text { min-width: 0; overflow-wrap: anywhere; }
+.ui-select-item[data-selected] { color: var(--ui-accent); background: var(--ui-accent-surface); }
+.ui-select-item[data-highlighted] { background: var(--ui-surface-hover); outline: var(--ui-focus-width) solid var(--ui-focus-color); outline-offset: var(--ui-focus-offset); }
+@media (hover: hover) { .ui-select-item:hover { background: var(--ui-surface-hover); } }
+.ui-select-item:active { background: var(--ui-surface-pressed); }
+.ui-select-indicator { display: flex; align-items: center; justify-content: center; width: 1.4rem; height: 1.4rem; }
+svg { display: block; width: 1.4rem; height: 1.4rem; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
 </style>

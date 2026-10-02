@@ -61,14 +61,28 @@ it('frames problem documents separately with named, bounded browser capabilities
   expect(html).not.toContain('srcdoc');
 });
 
-it('renders labeled native category choices and a plain status without decorative markers', async () => {
+it('renders labeled Sectile category choices with a custom trigger and portaled listbox', async () => {
   const html = await renderToString(createSSRApp({ render: () => h(UISelect, { id: 'category', label: '분야', modelValue: 'web', options: [{ value: '', label: '전체 분야' }, { value: 'web', label: '웹' }] }) }));
   expect(html).toMatch(/<label for="category"[^>]*>분야<\/label>/);
-  expect(html).toContain('<select id="category"');
-  expect(html).toMatch(/<option value="web"[^>]* selected>웹<\/option>/);
-  expect(html).toMatch(/class="ui-select-value" aria-hidden="true"[^>]*>웹<\/span>/);
+  expect(html).toMatch(/<button id="category"[^>]*aria-haspopup="listbox"/);
+  expect(html).toContain('aria-label="분야"');
+  expect(html).toContain('aria-expanded="false"');
+  expect(html).toMatch(/class="ui-select-value"[^>]*>웹<\/span>/);
   expect(html).toContain('<svg');
-  expect(html).not.toMatch(/<select[^>]*aria-hidden/);
+  expect(html).not.toContain('<select');
+  const context: { teleports?: Record<string, string> } = {};
+  await renderToString(createSSRApp({ render: () => h(UISelect, { id: 'difficulty', label: '난이도', modelValue: '', options: [{ value: '', label: '전체 난이도' }, { value: '1', label: '입문' }] }) }), context);
+  const popup = context.teleports?.body ?? '';
+  expect(popup).toContain('role="listbox"');
+  expect(popup).toMatch(/aria-selected="true"[^>]*data-sectile-select-id(?:="")?\s/);
+  expect(popup).toContain('전체 난이도');
+  expect(popup).toContain('입문');
+  expect(popup.match(/role="option"/g)).toHaveLength(2);
+  const disabled = await renderToString(createSSRApp({ render: () => h(UISelect, { id: 'empty', label: '파일', modelValue: '', options: [], disabled: true }) }));
+  expect(disabled).toMatch(/<button[^>]* disabled/);
+});
+
+it('renders a plain status without decorative markers', async () => {
   const status = await renderToString(createSSRApp({ render: () => h(UIStatus, {}, () => '준비됨') }));
   expect(status).toContain('준비됨');
   expect(status).not.toContain('aria-hidden');
