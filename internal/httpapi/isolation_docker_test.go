@@ -96,8 +96,34 @@ func TestIsolatedNoteVaultDocker(t *testing.T) {
 	}
 	body, _ := io.ReadAll(response.Body)
 	response.Body.Close()
-	if response.StatusCode != 200 || !strings.Contains(string(body), "Note Vault") {
+	if response.StatusCode != 200 || !strings.Contains(string(body), "개인 메모 사이트") {
 		t.Fatal("problem home unavailable", response.StatusCode, string(body))
+	}
+	// Compare identical warm routes with live endpoint inspection versus the full
+	// environment observer. Both modes keep identity and isolation enforcement.
+	observer := h.browsers.observe
+	if err := observer.CheckEndpoint(ctx, "note-vault", "web", result.Endpoints[0].Instance, "http://app:9000"); err == nil {
+		t.Fatal("changed destination accepted")
+	}
+	for _, mode := range []string{"full status", "live endpoint"} {
+		if mode == "full status" {
+			h.browsers.observe = nil
+		} else {
+			h.browsers.observe = observer
+		}
+		started := time.Now()
+		for i := 0; i < 5; i++ {
+			r, err := client.Get(browser.Target + "/")
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, _ = io.Copy(io.Discard, r.Body)
+			r.Body.Close()
+			if r.StatusCode != 200 {
+				t.Fatal(r.Status)
+			}
+		}
+		t.Logf("%s: mean route time %s (5 requests)", mode, time.Since(started)/5)
 	}
 	response, err = client.Post(browser.Target+"/login", "application/json", strings.NewReader(`{"username":"guest","password":"guest"}`))
 	if err != nil {

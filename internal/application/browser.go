@@ -13,6 +13,19 @@ type EndpointDialer interface {
 	DialEndpoint(context.Context, string, string, string) (net.Conn, error)
 }
 
+// EndpointObserver checks live identity and isolation for a prepared HTTP target.
+type EndpointObserver interface {
+	CheckEndpoint(context.Context, string, string, string, string) error
+}
+
+func (s *Service) CheckEndpoint(ctx context.Context, slug, name, instance, target string) error {
+	c, err := s.load(ctx, "browser", slug, false)
+	if err != nil {
+		return err
+	}
+	return runtime.CheckEndpoint(ctx, c, name, instance, target)
+}
+
 func (s *Service) DialEndpoint(ctx context.Context, slug, name, instance string) (net.Conn, error) {
 	c, err := s.load(ctx, "browser", slug, false)
 	if err != nil {
@@ -26,3 +39,4 @@ func (s *Service) DialEndpoint(ctx context.Context, slug, name, instance string)
 }
 
 var _ EndpointDialer = (*Service)(nil)
+var _ EndpointObserver = (*Service)(nil)

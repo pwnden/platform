@@ -39,6 +39,7 @@ type browserManager struct {
 	ctx      context.Context
 	status   func(context.Context, string) (application.RunStatus, error)
 	dial     application.EndpointDialer
+	observe  application.EndpointObserver
 	parent   string
 	owned    func() []application.WorkspaceInfo
 	mu       sync.Mutex
@@ -62,7 +63,8 @@ type browserEntry struct {
 
 func newBrowserManager(ctx context.Context, backend Backend, parent string, owned func() []application.WorkspaceInfo) *browserManager {
 	dial, _ := backend.(application.EndpointDialer)
-	return &browserManager{ctx: ctx, status: backend.Status, dial: dial, parent: parent, owned: owned, entries: make(map[string]*browserEntry)}
+	observe, _ := backend.(application.EndpointObserver)
+	return &browserManager{ctx: ctx, status: backend.Status, dial: dial, observe: observe, parent: parent, owned: owned, entries: make(map[string]*browserEntry)}
 }
 
 func localHTTP(raw string) (*url.URL, bool) {
@@ -316,11 +318,20 @@ func (e *browserEntry) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Resolve only the declared, still-running endpoint. The caller supplies paths,
 	// never a destination URL. Stop/restart cannot retarget an old browser origin.
 	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
-	status, err := m.status(ctx, e.slug)
+	var err error
+	if e.isolated && m.observe != nil {
+		err = m.observe.CheckEndpoint(ctx, e.slug, e.name, e.instance, e.target)
+	} else {
+		var status application.RunStatus
+		status, err = m.status(ctx, e.slug)
+		target, ok := browserTarget(status, e.name)
+		instance, _ := browserInstance(status, e.name)
+		if !ok || target != e.target || instance != e.instance {
+			err = errBrowserUnavailable
+		}
+	}
 	cancel()
-	target, ok := browserTarget(status, e.name)
-	instance, _ := browserInstance(status, e.name)
-	if err != nil || !ok || target != e.target || instance != e.instance {
+	if err != nil {
 		http.Error(w, "Problem environment closed", 410)
 		return
 	}

@@ -35,7 +35,7 @@ func EndpointAddresses(ctx context.Context, c *challenge.Loaded) ([]EndpointAddr
 	if err := checkLiveNetworks(ctx, c, state.Project); err != nil {
 		return nil, err
 	}
-	instance := fmt.Sprintf("%x", sha256.Sum256([]byte(state.Project+"\x00"+state.Flag)))
+	instance := endpointInstance(state)
 	addresses := make([]EndpointAddress, 0, len(c.Endpoints))
 	for _, endpoint := range c.Endpoints {
 		address := net.JoinHostPort(endpoint.Service, strconv.Itoa(endpoint.Port))
@@ -45,4 +45,8 @@ func EndpointAddresses(ctx context.Context, c *challenge.Loaded) ([]EndpointAddr
 		})
 	}
 	return addresses, nil
+}
+
+func endpointInstance(state State) string {
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(state.Project+"\x00"+state.Flag)))
 }

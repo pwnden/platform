@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -19,6 +20,57 @@ type isolatedBrowserBackend struct {
 	upstream string
 	instance atomic.Int32
 	calls    atomic.Int32
+}
+
+type observedBrowserBackend struct {
+	*isolatedBrowserBackend
+	checks atomic.Int32
+	closed atomic.Bool
+}
+
+func (b *observedBrowserBackend) CheckEndpoint(_ context.Context, slug, name, instance, target string) error {
+	b.checks.Add(1)
+	if slug != "example" || name != "web" || instance != "first" || target != "http://app:8000" || b.closed.Load() {
+		return errors.New("endpoint closed")
+	}
+	return nil
+}
+
+func TestBrowserUsesLiveEndpointObservationOnEveryRequest(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "page") }))
+	defer upstream.Close()
+	b := &observedBrowserBackend{isolatedBrowserBackend: &isolatedBrowserBackend{fakeBackend: &fakeBackend{}, upstream: upstream.URL}}
+	manager := newBrowserManager(context.Background(), b, "http://"+testHost, nil)
+	defer manager.close()
+	session, err := manager.open(context.Background(), "example", "web")
+	if err != nil {
+		t.Fatal(err)
+	}
+	manager.status = func(context.Context, string) (application.RunStatus, error) {
+		t.Error("full environment observation during navigation")
+		return application.RunStatus{}, errors.New("unexpected status")
+	}
+	client := &http.Client{Timeout: 3 * time.Second}
+	for i := 0; i < 3; i++ {
+		response, err := client.Get(session.Target + "/page")
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _ = io.Copy(io.Discard, response.Body)
+		response.Body.Close()
+		if response.StatusCode != 200 {
+			t.Fatal(response.Status)
+		}
+	}
+	b.closed.Store(true)
+	response, err := client.Get(session.Target + "/page")
+	if err != nil {
+		t.Fatal(err)
+	}
+	response.Body.Close()
+	if response.StatusCode != 410 || b.checks.Load() != 4 {
+		t.Fatal("closed endpoint accepted or live checks skipped", response.StatusCode, b.checks.Load())
+	}
 }
 
 func TestHTTPRunAndStatusReuseObservationWhileProblemIsLocked(t *testing.T) {

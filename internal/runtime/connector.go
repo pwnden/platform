@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"strconv"
@@ -28,33 +27,6 @@ const connectorImage = "busybox:1.37.0-musl@sha256:5cec3fc171c87218698e85a52af70
 var connectorMu sync.Mutex
 
 func DialEndpoint(ctx context.Context, c *challenge.Loaded, name, instance string) (net.Conn, error) {
-	state, err := ReadState(c)
-	if err != nil {
-		return nil, err
-	}
-	addresses, err := EndpointAddresses(ctx, c)
-	if err != nil {
-		return nil, err
-	}
-	valid := false
-	for _, address := range addresses {
-		if address.Name == name && address.Proxied && address.Instance == instance {
-			valid = true
-		}
-	}
-	if !valid {
-		return nil, errors.New("HTTP endpoint is unavailable or belongs to an earlier run")
-	}
-	var endpoint challenge.Endpoint
-	for _, candidate := range c.Endpoints {
-		if candidate.Name == name {
-			endpoint = candidate
-		}
-	}
-	network, err := networkID(ctx, c, state.Project)
-	if err != nil {
-		return nil, err
-	}
 	engine, err := terminalEngine()
 	if err != nil {
 		return nil, err
@@ -65,40 +37,17 @@ func DialEndpoint(ctx context.Context, c *challenge.Loaded, name, instance strin
 			engine.Close()
 		}
 	}()
-	out, stderr, err := command(ctx, c.Dir, []string{"FLAG=" + state.Flag}, "docker",
-		composeArgs(c, state.Project, []string{c.Compose}, "ps", "-q", endpoint.Service)...)
-	if err != nil {
-		return nil, fmt.Errorf("find endpoint service: %w: %s", err, stderr)
-	}
-	ids := strings.Fields(out)
-	if len(ids) != 1 {
-		return nil, errors.New("endpoint requires one running service container")
-	}
-	inspected, err := engine.ContainerInspect(ctx, ids[0], client.ContainerInspectOptions{})
+	resolved, err := resolveEndpoint(ctx, c, engine, name, instance)
 	if err != nil {
 		return nil, err
 	}
-	service := inspected.Container
-	if service.Config == nil || service.State == nil || !service.State.Running || service.NetworkSettings == nil ||
-		service.Config.Labels["com.docker.compose.project"] != state.Project || service.Config.Labels["com.docker.compose.service"] != endpoint.Service {
-		return nil, errors.New("endpoint service does not belong to this running problem")
-	}
-	address := ""
-	for _, settings := range service.NetworkSettings.Networks {
-		if settings.NetworkID == network {
-			address = settings.IPAddress.String()
-		}
-	}
-	if net.ParseIP(address) == nil {
-		return nil, errors.New("endpoint service is not connected to the solve network")
-	}
-	id, err := ensureConnector(ctx, c, engine, state.Project, network)
+	id, err := ensureConnector(ctx, c, engine, resolved.project, resolved.network)
 	if err != nil {
 		return nil, err
 	}
 	created, err := engine.ExecCreate(ctx, id, client.ExecCreateOptions{
 		AttachStdin: true, AttachStdout: true, AttachStderr: true,
-		Cmd: []string{"/bin/nc", address, strconv.Itoa(endpoint.Port)},
+		Cmd: []string{"/bin/nc", resolved.address, strconv.Itoa(resolved.port)},
 	})
 	if err != nil {
 		return nil, err
