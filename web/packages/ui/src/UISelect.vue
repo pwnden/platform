@@ -4,13 +4,17 @@ import { SelectRoot, SelectTrigger, SelectValue, SelectPortal, SelectContent, Se
 import type { UISelectProps } from './props';
 const props = defineProps<UISelectProps>();
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
-const values = computed(() => props.options.map(option => option.value));
-function textValue(value: string) { return props.options.find(option => option.value === value)?.label ?? ''; }
-function select(value: string | null) { if (value !== null) emit('update:modelValue', value); }
+function optionID(value: string) { return `option:${value}`; }
+const values = computed(() => props.options.map(option => optionID(option.value)));
+function textValue(id: string) { return props.options.find(option => optionID(option.value) === id)?.label ?? ''; }
+function select(id: string | null) {
+  const option = props.options.find(option => optionID(option.value) === id);
+  if (option) emit('update:modelValue', option.value);
+}
 </script>
 
 <template>
-  <SelectRoot class="ui-field" :items="values" :model-value="modelValue" :disabled="disabled" :label="label" :text-value="textValue" strategy="fixed" hide-when-detached @update:model-value="select">
+  <SelectRoot class="ui-field" :items="values" :model-value="optionID(modelValue)" :disabled="disabled" :label="label" :text-value="textValue" strategy="fixed" hide-when-detached @update:model-value="select">
     <label :for="id">{{ label }}</label>
     <SelectTrigger :id="id" class="ui-input ui-select">
       <SelectValue class="ui-select-value" />
@@ -19,7 +23,7 @@ function select(value: string | null) { if (value !== null) emit('update:modelVa
     <SelectPortal>
       <SelectContent class="ui-select-content ui-radius-outer">
         <SelectViewport class="ui-select-viewport">
-          <SelectItem v-for="option in options" :key="option.value" :value="option.value" class="ui-select-item ui-radius-inner">
+          <SelectItem v-for="option in options" :key="option.value" :value="optionID(option.value)" class="ui-select-item ui-radius-inner">
             <SelectItemText class="ui-select-item-text">{{ option.label }}</SelectItemText>
             <span class="ui-select-indicator" aria-hidden="true"><SelectItemIndicator><svg viewBox="0 0 24 24" focusable="false"><path d="m5 12 4 4 10-10" /></svg></SelectItemIndicator></span>
           </SelectItem>

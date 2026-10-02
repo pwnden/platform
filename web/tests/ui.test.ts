@@ -78,7 +78,7 @@ it('renders labeled Sectile category choices with a custom trigger and portaled 
   await renderToString(createSSRApp({ render: () => h(UISelect, { id: 'difficulty', label: '난이도', modelValue: '', options: [{ value: '', label: '전체 난이도' }, { value: '1', label: '입문' }] }) }), context);
   const popup = context.teleports?.body ?? '';
   expect(popup).toContain('role="listbox"');
-  expect(popup).toMatch(/aria-selected="true"[^>]*data-sectile-select-id(?:="")?\s/);
+  expect(popup).toMatch(/aria-selected="true"[^>]*data-sectile-select-id="option:"/);
   expect(popup).toContain('전체 난이도');
   expect(popup).toContain('입문');
   expect(popup.match(/role="option"/g)).toHaveLength(2);

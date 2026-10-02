@@ -76,8 +76,8 @@ onMounted(load);
     <div class="catalog-viewport">
       <p v-if="failed" class="catalog-notice" role="alert">목록을 불러오지 못했습니다. 새로고침으로 다시 시도하세요.</p>
     <div ref="results" class="catalog-results" tabindex="0" role="region" aria-label="문제 검색 결과">
-      <p v-if="!pending && problems.length === 0">등록된 문제가 없습니다.</p>
-      <div v-else-if="!pending && !filtered.length" class="no-results">
+      <p v-if="!pending && !failed && problems.length === 0">등록된 문제가 없습니다.</p>
+      <div v-else-if="!pending && !failed && !filtered.length" class="no-results">
         <p role="status">검색 결과가 없습니다.</p>
         <UIButton variant="ghost" size="compact" @click="query = ''; category = ''; difficulty = ''">검색 조건 초기화</UIButton>
       </div>
