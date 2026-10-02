@@ -227,8 +227,12 @@ both OFL license files under `/assets/licenses/`. Go serves WOFF2 as `font/woff2
 `UIMarkdown` accepts a `source` string. The UI package lazily imports the
 md4x standalone module and initializes its embedded WASM once. It renders the
 AST through Vue nodes: headings, lists, tables, fenced code, emphasis, quotes
-and read-only task markers share the theme. Raw HTML displays as escaped text;
-author components and attributes are excluded. HTTP/HTTPS links open with
+and read-only task markers share the theme. The named MDC block
+`::message{from="nickname"}` renders requester dialogue with an optional escaped
+sender above its Markdown body. It uses fixed markup and shared UI tokens; source
+attributes are never forwarded to the message DOM. Other author components
+contribute only allowed children or escaped text. Raw HTML displays as escaped
+text. HTTP/HTTPS links open with
 `noopener noreferrer`, and document anchors use instance-prefixed heading IDs.
 Relative and unsupported links remain text; images display their alternative
 text. Problem-local image/file URL resolution is not part of this component.

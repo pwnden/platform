@@ -34,6 +34,13 @@ export function renderMarkdownNode(node: ComarkNode, prefix: string, headingOffs
     }
   }
   const children = content.map(child => renderMarkdownNode(child, prefix, headingOffset));
+  if (tag === 'message') {
+    const from = typeof attributes.from === 'string' ? attributes.from.trim() : '';
+    return h('blockquote', { class: 'markdown-message' }, [
+      ...(from ? [h('p', { class: 'markdown-message-from' }, from)] : []),
+      h('div', { class: 'markdown-message-body' }, children),
+    ]);
+  }
   if (tag === 'a') {
     const href = linkTarget(attributes.href, prefix);
     if (!href) return h('span', children);

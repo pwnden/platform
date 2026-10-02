@@ -36,6 +36,33 @@ it('highlights fenced code using its language and leaves inline code plain under
   expect(html).not.toMatch(/style=|<script|<style/);
 });
 
+it('renders md4x message blocks with a sender and formatted dialogue', async () => {
+  const html = await render('::message{from="moru17"}\n복구 키 파일이 공개됐어요. **확인해 주세요.**\n\n[안내](https://example.com/help)도 보냈어요.\n::\n\n일반 본문');
+  expect(html).toContain('<blockquote class="markdown-message"><p class="markdown-message-from">moru17</p><div class="markdown-message-body">');
+  expect(html).toContain('<strong>확인해 주세요.</strong>');
+  expect(html).toContain('href="https://example.com/help" target="_blank" rel="noopener noreferrer"');
+  expect(html).toContain('</div></blockquote><p>일반 본문</p>');
+  expect(html).not.toContain('::message');
+});
+
+it('supports unnamed messages while preserving ordinary blockquotes', async () => {
+  const html = await render('::message\n의뢰인의 메시지\n::\n\n> 일반 인용문');
+  expect(html).toContain('<blockquote class="markdown-message"><div class="markdown-message-body"><p>의뢰인의 메시지</p></div></blockquote>');
+  expect(html).toContain('<blockquote><p>일반 인용문</p></blockquote>');
+  expect(html).not.toContain('markdown-message-from');
+});
+
+it('escapes message senders and retains the existing attribute and component allowlist', async () => {
+  const html = await render('::message{from="<img src=x onerror=bad>" onclick="bad" style="display:none"}\n<script>bad</script>\n\n::iframe{src="https://example.com"}\n본문\n::\n::');
+  expect(html).toContain('&lt;img src=x onerror=bad&gt;');
+  expect(html).toContain('&lt;script&gt;bad&lt;/script&gt;');
+  expect(html).toContain('본문');
+  expect(html).not.toMatch(/<(?:script|iframe|img)\b|onclick=|style=/);
+  const malformed = await renderToString(createSSRApp({ render: () => h('div', [markdown.renderMarkdownNode(['message', { from: { toString: 'bad' }, innerHTML: '<script>bad</script>' }, ['p', {}, '내용']], 'test')]) }));
+  expect(malformed).toContain('<blockquote class="markdown-message"><div class="markdown-message-body"><p>내용</p></div></blockquote>');
+  expect(malformed).not.toContain('markdown-message-from');
+});
+
 it('escapes raw HTML and keeps author components and attributes out of rendered DOM', async () => {
   const html = await render('<script>alert(1)</script>\n\n::iframe{src="https://example.com" onclick="bad"}\n**표시할 내용**\n::\n\n![설명](https://example.com/tracker.png)');
   expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
