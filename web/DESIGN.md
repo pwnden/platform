@@ -80,7 +80,7 @@ typography:
     fontWeight: 600
     lineHeight: 1.65
   code:
-    fontFamily: "'JetBrains Mono', 'D2Coding', monospace"
+    fontFamily: "'D2Coding', monospace"
     fontSize: "0.9rem"
     fontWeight: 400
     lineHeight: 1.6
@@ -191,13 +191,13 @@ Semantic success, warning and danger colors support status and terminal output. 
 
 ## Typography
 
-**Body font stack:** Pretendard, system-ui, sans-serif. Pretendard Variable 1.3.9 supports the body, headings and controls. **Code stack:** JetBrains Mono, D2Coding, monospace. All fonts are bundled and served locally with `font-display: swap`; license files and source revisions are recorded in [fonts/README.md](packages/ui/src/fonts/README.md).
+**Body font stack:** Pretendard, system-ui, sans-serif. Pretendard Variable 1.3.9 supports the body, headings and controls. **Code stack:** D2Coding, monospace, through `--ui-font-code`. Markdown code blocks, inline code and the source viewer share this token. Terminal output and the brand use the separate JetBrains Mono, D2Coding, monospace stack. All fonts are bundled and served locally with `font-display: swap`; license files and source revisions are recorded in [fonts/README.md](packages/ui/src/fonts/README.md).
 
 The display role is the empty workspace heading; headline is the selected problem title; title is the shared section heading. Body sets the root scale at (15px), and label covers fields and categories. Status and footnote roles carry secondary state. Headings use weight (600); body uses (400). Numeric text uses tabular figures; ligatures are disabled.
 
 Problem descriptions render Markdown, wrap at word boundaries, use a reading measure of (72ch) and line height of (1.85). Korean words stay together; controls keep whole labels and wrap as units. Code preserves literal whitespace inside a scrollable block. The real terminal uses (14px) monospace type and line height of (1.4). Text inputs use (16px) at the narrow layout breakpoint.
 
-**The Reading Rule.** Body text, headings and controls use Pretendard. Code, terminal output and the brand use the monospace stack.
+**The Reading Rule.** Body text, headings and controls use Pretendard. Code uses D2Coding. Terminal output and the brand use their dedicated monospace stack.
 
 ## Layout
 
