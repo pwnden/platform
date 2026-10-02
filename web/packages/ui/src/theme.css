@@ -135,9 +135,10 @@ a:not(.ui-button):active { color: var(--ui-accent); background: var(--ui-accent-
 @keyframes ui-icon-progress { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .ui-icon-progress { animation: none; } }
 .ui-button--row { width: 100%; justify-content: flex-start; text-align: left; background: transparent; border-color: transparent; }
-.ui-button--row[aria-pressed='true'] { color: var(--ui-accent); background: var(--ui-accent-surface); border-color: var(--ui-border-active); }
+.ui-button--row[aria-pressed='true'] { color: var(--ui-accent); background: var(--ui-accent-surface); }
 @media (hover: hover) { .ui-button--row[aria-pressed='true']:hover:enabled { background: var(--ui-surface-pressed); } }
 .ui-button:is(:enabled, a):active { background: var(--ui-surface-pressed); border-color: var(--ui-accent); box-shadow: none; }
+.ui-button.ui-button--row:is(:hover, :active) { border-color: transparent; }
 .ui-button:disabled { color: var(--ui-muted); opacity: 0.5; cursor: not-allowed; }
 .ui-field { display: grid; gap: 0.5rem; min-width: 0; }
 .ui-field label { color: var(--ui-muted); font-size: 0.85rem; }
@@ -177,7 +178,7 @@ a:not(.ui-button):active { color: var(--ui-accent); background: var(--ui-accent-
 .ui-disclosure:focus-visible .ui-disclosure-label { outline: var(--ui-focus-width) solid var(--ui-focus-color); outline-offset: 2px; }
 @media (forced-colors: active) {
   :focus-visible, .ui-disclosure:focus-visible .ui-disclosure-label { outline-color: Highlight; }
-  .ui-button--row[aria-pressed='true'] { border-color: Highlight; }
+  .ui-button--row[aria-pressed='true'] { color: HighlightText; background: Highlight; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
 @media (max-width: 48rem) { .ui-input { font-size: 16px; } }

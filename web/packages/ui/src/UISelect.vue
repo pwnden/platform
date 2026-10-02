@@ -42,7 +42,7 @@ function select(id: string | null) {
 .ui-select-item { display: grid; grid-template-columns: minmax(0, 1fr) 1.4rem; align-items: center; gap: var(--ui-space-1); min-height: var(--ui-control-size); padding: var(--ui-inset-control); cursor: pointer; font-size: 1rem; line-height: 1.4rem; transition: background-color var(--ui-state-duration) var(--ui-state-easing), color var(--ui-state-duration) var(--ui-state-easing); }
 .ui-select-item-text { min-width: 0; overflow-wrap: anywhere; }
 .ui-select-item[data-selected] { color: var(--ui-accent); background: var(--ui-accent-surface); }
-.ui-select-item[data-highlighted] { background: var(--ui-surface-hover); outline: var(--ui-focus-width) solid var(--ui-focus-color); outline-offset: var(--ui-focus-offset); }
+.ui-select-item[data-highlighted] { background: var(--ui-surface-hover); }
 @media (hover: hover) { .ui-select-item:hover { background: var(--ui-surface-hover); } }
 .ui-select-item:active { background: var(--ui-surface-pressed); }
 .ui-select-indicator { display: flex; align-items: center; justify-content: center; width: 1.4rem; height: 1.4rem; }
