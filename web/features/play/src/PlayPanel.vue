@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import type { Player, RunStatus, Workspaces, WorkspaceConnection, WorkspaceInfo } from '@pwnden/play';
-import { UIButton, UIForm, UISubmitButton, UITextField, UIIconButton, UIIcon } from '@pwnden/ui';
+import { UIForm, UISubmitButton, UITextField, UIIcon } from '@pwnden/ui';
+import EnvironmentStatus from './EnvironmentStatus.vue';
+import type { EnvironmentState } from './props';
 
 const props = defineProps<{ player: Player; workspaces: Workspaces; slug: string; kind: RunStatus['kind'] }>();
 const emit = defineEmits<{ busy: [value: boolean]; status: [value: RunStatus | undefined] }>();
@@ -19,8 +21,10 @@ let connection: WorkspaceConnection | undefined;
 let generation = 0;
 const visible = () => typeof document === 'undefined' || document.visibilityState !== 'hidden';
 const accepted = computed(() => result.value === 'accepted');
-const ready = computed(() => !preparing.value && !!status.value && (status.value.state === 'running' || status.value.state === 'ready'));
-const feedback = computed(() => pending.value ? '확인 중…' : message.value || environmentError.value || (preparing.value ? '풀이 환경 준비 중…' : ''));
+const ready = computed(() => !preparing.value && !environmentError.value && !!status.value && (status.value.state === 'running' || status.value.state === 'ready'));
+const feedback = computed(() => pending.value ? '확인 중…' : message.value);
+const blocked = computed(() => preparing.value || !!environmentError.value);
+const environment = computed<EnvironmentState>(() => ({ preparing: preparing.value, error: environmentError.value, retained: retained.value, ending: ending.value, retry, stop: endEnvironment }));
 function disconnect() { generation++; connection?.close(); connection = undefined; }
 async function prepare() {
   if (!active || !visible() || connection) return;
@@ -74,31 +78,31 @@ onUnmounted(() => { active = false; if (typeof document !== 'undefined') documen
 </script>
 
 <template>
-  <section class="submission-bar" :class="{ 'submission-bar--accepted': accepted }" aria-label="플래그 제출" :aria-busy="pending || preparing">
-    <div class="submission-caption">
-      <label for="flag">정답 제출</label>
-      <p id="submission-feedback" class="submission-feedback" :class="{ 'submission-feedback--error': result === 'rejected' || result === 'error' || !!environmentError }" role="status" aria-live="polite" :title="feedback">{{ feedback }}</p>
-      <div class="environment-retry"><UIIconButton v-if="environmentError" label="풀이 환경 다시 연결" icon="refresh" :disabled="pending" @click="retry" /></div>
-    </div>
-    <UIForm :submit="submit">
-      <UITextField id="flag" v-model="flag" label="정답 플래그" label-hidden placeholder="문제에서 찾아낸 플래그를 입력하세요" :readonly="accepted" :tone="accepted ? 'success' : result === 'rejected' ? 'danger' : 'default'" :aria-invalid="result === 'rejected' || undefined" aria-describedby="submission-feedback" :disabled="pending" required />
-      <UISubmitButton class="submit-button" :busy="pending" :disabled="accepted || !ready || !flag.trim()">
-        <span>{{ accepted ? '완료' : '제출' }}</span>
-        <UIIcon :name="pending ? 'loader' : accepted ? 'check' : 'forward'" :class="{ 'submit-progress': pending }" />
-      </UISubmitButton>
-    </UIForm>
-    <div v-if="retained.length" class="environment-recovery" role="region" aria-label="유지 환경 정리">
-      <ul><li v-for="environment in retained" :key="environment.slug"><span>{{ environment.title }}</span><UIButton variant="danger" size="compact" :disabled="ending" @click="endEnvironment(environment.slug)">정리</UIButton></li></ul>
-    </div>
-  </section>
+  <div class="play-workspace">
+    <div class="play-tools"><slot :environment="environment" :blocked="blocked"><EnvironmentStatus :state="environment" /></slot></div>
+    <section class="submission-bar" :class="{ 'submission-bar--accepted': accepted }" aria-label="플래그 제출" :aria-busy="pending">
+      <div class="submission-caption">
+        <label for="flag">정답 제출</label>
+        <p id="submission-feedback" class="submission-feedback" :class="{ 'submission-feedback--error': result === 'rejected' || result === 'error' }" role="status" aria-live="polite" :title="feedback">{{ feedback }}</p>
+      </div>
+      <UIForm :submit="submit">
+        <UITextField id="flag" v-model="flag" label="정답 플래그" label-hidden placeholder="문제에서 찾아낸 플래그를 입력하세요" :readonly="accepted" :tone="accepted ? 'success' : result === 'rejected' ? 'danger' : 'default'" :aria-invalid="result === 'rejected' || undefined" aria-describedby="submission-feedback" :disabled="pending" required />
+        <UISubmitButton class="submit-button" :busy="pending" :disabled="accepted || !ready || !flag.trim()">
+          <span>{{ accepted ? '완료' : '제출' }}</span>
+          <UIIcon :name="pending ? 'loader' : accepted ? 'check' : 'forward'" :class="{ 'submit-progress': pending }" />
+        </UISubmitButton>
+      </UIForm>
+    </section>
+  </div>
 </template>
 
 <style scoped>
+.play-workspace { height: 100%; min-height: 0; min-width: 0; display: flex; flex-direction: column; }
+.play-tools { position: relative; flex: 1; min-width: 0; min-height: 0; }
 .submission-bar { position: relative; flex: none; min-width: 0; padding: var(--ui-space-2); border-top: 1px solid var(--ui-border); background: var(--ui-surface); display: grid; gap: var(--ui-space-1); container-type: inline-size; transition: border-color var(--ui-state-duration) var(--ui-state-easing), background-color var(--ui-state-duration) var(--ui-state-easing); }
 .submission-bar--accepted { border-color: var(--ui-success); }
 .submission-caption { display: flex; align-items: center; gap: var(--ui-space-1); height: var(--ui-control-size-compact); min-width: 0; }
 .submission-caption label { flex: none; font-size: 1rem; font-weight: 600; line-height: 1.4; color: var(--ui-foreground); white-space: nowrap; }
-.environment-retry { flex: none; width: var(--ui-control-size-compact); height: var(--ui-control-size-compact); }
 .submission-feedback { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ui-muted); font-size: 0.85rem; }
 .submission-feedback--error { color: var(--ui-danger); }
 .submission-bar--accepted .submission-feedback { color: var(--ui-success); }
@@ -110,7 +114,4 @@ form { display: grid; grid-template-columns: minmax(0, 1fr) 6rem; align-items: c
 .submit-progress { animation: submit-progress 1s linear infinite; }
 @keyframes submit-progress { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .submit-progress { animation: none; } }
-.environment-recovery { position: absolute; bottom: 100%; inset-inline: var(--ui-space-2); z-index: 3; max-height: 16rem; overflow: auto; padding: var(--ui-space-2); border: 1px solid var(--ui-border-active); border-radius: var(--ui-radius-surface); background: var(--ui-surface-raised); }
-.environment-recovery ul { padding: 0; margin: 0; list-style: none; display: grid; gap: var(--ui-space-1); }
-.environment-recovery li { display: flex; align-items: center; justify-content: space-between; gap: var(--ui-space-1); }
 </style>

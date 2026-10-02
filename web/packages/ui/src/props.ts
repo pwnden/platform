@@ -63,6 +63,7 @@ export interface UISplitProps {
 }
 
 export interface UITabsProps {
+  readonly blocked?: boolean;
   readonly label: string;
   readonly modelValue: string;
   readonly items: readonly { value: string; label: string; icon?: UIIconName }[];

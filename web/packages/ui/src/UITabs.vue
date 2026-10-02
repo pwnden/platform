@@ -16,9 +16,14 @@ const values = computed(() => props.items.map(item => item.value));
       </TabsList>
       <div v-if="$slots.actions" class="ui-tabs-actions"><slot name="actions" /></div>
     </div>
-    <TabsContent v-for="item in items" :key="item.value" class="ui-tab-panel" :value="item.value" force-present>
-      <slot :name="item.value" :selected="modelValue === item.value" />
-    </TabsContent>
+    <div class="ui-tabs-viewport">
+      <div class="ui-tabs-panels" :inert="blocked" :aria-hidden="blocked || undefined">
+        <TabsContent v-for="item in items" :key="item.value" class="ui-tab-panel" :value="item.value" force-present>
+          <slot :name="item.value" :selected="modelValue === item.value" />
+        </TabsContent>
+      </div>
+      <slot name="overlay" />
+    </div>
   </TabsRoot>
 </template>
 
@@ -37,6 +42,7 @@ const values = computed(() => props.items.map(item => item.value));
 @media (hover: hover) { .ui-tab:hover:enabled { color: var(--ui-foreground); background: var(--ui-surface-raised); } }
 .ui-tab:active:enabled { background: var(--ui-surface-pressed); }
 .ui-tab:disabled { opacity: 0.5; cursor: not-allowed; }
-.ui-tab-panel { flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
+.ui-tabs-viewport { position: relative; flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
+.ui-tabs-panels, .ui-tab-panel { height: 100%; min-width: 0; min-height: 0; overflow: hidden; }
 .ui-tab-panel[hidden], .ui-tab-panel[aria-hidden='true'] { display: none; }
 </style>

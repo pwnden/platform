@@ -124,7 +124,8 @@ it('opens only the declared web tool for Note Vault and retains its view during 
   expect(environments.connect).toHaveBeenCalledOnce();
   expect(client.terminals.connect).not.toHaveBeenCalled();
   const submission = flatten(root).find(item => item.props['aria-label'] === '플래그 제출')!;
-  expect(submission.parent?.props.class).toBe('tool-workspace');
+  expect(submission.parent?.props.class).toBe('play-workspace');
+  expect(submission.parent?.parent?.props.class).toBe('tool-workspace');
   renderer.render(null, root);
 });
 
@@ -321,6 +322,51 @@ it('opens the declared web tab while environment preparation is pending without 
   resolve({ slug: problem.slug, kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:43123' }] }); await settle();
   expect(flatten(root).find(item => item.props.class === 'web-address-bar')).toBe(form);
   expect(flatten(root).find(item => item.type === 'iframe')?.props.src).toBe(browserSession('http://127.0.0.1:43123').url);
+  expect(client.terminals.connect).not.toHaveBeenCalled();
+  renderer.render(null, root);
+});
+
+it('shows preparation and connection errors inside tools while submission stays stable', async () => {
+  const problem = { slug: 'note-vault', title: '다른 사람의 메모', category: 'web', kind: 'service' as const };
+  const status: RunStatus = { ...problem, state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:43123' }] };
+  let fail: (code: string) => void = () => {};
+  let reject: (error: Error) => void = () => {};
+  const ready = new Promise<RunStatus>((_resolve, failed) => { reject = failed; });
+  const client = {
+    catalog: { list: vi.fn(async () => [problem]), detail: vi.fn(async () => ({ ...problem, tools: ['web'] as const, description: '', files: [], hintCount: 0, walkthrough: false })), download: vi.fn(), guidance: vi.fn() },
+    player: { browser: vi.fn(async () => browserSession(status.endpoints[0]!.url)), status: vi.fn(), run: vi.fn(), stop: vi.fn(), submit: vi.fn() },
+    terminals: { connect: vi.fn(), list: vi.fn(), stop: vi.fn() },
+    workspaces: { connect: vi.fn().mockImplementationOnce((_slug, failed) => { fail = failed; return { ready, close: vi.fn() }; }).mockReturnValue({ ready: Promise.resolve(status), close: vi.fn() }), list: vi.fn(async () => []), stop: vi.fn() },
+  };
+  const root = node('root');
+  renderer.render(h(App, { client }), root); await settle();
+  await click(button(root, problem.title)); await settle();
+  const submission = flatten(root).find(item => item.props['aria-label'] === '플래그 제출')!;
+  const structure = layoutStructure(submission);
+  const panels = flatten(root).find(item => item.props.class === 'ui-tabs-panels')!;
+  const viewport = panels.parent!;
+  const address = flatten(panels).find(item => item.props.class === 'web-address-bar');
+  expect(panels.props.inert).toBe(true);
+  expect(panels.props['aria-hidden']).toBe(true);
+  expect(text(viewport.children.find(item => item.props.class === 'environment-overlay')!)).toBe('풀이 환경 준비 중…');
+  expect(text(submission)).toBe('정답 제출제출');
+  expect(client.player.browser).not.toHaveBeenCalled();
+  fail('network_error'); reject(new Error('network_error')); await settle();
+  const overlay = viewport.children.find(item => item.props.class === 'environment-overlay')!;
+  expect(text(overlay)).toContain('서버 연결을 확인한 뒤 다시 연결하세요.');
+  expect(text(overlay)).not.toContain('준비 중');
+  expect(flatten(overlay).find(item => item.props['aria-label'] === '풀이 환경 다시 연결')).toBeDefined();
+  expect(text(submission)).toBe('정답 제출제출');
+  expect(layoutStructure(submission)).toEqual(structure);
+  expect(submission.props['aria-busy']).toBe(false);
+  await click(button(root, '풀이 환경 다시 연결')); await settle();
+  expect(viewport.children.find(item => item.props.class === 'environment-overlay')).toBeUndefined();
+  expect(panels.props.inert).toBe(false);
+  expect(panels.props['aria-hidden']).toBeUndefined();
+  expect(flatten(panels).find(item => item.props.class === 'web-address-bar')).toBe(address);
+  expect(flatten(panels).find(item => item.type === 'iframe')).toBeDefined();
+  expect(layoutStructure(submission)).toEqual(structure);
+  expect(client.workspaces.connect).toHaveBeenCalledTimes(2);
   expect(client.terminals.connect).not.toHaveBeenCalled();
   renderer.render(null, root);
 });
@@ -680,6 +726,8 @@ it.each(['file', 'service'] as const)('keeps accepted %s answers readonly and pr
   expect(submitButton.children[1]!.props.class).toContain('ui-icon--check');
   expect(flatten(root).find(item => item.props.id === 'submission-feedback')).toBe(feedback);
   failed('network_error'); await settle();
+  expect(text(feedback)).toBe('해결 완료');
+  expect(feedback.props.class).not.toContain('submission-feedback--error');
   expect(button(root, '풀이 환경 다시 연결')).toBeDefined();
   await click(button(root, '풀이 환경 다시 연결')); await settle();
   expect(environments.connect).toHaveBeenCalledTimes(2);

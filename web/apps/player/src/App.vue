@@ -5,7 +5,7 @@ import type { Problem, ProblemFile, ProblemTool, ProblemDetail as ProblemDetails
 import type { RunStatus } from '@pwnden/play';
 import { ProblemDetail, ProblemFiles, ProblemList, categoryLabel } from '@pwnden/catalog-feature';
 import type { ProblemFilesHandle } from '@pwnden/catalog-feature';
-import { PlayPanel, ProblemWeb } from '@pwnden/play-feature';
+import { EnvironmentStatus, PlayPanel, ProblemWeb } from '@pwnden/play-feature';
 import type { ProblemWebHandle } from '@pwnden/play-feature';
 import { TerminalPanel } from '@pwnden/terminal-feature';
 import type { TerminalPanelHandle } from '@pwnden/terminal-feature';
@@ -70,22 +70,26 @@ function select(problem: Problem) {
           </div></template>
           <template #after>
             <div class="tool-workspace">
-            <UITabs v-model="tool" :items="tools" label="풀이 도구" class="tool-pane">
-              <template #actions>
-                <template v-if="tool === 'terminal'">
-                  <code v-for="endpoint in runStatus?.endpoints.filter(endpoint => endpoint.url.startsWith('tcp://'))" :key="endpoint.name" class="tcp-endpoint" :title="endpoint.url">{{ endpoint.url }}</code>
-                  <UIIconButton label="터미널 새로고침" icon="refresh" :busy="!!terminal?.busy" :disabled="!terminal" @click="terminal?.refresh()" />
+              <PlayPanel :player="client.player" :workspaces="client.workspaces" :slug="selected.slug" :kind="selected.kind" @busy="busy = $event" @status="observe">
+                <template #default="{ environment, blocked }">
+                  <UITabs v-model="tool" :items="tools" :blocked="blocked" label="풀이 도구" class="tool-pane">
+                    <template #overlay><EnvironmentStatus :state="environment" /></template>
+                    <template #actions>
+                      <template v-if="tool === 'terminal'">
+                        <code v-for="endpoint in runStatus?.endpoints.filter(endpoint => endpoint.url.startsWith('tcp://'))" :key="endpoint.name" class="tcp-endpoint" :title="endpoint.url">{{ endpoint.url }}</code>
+                        <UIIconButton label="터미널 새로고침" icon="refresh" :busy="!!terminal?.busy" :disabled="!terminal" @click="terminal?.refresh()" />
+                      </template>
+                      <UIIconButton v-else-if="tool === 'files'" :label="materials?.filename ? `${materials.filename} 다운로드` : '파일 다운로드'" icon="download" :busy="!!materials?.busy" :disabled="!materials?.filename" @click="materials?.download()" />
+                      <template v-else-if="tool === 'web'">
+                        <UILink v-if="web?.url" :href="web.url" new-tab icon-only variant="ghost" size="compact" aria-label="문제 웹을 새 탭에서 열기" title="새 탭에서 열기"><span class="ui-sr-only">새 탭에서 열기</span></UILink>
+                      </template>
+                    </template>
+                    <template #terminal><TerminalPanel v-if="visited.includes('terminal')" ref="terminal" :terminals="client.terminals" :slug="selected.slug" :paused="!runStatus || (runStatus.state !== 'ready' && runStatus.state !== 'running')" :foreground="tool === 'terminal'" /></template>
+                    <template #files><ProblemFiles ref="materials" :catalog="client.catalog" :slug="selected.slug" :files="files" :foreground="tool === 'files'" /></template>
+                    <template #web><ProblemWeb ref="web" :player="client.player" :slug="selected.slug" :status="runStatus" :active="tool === 'web'" /></template>
+                  </UITabs>
                 </template>
-                <UIIconButton v-else-if="tool === 'files'" :label="materials?.filename ? `${materials.filename} 다운로드` : '파일 다운로드'" icon="download" :busy="!!materials?.busy" :disabled="!materials?.filename" @click="materials?.download()" />
-                <template v-else-if="tool === 'web'">
-                  <UILink v-if="web?.url" :href="web.url" new-tab icon-only variant="ghost" size="compact" aria-label="문제 웹을 새 탭에서 열기" title="새 탭에서 열기"><span class="ui-sr-only">새 탭에서 열기</span></UILink>
-                </template>
-              </template>
-              <template #terminal><TerminalPanel v-if="visited.includes('terminal')" ref="terminal" :terminals="client.terminals" :slug="selected.slug" :paused="!runStatus || (runStatus.state !== 'ready' && runStatus.state !== 'running')" :foreground="tool === 'terminal'" /></template>
-              <template #files><ProblemFiles ref="materials" :catalog="client.catalog" :slug="selected.slug" :files="files" :foreground="tool === 'files'" /></template>
-              <template #web><ProblemWeb ref="web" :player="client.player" :slug="selected.slug" :status="runStatus" :active="tool === 'web'" /></template>
-            </UITabs>
-            <PlayPanel :player="client.player" :workspaces="client.workspaces" :slug="selected.slug" :kind="selected.kind" @busy="busy = $event" @status="observe" />
+              </PlayPanel>
             </div>
           </template>
         </UISplit>
