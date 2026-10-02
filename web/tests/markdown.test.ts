@@ -52,6 +52,31 @@ it('supports unnamed messages while preserving ordinary blockquotes', async () =
   expect(html).not.toContain('markdown-message-from');
 });
 
+it('renders briefing roles with distinct sections and headings below the panel title', async () => {
+  const source = '::objective\n복구 키를 찾자.\n::\n\n::resources{title="전달받은 자료"}\n- `files/recovery.txt`\n::\n\n::knowledge\nBase64 예제\n\n```sh\nprintf hello\n```\n::\n\n::submission\n`pwnden{...}` 전체를 제출하자.\n::';
+  const html = await renderToString(createSSRApp({ render: () => h(UIMarkdown, { source, headingOffset: 1 }) }));
+  for (const [role, title] of [['objective', '의뢰 목표'], ['resources', '전달받은 자료'], ['knowledge', '시작 전 알아둘 것'], ['submission', '제출할 값']]) {
+    expect(html).toContain(`class="markdown-section markdown-section--${role}" aria-label="${title}"`);
+    expect(html).toContain(`<h3 class="markdown-section-title">${title}</h3>`);
+  }
+  expect(html).toContain('<li><code>files/recovery.txt</code></li>');
+  expect(html).toContain('class="ui-code"');
+  expect(html).toContain('<code>pwnden{...}</code>');
+  expect(html).not.toContain('::objective');
+});
+
+it('keeps role labels and attributes safe while preserving ordinary headings and unknown blocks', async () => {
+  const html = await render('::resources{title="<img src=x onerror=bad>" onclick="bad" style="display:none"}\n자료 설명\n::\n\n::knowledge{title=""}\n배경 설명\n::\n\n::other-role\n일반 내용\n::\n\n## 일반 제목');
+  expect(html).toContain('&lt;img src=x onerror=bad&gt;');
+  expect(html).toContain('aria-label="시작 전 알아둘 것"');
+  expect(html).toContain('일반 내용');
+  expect(html).toMatch(/<h5[^>]*>일반 제목<\/h5>/);
+  expect(html).not.toMatch(/<img\b|onclick=|style=|markdown-section--other-role/);
+  const malformed = await renderToString(createSSRApp({ render: () => h('div', [markdown.renderMarkdownNode(['objective', { title: { toString: 'bad' }, innerHTML: '<script>bad</script>' }, ['p', {}, '목표']], 'test')]) }));
+  expect(malformed).toContain('aria-label="의뢰 목표"');
+  expect(malformed).not.toContain('script');
+});
+
 it('escapes message senders and retains the existing attribute and component allowlist', async () => {
   const html = await render('::message{from="<img src=x onerror=bad>" onclick="bad" style="display:none"}\n<script>bad</script>\n\n::iframe{src="https://example.com"}\n본문\n::\n::');
   expect(html).toContain('&lt;img src=x onerror=bad&gt;');

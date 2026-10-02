@@ -60,6 +60,16 @@ const MarkdownContent = () => nodes.value.map(node => renderMarkdownNode(node, p
 .ui-markdown :deep(.markdown-message) { padding: var(--ui-space-3); border: 0; border-radius: var(--ui-radius-surface); color: var(--ui-foreground); background: var(--ui-accent-surface); }
 .ui-markdown :deep(.markdown-message-from) { margin-bottom: var(--ui-space-1); color: var(--ui-accent); font-weight: 600; }
 .ui-markdown :deep(.markdown-message-body) { font-size: 1.05rem; }
+.ui-markdown :deep(.markdown-section) { margin-block: var(--ui-space-3); padding: var(--ui-space-3); }
+.ui-markdown :deep(.markdown-section-title) { margin-block: 0 var(--ui-space-1); font-size: 1.05rem; font-weight: 600; }
+.ui-markdown :deep(.markdown-section--objective) { border-radius: var(--ui-radius-surface); background: var(--ui-surface-hover); }
+.ui-markdown :deep(.markdown-section--objective > .markdown-section-title) { color: var(--ui-accent); }
+.ui-markdown :deep(.markdown-section--objective > .markdown-section-body) { font-size: 1.05rem; }
+.ui-markdown :deep(.markdown-section--resources) { border-radius: var(--ui-radius-surface); background: var(--ui-surface-raised); }
+.ui-markdown :deep(.markdown-section--knowledge) { border-top: 1px solid var(--ui-border); }
+.ui-markdown :deep(.markdown-section--submission) { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--ui-space-1) var(--ui-space-2); padding: var(--ui-space-2); border-top: 1px solid var(--ui-border); }
+.ui-markdown :deep(.markdown-section--submission > .markdown-section-title) { margin: 0; color: var(--ui-muted); font-size: 0.9rem; }
+.ui-markdown :deep(.markdown-section--submission > .markdown-section-body) { flex: 1 1 16rem; min-width: 0; font-size: 0.9rem; }
 .ui-markdown :deep(pre) { min-width: 0; overflow: auto; padding: var(--ui-space-2); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-surface); background: var(--ui-terminal-background); white-space: pre; line-height: 1.6; }
 .ui-markdown :deep(code) { padding: 0.2rem; border-radius: var(--ui-radius-inline); color: var(--ui-accent); background: var(--ui-surface-raised); }
 .ui-markdown :deep(pre code) { padding: 0; color: var(--ui-foreground); background: transparent; }

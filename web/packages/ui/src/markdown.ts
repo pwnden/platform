@@ -13,6 +13,12 @@ export async function parseMarkdown(source: string): Promise<ComarkNode[]> {
 }
 
 const elements = new Set(['p', 'ul', 'ol', 'li', 'blockquote', 'pre', 'code', 'strong', 'em', 'del', 's', 'hr', 'br', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'span', 'div', 'mark']);
+const sections = new Map([
+  ['objective', '의뢰 목표'],
+  ['resources', '전달받은 정보'],
+  ['knowledge', '시작 전 알아둘 것'],
+  ['submission', '제출할 값'],
+]);
 
 function linkTarget(value: unknown, prefix: string): string | undefined {
   if (typeof value !== 'string') return;
@@ -34,6 +40,14 @@ export function renderMarkdownNode(node: ComarkNode, prefix: string, headingOffs
     }
   }
   const children = content.map(child => renderMarkdownNode(child, prefix, headingOffset));
+  const sectionTitle = tag ? sections.get(tag) : undefined;
+  if (sectionTitle) {
+    const title = typeof attributes.title === 'string' && attributes.title.trim() ? attributes.title.trim() : sectionTitle;
+    return h('section', { class: `markdown-section markdown-section--${tag}`, 'aria-label': title }, [
+      h(`h${Math.min(2 + headingOffset, 6)}`, { class: 'markdown-section-title' }, title),
+      h('div', { class: 'markdown-section-body' }, children),
+    ]);
+  }
   if (tag === 'message') {
     const from = typeof attributes.from === 'string' ? attributes.from.trim() : '';
     return h('blockquote', { class: 'markdown-message' }, [

@@ -238,6 +238,15 @@ Relative and unsupported links remain text; images display their alternative
 text. Problem-local image/file URL resolution is not part of this component.
 Loading is announced, and parser failure preserves escaped source with retry.
 
+Briefing blocks `objective`, `resources`, `knowledge` and `submission` select a
+fixed section role. The UI supplies the corresponding Korean heading and derives
+its HTML level from the same `headingOffset` used for Markdown headings. An
+optional escaped `title` overrides the heading text. Objective blocks emphasize
+the mission, resources group supplied data, knowledge separates explanations and
+examples, and submission keeps answer instructions compact. Ordinary narrative
+paragraphs and Markdown headings retain their existing behavior. Each section
+is named for assistive technology; arbitrary source attributes are omitted.
+
 The page CSP explicitly allows `script-src 'self' 'wasm-unsafe-eval'` for this
 parser. JavaScript eval and inline scripts remain blocked. WASM is bundled into
 a same-origin JavaScript chunk; no CDN, native addon or additional host tool is
