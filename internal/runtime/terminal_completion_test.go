@@ -52,10 +52,10 @@ func TestTerminalFilenameCompletionDocker(t *testing.T) {
 		}
 	}()
 	cases := []struct{ name, input, want string }{
-		{"problem prompt", "", "\x1b[34mrotor-lock\x1b[0m:\x1b[36m/challenge\x1b[0m "},
+		{"directory prompt", "", "\x1b[36m/challenge\x1b[0m "},
 		{"disable input echo", "stty -echo; printf '\\137\\137READY__\\n'\r", "__READY__\r\n"},
-		{"prompt follows working directory", "cd /tmp\r", "\x1b[34mrotor-lock\x1b[0m:\x1b[36m/tmp\x1b[0m "},
-		{"return to problem directory", "cd /challenge\r", "\x1b[34mrotor-lock\x1b[0m:\x1b[36m/challenge\x1b[0m "},
+		{"prompt follows working directory", "cd /tmp\r", "\x1b[36m/tmp\x1b[0m "},
+		{"return to problem directory", "cd /challenge\r", "\x1b[36m/challenge\x1b[0m "},
 		{"relative filename ignoring case", "printf '\\137\\137RELATIVE__:%s\\n' readme\t\r", "__RELATIVE__:README.md\r\n"},
 		{"absolute filename ignoring case", "printf '\\137\\137ABSOLUTE__:%s\\n' /challenge/readme\t\r", "__ABSOLUTE__:/challenge/README.md\r\n"},
 		{"directory completion", "printf '\\137\\137DIRECTORY__:%s\\n' /challenge/sol\t\r", "__DIRECTORY__:/challenge/solve/\r\n"},
@@ -89,6 +89,9 @@ func TestTerminalFilenameCompletionDocker(t *testing.T) {
 				case <-ctx.Done():
 					t.Fatal(ctx.Err())
 				}
+			}
+			if check.input == "" && strings.Contains(received.String(), c.Slug) {
+				t.Fatal("directory prompt includes the problem name")
 			}
 		})
 		if t.Failed() {
