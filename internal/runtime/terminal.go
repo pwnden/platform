@@ -98,11 +98,16 @@ func OpenTerminal(ctx context.Context, c *challenge.Loaded, project string, cols
 		}
 		engine.Close()
 	}()
+	// Readline excludes color bytes from the prompt width. Bash expands the
+	// current directory and privilege marker each time it displays this prompt.
+	prompt := "\\[\\e[34m\\]" + c.Slug + "\\[\\e[0m\\]:\\[\\e[36m\\]\\w\\[\\e[0m\\] \\$ "
 	config := &dockerContainer.Config{
 		// Readline owns editing, completion and history. UTF-8 applies to both
 		// Readline's character widths and the daemon TTY's canonical erase mode.
 		Image: c.Solve.Image, Entrypoint: []string{"/bin/bash"},
-		Cmd: []string{"--noprofile", "--norc", "-c", `(umask 077; printf '%s' "$1" > "$INPUTRC") || exit; stty iutf8 || exit; exec /bin/bash --noprofile --norc -i`, "pwnden-terminal", terminalReadline},
+		// The noninteractive startup shell clears inherited PS1; assign it after
+		// startup and pass the value as data before launching interactive Bash.
+		Cmd: []string{"--noprofile", "--norc", "-c", `(umask 077; printf '%s' "$1" > "$INPUTRC") || exit; stty iutf8 || exit; export PS1="$2"; exec /bin/bash --noprofile --norc -i`, "pwnden-terminal", terminalReadline, prompt},
 		Tty: true, OpenStdin: true, StdinOnce: true, AttachStdin: true, AttachStdout: true, AttachStderr: true,
 		WorkingDir: "/challenge", Env: []string{"TERM=xterm-256color", "LANG=C.UTF-8", "LC_ALL=C.UTF-8", "INPUTRC=/tmp/pwnden.inputrc", "HISTFILE=/dev/null"},
 		Labels: map[string]string{"pwnden.kind": "terminal", "pwnden.problem": c.Slug, "pwnden.project": Project(c), "pwnden.repository": repositoryID(c.RepoRoot)},

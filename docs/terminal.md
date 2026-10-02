@@ -26,6 +26,15 @@ when the problem has no Terminal tool.
 
 ## Input and isolation
 
+The prompt identifies the selected problem and current shell directory, for
+example `rotor-lock:/challenge #`. The problem slug uses ANSI blue and the path
+uses cyan from the shared terminal palette. Bash updates the path after `cd` and
+uses `#` for root or `$` for other users. Color sequences are enclosed in
+Readline nonprinting delimiters so cursor movement and line wrapping use the
+visible prompt width. The platform supplies `PS1` inside the toolbox; players
+can change it with normal Bash assignments. Existing retained shells keep their
+current prompt until replaced.
+
 xterm translates keyboard and IME input into terminal bytes. Bash/Readline owns
 completion, history and editing: Tab, arrows, Home/End, Delete, Ctrl+A/E,
 Ctrl+U/K/W/Y/R/L, Ctrl+C/Z and `fg` keep their normal shell behavior. Ctrl+D
@@ -83,7 +92,7 @@ preserves context, TLS and endpoint selection.
 For a disposable Docker completion regression check, run
 `PWNDEN_TEST_CHALLENGES=/absolute/path/to/challenges go test ./internal/runtime -run '^TestTerminalFilenameCompletionDocker$' -count=1 -v`.
 It creates its own toolbox, checks relative and absolute case-insensitive
-completion, directory completion, forward and reverse candidate cycling,
+completion, problem prompt and directory updates, directory completion, forward and reverse candidate cycling,
 wraparound, missing matches, UTF-8 deletion and command history, then
 removes that toolbox. Existing player environments remain available.
 
