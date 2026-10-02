@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, useId } from 'vue';
+import { computed } from 'vue';
+import { DisclosureRoot, DisclosureTrigger, DisclosureContent } from '@sectile/vue/disclosure';
 import type { UIFileProps } from './props';
 import UIButton from './UIButton.vue';
 
 const props = defineProps<UIFileProps>();
 defineEmits<{ 'update:modelValue': [value: boolean]; download: [] }>();
-const previewID = `file-preview-${useId()}`;
 const filename = computed(() => props.name.split('/').at(-1) || props.name);
 const directory = computed(() => props.name.slice(0, props.name.length - filename.value.length));
 const sizeLabel = computed(() => {
@@ -17,16 +17,16 @@ const sizeLabel = computed(() => {
 </script>
 
 <template>
-  <div class="ui-file">
+  <DisclosureRoot class="ui-file" :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)">
     <div class="ui-file-header">
-      <button type="button" class="ui-disclosure ui-file-toggle" :aria-expanded="modelValue" :aria-controls="previewID" :aria-label="`${name} ${modelValue ? '미리보기 닫기' : '미리보기 열기'}`" :title="name" @click="$emit('update:modelValue', !modelValue)">
+      <DisclosureTrigger class="ui-disclosure ui-file-toggle" :aria-label="`${name} ${modelValue ? '미리보기 닫기' : '미리보기 열기'}`" :title="name">
         <span class="ui-disclosure-label ui-file-identity">
           <svg class="ui-disclosure-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 5 7 7-7 7" /></svg>
           <span v-if="directory" class="ui-file-directory">{{ directory }}</span>
           <span class="ui-file-name">{{ filename }}</span>
         </span>
         <span class="ui-file-size" :title="`${size.toLocaleString('ko-KR')} 바이트`">{{ sizeLabel }}</span>
-      </button>
+      </DisclosureTrigger>
       <UIButton variant="ghost" size="compact" class="ui-file-download" :busy="busy" :disabled="disabled" :aria-label="`${name} 다운로드`" :title="`${name} 다운로드`" @click="$emit('download')">
         <svg :class="{ 'ui-file-progress': busy }" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path v-if="busy" d="M20 12a8 8 0 1 1-8-8" />
@@ -35,8 +35,8 @@ const sizeLabel = computed(() => {
         <span>다운로드</span>
       </UIButton>
     </div>
-    <div :id="previewID" class="ui-file-preview" :hidden="!modelValue"><slot v-if="modelValue" /></div>
-  </div>
+    <DisclosureContent class="ui-file-preview"><slot v-if="modelValue" /></DisclosureContent>
+  </DisclosureRoot>
 </template>
 
 <style scoped>

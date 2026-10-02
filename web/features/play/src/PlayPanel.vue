@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import type { Player, RunStatus, Workspaces, WorkspaceConnection, WorkspaceInfo } from '@pwnden/play';
-import { UIButton, UITextField, UIIconButton } from '@pwnden/ui';
+import { UIButton, UIForm, UISubmitButton, UITextField, UIIconButton } from '@pwnden/ui';
 
 const props = defineProps<{ player: Player; workspaces: Workspaces; slug: string; kind: RunStatus['kind'] }>();
 const emit = defineEmits<{ busy: [value: boolean]; status: [value: RunStatus | undefined] }>();
@@ -80,13 +80,13 @@ onUnmounted(() => { active = false; if (typeof document !== 'undefined') documen
       <p id="submission-feedback" class="submission-feedback" :class="{ 'submission-feedback--error': result === 'rejected' || result === 'error' || !!environmentError }" role="status" aria-live="polite" :title="feedback">{{ feedback }}</p>
       <div class="environment-retry"><UIIconButton v-if="environmentError" label="풀이 환경 다시 연결" icon="refresh" :disabled="pending" @click="retry" /></div>
     </div>
-    <form @submit.prevent="submit">
+    <UIForm :submit="submit">
       <UITextField id="flag" v-model="flag" label="정답 플래그" label-hidden placeholder="문제에서 찾아낸 플래그를 입력하세요" :readonly="accepted" :tone="accepted ? 'success' : result === 'rejected' ? 'danger' : 'default'" :aria-invalid="result === 'rejected' || undefined" aria-describedby="submission-feedback" :disabled="pending" required />
-      <UIButton class="submit-button" variant="primary" type="submit" :busy="pending" :disabled="accepted || !ready || !flag.trim()">
+      <UISubmitButton class="submit-button" :busy="pending" :disabled="accepted || !ready || !flag.trim()">
         <span>{{ accepted ? '완료' : '제출' }}</span>
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" :class="{ 'submit-progress': pending }"><path v-if="pending" d="M20 7v5h-5M4 17v-5h5m10.3-4a8 8 0 0 0-13.9-3M4.7 16a8 8 0 0 0 13.9 3" /><path v-else-if="accepted" d="m5 12 4 4L19 6" /><path v-else d="m5 12 14 0m-6-6 6 6-6 6" /></svg>
-      </UIButton>
-    </form>
+      </UISubmitButton>
+    </UIForm>
     <div v-if="retained.length" class="environment-recovery" role="region" aria-label="유지 환경 정리">
       <ul><li v-for="environment in retained" :key="environment.slug"><span>{{ environment.title }}</span><UIButton variant="danger" size="compact" :disabled="ending" @click="endEnvironment(environment.slug)">정리</UIButton></li></ul>
     </div>

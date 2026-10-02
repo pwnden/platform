@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, shallowReactive, watch } from 'vue';
 import type { BrowserSession, Player, RunStatus } from '@pwnden/play';
-import { UIIconButton, UISelect, UITextField, UIWebFrame } from '@pwnden/ui';
+import { UIForm, UIIconButton, UISelect, UITextField, UIWebFrame } from '@pwnden/ui';
 import type { UIWebFrameHandle, UIWebNavigation } from '@pwnden/ui';
 import { webEndpoints } from './web-endpoints';
 import type { ProblemWebHandle } from './props';
@@ -75,14 +75,14 @@ defineExpose(handle);
 <template>
   <section class="web-panel" aria-label="문제 웹">
     <UISelect v-if="endpoints.length > 1" id="web-service" label="웹 서비스" v-model="selected" :options="endpoints.map(endpoint => ({ value: endpoint.url, label: endpoint.name }))" />
-    <form class="web-address-bar" @submit.prevent="navigate">
+    <UIForm class="web-address-bar" :submit="navigate">
       <div class="web-navigation" role="group" aria-label="웹 탐색">
         <UIIconButton label="뒤로 가기" icon="back" :disabled="!handle.canBack || handle.busy" @click="handle.back()" />
         <UIIconButton label="앞으로 가기" icon="forward" :disabled="!handle.canForward || handle.busy" @click="handle.forward()" />
         <UIIconButton label="문제 웹 새로고침" icon="refresh" :busy="handle.busy" :disabled="!handle.canReload" @click="reload" />
       </div>
       <UITextField id="web-address" label="문제 웹 경로" label-hidden size="compact" v-model="address" :disabled="!sessions[selected]" />
-    </form>
+    </UIForm>
     <div v-if="current" class="web-viewport" :aria-busy="!!pending[selected]">
       <p v-if="errors[selected] || state?.error" class="web-notice" role="alert">{{ errors[selected] || state?.error }}</p>
       <template v-for="endpoint in endpoints" :key="endpoint.url">

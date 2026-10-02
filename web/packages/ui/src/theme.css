@@ -167,11 +167,10 @@ a:not(.ui-button):active { color: var(--ui-accent); background: var(--ui-accent-
 .ui-input[aria-invalid='true'] { border-color: var(--ui-danger); }
 .ui-input--success[readonly] { border-color: var(--ui-success); }
 .ui-disclosure { display: flex; align-items: center; min-width: 0; min-height: var(--ui-control-size); padding: var(--ui-inset-control); border: 1px solid transparent; border-radius: var(--ui-radius-control); background: transparent; color: var(--ui-foreground); font-size: 1rem; line-height: 1.4; text-align: left; cursor: pointer; list-style: none; transition: color var(--ui-state-duration) var(--ui-state-easing), background-color var(--ui-state-duration) var(--ui-state-easing); }
-.ui-disclosure::-webkit-details-marker { display: none; }
 .ui-disclosure-label { display: inline-flex; align-items: center; gap: var(--ui-space-1); width: fit-content; min-width: 0; border-radius: var(--ui-radius-inline); }
 .ui-disclosure-chevron { flex: none; width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; transition: transform var(--ui-state-duration) var(--ui-state-easing); }
-details[open] > .ui-disclosure, .ui-disclosure[aria-expanded='true'] { color: var(--ui-accent); }
-details[open] > .ui-disclosure .ui-disclosure-chevron, .ui-disclosure[aria-expanded='true'] .ui-disclosure-chevron { transform: rotate(90deg); }
+.ui-disclosure[aria-expanded='true'] { color: var(--ui-accent); }
+.ui-disclosure[aria-expanded='true'] .ui-disclosure-chevron { transform: rotate(90deg); }
 @media (hover: hover) { .ui-disclosure:hover { color: var(--ui-accent); background: var(--ui-surface-hover); } }
 .ui-disclosure:active { background: var(--ui-surface-pressed); }
 .ui-disclosure:focus-visible { outline: none; }

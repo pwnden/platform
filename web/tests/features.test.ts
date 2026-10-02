@@ -13,6 +13,8 @@ import type { TerminalPanelHandle } from '../features/terminal/src/props';
 import type { ProblemFilesHandle } from '../features/catalog/src/props';
 import App from '../apps/player/src/App.vue';
 import UICode from '../packages/ui/src/UICode.vue';
+import UIReveal from '../packages/ui/src/UIReveal.vue';
+import UIToggleButton from '../packages/ui/src/UIToggleButton.vue';
 import * as syntax from '../packages/ui/src/syntax';
 
 function browserSession(target: string) { return { target, url: target + '/__pwnden_browser/' + 'a'.repeat(64) }; }
@@ -48,6 +50,20 @@ vi.mock('../packages/ui/src/index.ts', async () => {
     UIButton: defineComponent({ setup: (_, { attrs, slots }) => () => h('button', attrs, slots.default?.()) }),
     UITextField: defineComponent({ setup: (_, { attrs }) => () => h('input', attrs) }),
     UISelect: defineComponent({ setup: (_, { attrs }) => () => h('select', attrs) }),
+    UIForm: defineComponent({ props: ['submit'], setup: (props, { attrs, slots }) => () => h('form', { ...attrs, onSubmit: props.submit }, slots.default?.()) }),
+    UISubmitButton: defineComponent({ setup: (_, { attrs, slots }) => () => h('button', { ...attrs, type: 'submit' }, slots.default?.()) }),
+    UIToggleButton: defineComponent({ props: ['modelValue'], emits: ['update:modelValue'], setup: (props, { attrs, slots, emit }) => () => h('button', { ...attrs, 'aria-pressed': props.modelValue, onClick: () => emit('update:modelValue', !props.modelValue) }, slots.default?.()) }),
+    UIPagination: defineComponent({ props: ['total', 'modelValue', 'pageSize', 'disabled', 'label'], emits: ['update:modelValue'], setup: (props, { emit }) => () => {
+      const pageCount = Math.max(1, Math.ceil(props.total / props.pageSize));
+      const page = Math.min(props.modelValue, pageCount);
+      return h('nav', { 'aria-label': props.label }, [
+        h('p', props.total ? `${(page - 1) * props.pageSize + 1}–${Math.min(page * props.pageSize, props.total)} / ${props.total}개` : '0개'),
+        ...(pageCount > 1 ? [
+          h('button', { disabled: props.disabled || page === 1, onClick: () => emit('update:modelValue', page - 1) }, '이전'),
+          h('button', { disabled: props.disabled || page === pageCount, onClick: () => emit('update:modelValue', page + 1) }, '다음'),
+        ] : []),
+      ]);
+    } }),
     UITerminal: defineComponent({ setup: (_, { attrs, expose }) => {
       expose({ write: (_data: Uint8Array, rendered: () => void) => rendered(), clear: () => {}, focus: () => {} });
       return () => h('terminal', attrs);
@@ -472,6 +488,45 @@ const click = (item: Node) => {
 };
 async function settle() { for (let i = 0; i < 8; i++) { await Promise.resolve(); await nextTick(); } }
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+
+it('uses the real Sectile disclosure to request changes while keeping closed spoilers unmounted', async () => {
+  const changed = vi.fn();
+  const root = node('root');
+  const render = (open: boolean) => renderer.render(h(UIReveal, { label: '해설 보기 · 정답 포함', modelValue: open, 'onUpdate:modelValue': changed }, () => 'spoiler'), root);
+  render(false); await settle();
+  expect(text(root)).not.toContain('spoiler');
+  const trigger = button(root, '해설 보기 · 정답 포함');
+  expect(trigger.props['aria-expanded']).toBe('false');
+  await click(trigger); await settle();
+  expect(changed).toHaveBeenLastCalledWith(true);
+  expect(text(root)).not.toContain('spoiler');
+  render(true); await settle();
+  expect(text(root)).toContain('spoiler');
+  expect(button(root, '해설 보기 · 정답 포함').props['aria-expanded']).toBe('true');
+  await click(button(root, '해설 보기 · 정답 포함')); await settle();
+  expect(changed).toHaveBeenLastCalledWith(false);
+  render(false); await settle();
+  expect(text(root)).not.toContain('spoiler');
+  renderer.render(null, root);
+});
+
+it('uses the real Sectile selected button to emit controlled changes and block busy actions', async () => {
+  const changed = vi.fn();
+  const root = node('root');
+  const render = (selected: boolean, busy = false) => renderer.render(h(UIToggleButton, { modelValue: selected, busy, variant: 'row', 'onUpdate:modelValue': changed }, () => '문제'), root);
+  render(false); await settle();
+  await click(button(root, '문제')); await settle();
+  expect(changed).toHaveBeenLastCalledWith(true);
+  render(true); await settle();
+  expect(button(root, '문제').props['aria-pressed']).toBe('true');
+  await click(button(root, '문제')); await settle();
+  expect(changed).toHaveBeenLastCalledWith(false);
+  changed.mockClear(); render(true, true); await settle();
+  expect(button(root, '문제').props.disabled).toBe(true);
+  await click(button(root, '문제')); await settle();
+  expect(changed).not.toHaveBeenCalled();
+  renderer.render(null, root);
+});
 
 it('browses a large catalog by category, search and bounded pages without repeating identifiers', async () => {
   const problems = Array.from({ length: 501 }, (_, i) => ({ slug: `exercise-${i}`, title: `Exercise ${String(i).padStart(3, '0')}`, category: i % 2 ? 'web' : 'rev', kind: 'file' as const }));

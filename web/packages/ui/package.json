@@ -12,6 +12,7 @@
     "typecheck": "vue-tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@sectile/form": "0.14.9",
     "@sectile/vue": "0.18.2",
     "@shikijs/langs": "4.4.3",
     "@xterm/addon-fit": "0.11.0",

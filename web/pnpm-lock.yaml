@@ -284,9 +284,12 @@ importers:
 
   packages/ui:
     dependencies:
+      '@sectile/form':
+        specifier: 0.14.9
+        version: 0.14.9
       '@sectile/vue':
         specifier: 0.18.2
-        version: 0.18.2(vue@3.5.43(typescript-native-bridge@6.0.3-bridge.18.tsgo.7.0.2))
+        version: 0.18.2(@sectile/form@0.14.9)(vue@3.5.43(typescript-native-bridge@6.0.3-bridge.18.tsgo.7.0.2))
       '@shikijs/langs':
         specifier: 4.4.3
         version: 4.4.3
@@ -461,6 +464,10 @@ packages:
         optional: true
       '@sectile/virtual':
         optional: true
+
+  '@sectile/form@0.14.9':
+    resolution: {integrity: sha512-QSQBKg2Lizyvl81vJTObItv5Ui2j3oYf5GyOs5AfNPsJjt6SgAE7Mm4jXIfKlW2yoOqAFh76jjDJdweaTqxt9A==}
+    engines: {node: '>=24'}
 
   '@sectile/vue@0.18.2':
     resolution: {integrity: sha512-J1iRoJvX+evA/tBAmfDE11SEcMmyNfcqFgRdrsXuTIjyV0jyDYWZNunJ5SS1ytiFIJlooSaQCuthmZn6GsJ4NQ==}
@@ -1112,15 +1119,23 @@ snapshots:
 
   '@sectile/core@0.14.7': {}
 
-  '@sectile/dom@0.18.2':
+  '@sectile/dom@0.18.2(@sectile/form@0.14.9)':
+    dependencies:
+      '@sectile/core': 0.14.7
+    optionalDependencies:
+      '@sectile/form': 0.14.9
+
+  '@sectile/form@0.14.9':
     dependencies:
       '@sectile/core': 0.14.7
 
-  '@sectile/vue@0.18.2(vue@3.5.43(typescript-native-bridge@6.0.3-bridge.18.tsgo.7.0.2))':
+  '@sectile/vue@0.18.2(@sectile/form@0.14.9)(vue@3.5.43(typescript-native-bridge@6.0.3-bridge.18.tsgo.7.0.2))':
     dependencies:
       '@sectile/core': 0.14.7
-      '@sectile/dom': 0.18.2
+      '@sectile/dom': 0.18.2(@sectile/form@0.14.9)
       vue: 3.5.43(typescript-native-bridge@6.0.3-bridge.18.tsgo.7.0.2)
+    optionalDependencies:
+      '@sectile/form': 0.14.9
 
   '@shikijs/core@4.4.3':
     dependencies:

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import type { Catalog, Problem } from '@pwnden/catalog';
-import { UIButton, UITextField, UISelect, UIPanel, UIIconButton, UIDifficultyBadge, difficultyLevels } from '@pwnden/ui';
+import { UIButton, UIToggleButton, UIPagination, UITextField, UISelect, UIPanel, UIIconButton, UIDifficultyBadge, difficultyLevels } from '@pwnden/ui';
 import { categoryLabel, filterProblems } from './browse';
 
 const props = defineProps<{ catalog: Catalog; selectionDisabled?: boolean; selectedSlug?: string | undefined }>();
@@ -85,22 +85,16 @@ onMounted(load);
         <h3>{{ categoryLabel(group.category) }}</h3>
         <ul class="problem-list">
           <li v-for="problem in group.problems" :key="problem.slug">
-            <UIButton variant="row" :aria-pressed="selectedSlug === problem.slug" :disabled="selectionDisabled" @click="emit('select', problem)">
+            <UIToggleButton variant="row" :model-value="selectedSlug === problem.slug" :disabled="selectionDisabled" @update:model-value="emit('select', problem)">
               <span class="problem-title" :title="problem.title">{{ problem.title }}</span>
               <UIDifficultyBadge v-if="problem.difficulty" :level="problem.difficulty" class="problem-difficulty" />
-            </UIButton>
+            </UIToggleButton>
           </li>
         </ul>
       </section>
     </div>
     </div>
-    <nav class="catalog-pagination" aria-label="문제 목록 페이지">
-      <p role="status" aria-live="polite">{{ filtered.length ? `${offset + 1}–${Math.min(offset + pageSize, filtered.length)} / ${filtered.length}개` : '0개' }}</p>
-      <div v-if="pageCount > 1" class="page-actions">
-        <UIButton variant="ghost" size="compact" :disabled="currentPage === 1 || pending" @click="page = currentPage - 1">이전</UIButton>
-        <UIButton variant="ghost" size="compact" :disabled="currentPage === pageCount || pending" @click="page = currentPage + 1">다음</UIButton>
-      </div>
-    </nav>
+    <UIPagination v-model="page" :total="filtered.length" :page-size="pageSize" label="문제 목록 페이지" :disabled="pending" />
   </UIPanel>
 </template>
 
@@ -117,9 +111,6 @@ onMounted(load);
 .problem-list { padding: 0; margin: 0; list-style: none; display: grid; gap: 0.25rem; }
 .problem-list :deep(.ui-button--row) { min-height: calc(var(--ui-control-size) + var(--ui-space-1)); }
 .problem-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
-.catalog-pagination { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; min-height: var(--ui-workspace-header-size); gap: var(--ui-space-1); padding: var(--ui-space-2); border-top: 1px solid var(--ui-border); flex: none; color: var(--ui-muted); font-size: 0.85rem; }
-.catalog-pagination p { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.page-actions { display: flex; gap: 0.25rem; }
 .catalog-results > p, .no-results { padding: 0; }
 .no-results { display: grid; gap: var(--ui-space-1); }
 @media (width > 48rem) and (height <= 32rem) {

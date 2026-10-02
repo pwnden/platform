@@ -9,6 +9,10 @@ TypeScript and own their ports. The app injects `packages/api` implementations
 into features. Features consume their domain and `packages/ui`. Only
 `packages/ui` imports Sectile and it exports its own component props and events.
 
+Interactive controls use the matching Sectile component through `packages/ui`.
+Disclosure, selection, pagination and form behavior belong to shared UI wrappers.
+Standalone action buttons, links and structural HTML retain their native semantics.
+
 Use public workspace package exports for imports between packages. Each direct,
 peer, development and optional dependency has an exact version. Run
 `pnpm verify` with the versions pinned in this workspace, or run the root

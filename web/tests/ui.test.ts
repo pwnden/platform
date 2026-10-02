@@ -6,6 +6,10 @@ import UIIconButton from '../packages/ui/src/UIIconButton.vue';
 import UILink from '../packages/ui/src/UILink.vue';
 import UITextField from '../packages/ui/src/UITextField.vue';
 import UISelect from '../packages/ui/src/UISelect.vue';
+import UIToggleButton from '../packages/ui/src/UIToggleButton.vue';
+import UIForm from '../packages/ui/src/UIForm.vue';
+import UISubmitButton from '../packages/ui/src/UISubmitButton.vue';
+import UIPagination from '../packages/ui/src/UIPagination.vue';
 import UIStatus from '../packages/ui/src/UIStatus.vue';
 import UIReveal from '../packages/ui/src/UIReveal.vue';
 import UIFile from '../packages/ui/src/UIFile.vue';
@@ -88,10 +92,60 @@ it('renders a plain status without decorative markers', async () => {
   expect(status).not.toContain('aria-hidden');
 });
 
+it('uses Sectile for selected buttons and retains the shared busy and disabled states', async () => {
+  for (const selected of [false, true]) {
+    const html = await renderToString(createSSRApp({ render: () => h(UIToggleButton, { modelValue: selected, variant: 'row', busy: true }, () => '문제') }));
+    expect(html).toContain(`aria-pressed="${selected}"`);
+    expect(html).toContain('ui-button--row');
+    expect(html).toContain(' disabled');
+    expect(html).toContain('aria-busy="true"');
+    expect(html.match(/<button/g)).toHaveLength(1);
+  }
+});
+
+it('renders shared Sectile forms and submits with the existing input and button geometry', async () => {
+  const html = await renderToString(createSSRApp({ render: () => h(UIForm, { submit: async () => {} }, () => [
+    h(UITextField, { id: 'flag', label: '정답 플래그', modelValue: 'pwnden{solved}', required: true, readonly: true }),
+    h(UISubmitButton, { disabled: true }, () => '완료'),
+  ]) }));
+  expect(html).toContain('data-scope="form"');
+  expect(html).toContain('data-part="submit"');
+  expect(html).toContain('type="submit"');
+  expect(html).toContain('ui-button--primary');
+  expect(html).toContain('value="pwnden{solved}"');
+  expect(html).toContain(' readonly');
+  expect(html).toContain(' required');
+  expect(html.match(/<form/g)).toHaveLength(1);
+  expect(html.match(/<button/g)).toHaveLength(1);
+});
+
+it('renders bounded Sectile pagination for empty, first, last and reduced result sets', async () => {
+  const render = (total: number, page: number, disabled = false) => renderToString(createSSRApp({ render: () => h(UIPagination, { label: '문제 목록 페이지', total, modelValue: page, pageSize: 20, disabled }) }));
+  const empty = await render(0, 1);
+  expect(empty).toContain('0개');
+  expect(empty).not.toContain('<button');
+  const first = await render(45, 1);
+  expect(first).toContain('role="navigation"');
+  expect(first).toContain('data-scope="pagination"');
+  expect(first).toContain('1–20 / 45개');
+  expect(first.match(/<button[^>]* disabled/g)).toHaveLength(1);
+  const last = await render(45, 3);
+  expect(last).toContain('41–45 / 45개');
+  expect(last.match(/<button[^>]* disabled/g)).toHaveLength(1);
+  expect((await render(45, 2, true)).match(/<button[^>]* disabled/g)).toHaveLength(2);
+  expect(await render(3, 3)).toContain('1–3 / 3개');
+});
+
 it('omits hidden spoilers and renders material source as escaped selectable code', async () => {
   const render = (open: boolean) => renderToString(createSSRApp({ render: () => h(UIReveal, { label: '해설 보기 · 정답 포함', modelValue: open }, () => 'answer spoiler') }));
   const closed = await render(false);
-  expect(closed).toContain('<summary');
+  expect(closed).toContain('aria-expanded="false"');
+  expect(closed).toContain('data-scope="disclosure"');
+  const panelID = closed.match(/aria-controls="([^"]+)"/)![1];
+  expect(closed).toContain(`id="${panelID}"`);
+  expect(closed).toContain('hidden');
+  expect(closed).not.toContain('<details');
+  expect(closed).not.toContain('<summary');
   expect(closed).not.toContain('answer spoiler');
   expect(await render(true)).toContain('answer spoiler');
   const source = await renderToString(createSSRApp({ render: () => h(UICode, { label: 'checker.py', source: '<script>run()</script>\n  indent' }) }));

@@ -6,6 +6,24 @@ export interface UIButtonProps {
   readonly size?: 'default' | 'compact';
 }
 
+export interface UIToggleButtonProps extends Omit<UIButtonProps, 'type'> {
+  readonly modelValue: boolean;
+}
+
+export interface UISubmitButtonProps extends Omit<UIButtonProps, 'type'> {}
+
+export interface UIFormProps {
+  readonly submit: () => void | Promise<void>;
+}
+
+export interface UIPaginationProps {
+  readonly label: string;
+  readonly total: number;
+  readonly modelValue: number;
+  readonly pageSize: number;
+  readonly disabled?: boolean;
+}
+
 export interface UILinkProps {
   readonly iconOnly?: boolean;
   readonly href: string;
