@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -37,6 +38,7 @@ type Terminal struct {
 	wait     client.ContainerWaitResult
 	once     sync.Once
 	closeErr error
+	source   string
 }
 
 func TerminalSize(cols, rows int) bool { return cols >= 2 && cols <= 500 && rows >= 1 && rows <= 200 }
@@ -55,16 +57,26 @@ func OpenTerminal(ctx context.Context, c *challenge.Loaded, project string, cols
 	if !TerminalSize(cols, rows) {
 		return nil, errors.New("invalid terminal dimensions")
 	}
-	source, err := challenge.Within(c.RepoRoot, c.Dir)
-	if err != nil {
+	if _, err := challenge.Within(c.RepoRoot, c.Dir); err != nil {
 		return nil, err
 	}
 	if err := prepareToolImage(ctx, c, c.Solve.Image); err != nil {
 		return nil, err
 	}
 	workspace := ""
+	source := ""
+	defer func() {
+		if err != nil && source != "" {
+			os.RemoveAll(source)
+		}
+	}()
 	if c.Solve.Writable {
 		workspace, err = ensureWorkspace(ctx, c, Project(c))
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		source, err = playerFiles(c)
 		if err != nil {
 			return nil, err
 		}
@@ -147,7 +159,7 @@ func OpenTerminal(ctx context.Context, c *challenge.Loaded, project string, cols
 		return nil, err
 	}
 	sessionCtx, cancel := context.WithCancel(ctx)
-	t := &Terminal{engine: engine, stream: stream, id: created.ID, ctx: sessionCtx, cancel: cancel}
+	t := &Terminal{engine: engine, stream: stream, id: created.ID, ctx: sessionCtx, cancel: cancel, source: source}
 	t.wait = engine.ContainerWait(sessionCtx, created.ID, client.ContainerWaitOptions{})
 	context.AfterFunc(sessionCtx, func() { t.Close() })
 	return t, nil
@@ -186,6 +198,9 @@ func (t *Terminal) Close() error {
 			t.closeErr = errors.Join(ErrCleanupFailed, err)
 		}
 		t.engine.Close()
+		if t.source != "" {
+			t.closeErr = errors.Join(t.closeErr, os.RemoveAll(t.source))
+		}
 	})
 	return t.closeErr
 }

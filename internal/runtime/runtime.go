@@ -518,7 +518,7 @@ type ToolExitError struct {
 func (e *ToolExitError) Error() string { return fmt.Sprintf("toolbox exited %d: %s", e.Code, e.Stderr) }
 
 func RunTool(ctx context.Context, c *challenge.Loaded, project, image string, args []string) (string, error) {
-	out, _, err := runTool(ctx, c, project, image, args)
+	out, _, err := runTool(ctx, c, project, image, args, false)
 	return out, err
 }
 
@@ -530,7 +530,7 @@ type CommandResult struct {
 
 // RunCommand distinguishes a completed user command from a runtime failure.
 func RunCommand(ctx context.Context, c *challenge.Loaded, project, image string, args []string) (CommandResult, error) {
-	out, stderr, err := runTool(ctx, c, project, image, args)
+	out, stderr, err := runTool(ctx, c, project, image, args, true)
 	if err == nil {
 		return CommandResult{Stdout: out, Stderr: stderr}, nil
 	}
@@ -540,7 +540,7 @@ func RunCommand(ctx context.Context, c *challenge.Loaded, project, image string,
 	return CommandResult{}, err
 }
 
-func runTool(ctx context.Context, c *challenge.Loaded, project, image string, args []string) (string, string, error) {
+func runTool(ctx context.Context, c *challenge.Loaded, project, image string, args []string, player bool) (string, string, error) {
 	// A cold image download uses the caller's deadline, not the solution's runtime limit.
 	if err := prepareToolImage(ctx, c, image); err != nil {
 		return "", "", err
@@ -558,12 +558,21 @@ func runTool(ctx context.Context, c *challenge.Loaded, project, image string, ar
 			return "", "", err
 		}
 	}
-	mount := toolboxMount(c.Dir, c.Solve.Writable)
+	source := c.Dir
+	if player && !c.Solve.Writable {
+		var err error
+		source, err = playerFiles(c)
+		if err != nil {
+			return "", "", err
+		}
+		defer os.RemoveAll(source)
+	}
+	mount := toolboxMount(source, false)
 	if c.Solve.Writable {
 		if project == "" {
 			project = Project(c)
 		}
-		volume, err := ensureWorkspace(ctx, c, project)
+		volume, err := ensureWorkspaceFor(ctx, c, project, player)
 		if err != nil {
 			return "", "", err
 		}

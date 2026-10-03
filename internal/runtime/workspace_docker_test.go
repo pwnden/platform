@@ -23,6 +23,16 @@ func TestBoundedWorkspaceDocker(t *testing.T) {
 	if err := os.WriteFile(original, []byte("original"), 0600); err != nil {
 		t.Fatal(err)
 	}
+	c.Files = []string{"input.txt"}
+	if err := os.WriteFile(filepath.Join(c.Dir, "AUTHORING.md"), []byte("private author notes"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	readonly := *c
+	readonly.Solve.Writable = false
+	read, err := RunCommand(ctx, &readonly, "", c.Solve.Image, []string{"sh", "-c", `test "$(cat input.txt)" = original && test ! -e AUTHORING.md && ! touch forbidden 2>/dev/null`})
+	if err != nil || read.ExitCode != 0 {
+		t.Fatalf("readonly player files: %+v %v", read, err)
+	}
 	defer func() {
 		if err := Stop(context.Background(), c); err != nil {
 			t.Error(err)
@@ -40,7 +50,7 @@ func TestBoundedWorkspaceDocker(t *testing.T) {
 		}
 	}
 	for _, source := range []string{
-		`test "$(cat input.txt)" = original && printf changed > input.txt && printf shared > result.txt`,
+		`test ! -e AUTHORING.md && test ! -e challenge.toml && test ! -e solve && test "$(cat input.txt)" = original && printf changed > input.txt && printf shared > result.txt`,
 		`test "$(cat input.txt)" = changed && test "$(cat result.txt)" = shared && test "$(id -u)" = 10001`,
 		`python3 -c 'import os; s=os.statvfs("."); assert s.f_blocks*s.f_frsize == 256*1024**2; assert s.f_files == 32768'`,
 	} {
@@ -53,10 +63,21 @@ func TestBoundedWorkspaceDocker(t *testing.T) {
 	if err != nil || string(bytes) != "original" {
 		t.Fatalf("original changed: %q %v", bytes, err)
 	}
+	// Trusted verification retains the author contract in its own bounded
+	// workspace. Its files and writes must never appear in the player volume.
+	output, err := RunTool(ctx, c, "", c.Solve.Image, []string{"sh", "-c", `test "$(cat AUTHORING.md)" = "private author notes" && test "$(cat input.txt)" = original && printf author > verification-result.txt && printf verified`})
+	if err != nil || output != "verified" {
+		t.Fatalf("trusted verification workspace: %q %v", output, err)
+	}
+	result, err := RunCommand(ctx, c, "", c.Solve.Image, []string{"sh", "-c", "test ! -e verification-result.txt && test ! -e AUTHORING.md"})
+	if err != nil || result.ExitCode != 0 {
+		t.Fatalf("verification leaked into player workspace: %+v %v", result, err)
+	}
 	// A second problem has its own copy even when commands run in the same daemon.
 	other := *c
 	other.Slug = "other"
 	other.Dir = filepath.Join(c.RepoRoot, "other")
+	other.Files = nil
 	if err := os.Mkdir(other.Dir, 0700); err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +93,7 @@ func TestBoundedWorkspaceDocker(t *testing.T) {
 	if err := Stop(ctx, &other); err != nil {
 		t.Fatal(err)
 	}
-	result, err := RunCommand(ctx, c, "", c.Solve.Image, []string{"python3", "-c", `import errno
+	result, err = RunCommand(ctx, c, "", c.Solve.Image, []string{"python3", "-c", `import errno
 try:
  with open("fill","wb", buffering=0) as f:
   for _ in range(260): f.write(b"x"*1024**2)
@@ -112,6 +133,10 @@ else: raise AssertionError("unbounded workspace")
 	exists, err := namedContainer(ctx, Project(c)+"-workspace")
 	if err != nil || exists {
 		t.Fatalf("keeper remains: %v %v", exists, err)
+	}
+	exists, err = namedContainer(ctx, Project(c)+"-verification-workspace")
+	if err != nil || exists {
+		t.Fatalf("verification keeper remains: %v %v", exists, err)
 	}
 	// Starting again seeds the unchanged repository, rather than prior user data.
 	result, err = RunCommand(ctx, c, "", c.Solve.Image, []string{"/bin/sh", "-c", `test "$(cat input.txt)" = original && test ! -e result.txt`})

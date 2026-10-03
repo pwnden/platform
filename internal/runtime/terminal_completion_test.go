@@ -30,8 +30,12 @@ func TestTerminalFilenameCompletionDocker(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() {
+		source := terminal.source
 		if err := terminal.Close(); err != nil {
 			t.Error(err)
+		}
+		if _, err := os.Stat(source); !os.IsNotExist(err) {
+			t.Errorf("readonly player copy remains: %v", err)
 		}
 	}()
 	output := make(chan string, 32)
@@ -61,9 +65,10 @@ func TestTerminalFilenameCompletionDocker(t *testing.T) {
 		{"text without final newline", "printf '\\137\\137PARTIAL__'\r", "__PARTIAL__\r\n\x1b[36m/challenge\x1b[0m "},
 		{"already terminated output", "printf '\\137\\137TERMINATED__\\n'\r", "__TERMINATED__\r\n\r\n\x1b[36m/challenge\x1b[0m "},
 		{"empty output", "true\r", "\r\n\x1b[36m/challenge\x1b[0m "},
-		{"relative filename ignoring case", "printf '\\137\\137RELATIVE__:%s\\n' readme\t\r", "__RELATIVE__:README.md\r\n"},
-		{"absolute filename ignoring case", "printf '\\137\\137ABSOLUTE__:%s\\n' /challenge/readme\t\r", "__ABSOLUTE__:/challenge/README.md\r\n"},
-		{"directory completion", "printf '\\137\\137DIRECTORY__:%s\\n' /challenge/sol\t\r", "__DIRECTORY__:/challenge/solve/\r\n"},
+		{"private files absent", "test ! -e README.md && test ! -e AUTHORING.md && test ! -e challenge.toml && test ! -e hints && test ! -e solve && printf '\\137\\137PRIVATE__:absent\\n'\r", "__PRIVATE__:absent\r\n"},
+		{"relative filename ignoring case", "printf '\\137\\137RELATIVE__:%s\\n' files/CHECK\t\r", "__RELATIVE__:files/checker.py\r\n"},
+		{"absolute filename ignoring case", "printf '\\137\\137ABSOLUTE__:%s\\n' /challenge/files/CHECK\t\r", "__ABSOLUTE__:/challenge/files/checker.py\r\n"},
+		{"directory completion", "printf '\\137\\137DIRECTORY__:%s\\n' /challenge/fil\t\r", "__DIRECTORY__:/challenge/files/\r\n"},
 		{"completion candidates", "mkdir -p /tmp/pwnden-completion; touch /tmp/pwnden-completion/choice-{alpha,beta,gamma}; printf '\\137\\137CANDIDATES__:ok\\n'\r", "__CANDIDATES__:ok\r\n"},
 		{"first candidate", "printf '\\137\\137FIRST__:%s\\n' /tmp/pwnden-completion/choice-\t\r", "__FIRST__:/tmp/pwnden-completion/choice-alpha\r\n"},
 		{"next candidate", "printf '\\137\\137SECOND__:%s\\n' /tmp/pwnden-completion/choice-\t\t\r", "__SECOND__:/tmp/pwnden-completion/choice-beta\r\n"},

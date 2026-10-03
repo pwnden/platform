@@ -30,6 +30,14 @@ submission bar reports the limit even when the problem has no Terminal tool.
 
 ## Input and isolation
 
+`/challenge` contains only regular files explicitly declared in the problem's
+`files` list, preserving their relative paths. A problem with no distributed
+files starts with an empty directory. The terminal does not mount the author
+directory, metadata, hints or solution scripts. Readonly problems use a private
+readonly copy; writable problems seed their bounded temporary volume with the
+same declared files. Trusted automatic solution verification uses a separate
+author workspace. Its scripts and output never enter the player volume.
+
 The prompt shows the current shell directory, for example `/challenge #`.
 The path uses cyan from the shared terminal palette. Bash updates it after `cd` and
 uses `#` for root or `$` for other users. Color sequences are enclosed in
@@ -48,8 +56,8 @@ Ctrl+U/K/W/Y/R/L, Ctrl+C/Z and `fg` keep their normal shell behavior. Ctrl+D
 deletes at the cursor or exits on an empty line. Bracketed paste waits for
 confirmation. Browser and operating system reserved shortcuts follow their own rules.
 
-Filename completion ignores case: `cat readme` followed by Tab completes to
-`cat README.md` when that filename is the unique match. The filesystem still
+Filename completion ignores case: `cat files/CHECK` followed by Tab completes to
+`cat files/checker.py` when that filename is the unique match. The filesystem still
 uses the actual filename. Tab invokes Readline's `menu-complete` to cycle forward
 through multiple matches; Shift+Tab invokes `menu-complete-backward` to cycle
 backward. Native Readline cycling includes the original input after the last

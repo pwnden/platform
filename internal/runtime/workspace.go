@@ -18,7 +18,7 @@ import (
 
 const workspaceSize = 256 << 20
 const workspaceInodes = 32768
-const workspacePolicy = "tmpfs-v1"
+const workspacePolicy = "tmpfs-player-files-v2"
 const workspaceOptions = "size=256m,nosuid,nodev,nr_inodes=32768,uid=10001,gid=10001,mode=0700"
 
 func workspaceCost() resourceCost { return resourceCost{25e7, 512 << 20, 32, 1} }
@@ -28,8 +28,15 @@ func workspaceLabels(c *challenge.Loaded, project string) []string {
 }
 
 func ensureWorkspace(ctx context.Context, c *challenge.Loaded, project string) (string, error) {
+	return ensureWorkspaceFor(ctx, c, project, true)
+}
+
+func ensureWorkspaceFor(ctx context.Context, c *challenge.Loaded, project string, player bool) (string, error) {
 	if project != Project(c) && project != Project(c)+"-patched" {
 		return "", errors.New("invalid workspace project")
+	}
+	if !player {
+		project += "-verification"
 	}
 	if err := prepareToolImage(ctx, c, connectorImage); err != nil {
 		return "", err
@@ -61,7 +68,15 @@ func ensureWorkspace(ctx context.Context, c *challenge.Loaded, project string) (
 		if strings.TrimSpace(out) != "" {
 			return errors.New("workspace volume already exists without its keeper; stop the environment before retrying")
 		}
-		archive, err := workspaceArchive(c.Dir)
+		source := c.Dir
+		if player {
+			source, err = playerFiles(c)
+			if err != nil {
+				return err
+			}
+			defer os.RemoveAll(source)
+		}
+		archive, err := workspaceArchive(source)
 		if err != nil {
 			return err
 		}
@@ -100,7 +115,9 @@ func ensureWorkspace(ctx context.Context, c *challenge.Loaded, project string) (
 		return nil
 	})
 	if err != nil && initializing {
-		err = errors.Join(err, removeWorkspace(context.Background(), c, project))
+		err = errors.Join(err, withRuntimeLock(context.Background(), false, func(ctx context.Context, _ func(resourceCost) error) error {
+			return removeWorkspaceUnlocked(ctx, c, project)
+		}))
 	}
 	return volume, err
 }
@@ -166,7 +183,7 @@ func removeWorkspace(ctx context.Context, c *challenge.Loaded, project string) e
 		return nil
 	}
 	return withRuntimeLock(ctx, false, func(ctx context.Context, _ func(resourceCost) error) error {
-		return removeWorkspaceUnlocked(ctx, c, project)
+		return errors.Join(removeWorkspaceUnlocked(ctx, c, project), removeWorkspaceUnlocked(ctx, c, project+"-verification"))
 	})
 }
 
