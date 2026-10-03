@@ -14,7 +14,8 @@ const readings = ref<Record<string, { open: boolean; pending: boolean; failed: b
 let active = true;
 onUnmounted(() => { active = false; });
 function reading(id: string) {
-  return readings.value[id] ?? (readings.value[id] = { open: false, pending: false, failed: false });
+  if (!readings.value[id]) readings.value[id] = { open: false, pending: false, failed: false };
+  return readings.value[id]!;
 }
 async function reveal(id: string, open: boolean) {
   const state = reading(id);

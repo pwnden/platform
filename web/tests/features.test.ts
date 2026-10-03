@@ -84,6 +84,37 @@ it('retries failed relationship reads and keeps learning goals closed initially'
   expect(catalog.guidance).toHaveBeenCalledTimes(1);
   renderer.render(null, root);
 });
+it('updates first-open learning goals after delayed success or failure and retries the failed note', async () => {
+  const concepts = [
+    { id: 'first', title: '첫 목표', requires: [], related: [] },
+    { id: 'second', title: '둘째 목표', requires: [], related: [] },
+  ];
+  const current = { slug: 'test', title: 'Test', category: 'web', kind: 'service' as const, learning: { requires: [], teaches: concepts } };
+  let resolve: (value: string) => void = () => {};
+  let reject: (reason: Error) => void = () => {};
+  const first = new Promise<string>(done => { resolve = done; });
+  const second = new Promise<string>((_done, failed) => { reject = failed; });
+  const catalog: Catalog = { list: vi.fn(async () => []), detail: vi.fn(), download: vi.fn(),
+    guidance: vi.fn().mockImplementationOnce(() => first).mockImplementationOnce(() => second).mockResolvedValueOnce('# 둘째 목표\n재시도 내용') };
+  const root = node('root');
+  renderer.render(h(ProblemConnections, { catalog, problem: current }), root); await settle();
+  const reveal = flatten(root).find(item => item.type === 'reveal')!;
+  (reveal.props['onUpdate:modelValue'] as (value: boolean) => void)(true); await settle();
+  expect(text(root)).toContain('첫 목표 설명을 불러오는 중');
+  expect(text(root)).toContain('둘째 목표 설명을 불러오는 중');
+  resolve('# 첫 목표\n완료된 내용'); await settle();
+  expect(text(root)).toContain('완료된 내용');
+  expect(text(root)).not.toContain('첫 목표 설명을 불러오는 중');
+  reject(new Error('offline')); await settle();
+  expect(text(root)).toContain('둘째 목표 설명을 불러오지 못했습니다.');
+  expect(text(root)).not.toContain('둘째 목표 설명을 불러오는 중');
+  await click(button(root, '설명 다시 불러오기')); await settle();
+  expect(text(root)).toContain('재시도 내용');
+  expect(catalog.guidance).toHaveBeenNthCalledWith(3, 'test', 'concept-second');
+  expect(catalog.guidance).toHaveBeenCalledTimes(3);
+  renderer.render(null, root);
+});
+
 function workspace(status: RunStatus): Workspaces {
   return { connect: vi.fn(() => ({ ready: Promise.resolve(status), close: vi.fn() })), list: vi.fn(async () => []), stop: vi.fn() };
 }
