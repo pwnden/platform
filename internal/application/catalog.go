@@ -161,22 +161,32 @@ func (s *Service) Detail(ctx context.Context, slug string) (ProblemDetail, error
 	for _, file := range files {
 		result.Files = append(result.Files, file.ProblemFile)
 	}
-	name := c.Content.Description
-	if c.Schema == 1 {
-		name = "README.md"
-		path, _ := filepath.Rel(c.RepoRoot, filepath.Join(c.Dir, name))
-		if _, err := root.Lstat(path); errors.Is(err, os.ErrNotExist) {
-			return result, nil
-		}
-	} else {
+	if c.Schema >= 2 {
 		result.HintCount = len(c.Content.Hints)
 		result.Walkthrough = c.Content.Walkthrough != ""
 	}
-	result.Description, err = readMarkdown(ctx, c, root, name)
+	result.Description, err = readDescription(ctx, c, root)
 	if err != nil {
 		return ProblemDetail{}, loadError(ctx, "detail", slug, err)
 	}
 	return result, nil
+}
+
+// Catalog search uses the same public brief as the detail pane. Guidance and
+// solution resources remain available only through their explicit read paths.
+func readDescription(ctx context.Context, c *challenge.Loaded, root *os.Root) (string, error) {
+	name := c.Content.Description
+	if c.Schema == 1 {
+		name = "README.md"
+		path, err := filepath.Rel(c.RepoRoot, filepath.Join(c.Dir, name))
+		if err != nil {
+			return "", err
+		}
+		if _, err := root.Lstat(path); errors.Is(err, os.ErrNotExist) {
+			return "", ctx.Err()
+		}
+	}
+	return readMarkdown(ctx, c, root, name)
 }
 
 // Guidance exposes only declared documents, after an explicit player request.

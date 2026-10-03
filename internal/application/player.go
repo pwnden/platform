@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"os"
 	"strings"
 	"time"
 
@@ -28,6 +29,7 @@ type Problem struct {
 	Difficulty int
 	Kind       Kind
 	SolvedAt   *time.Time
+	SearchText string
 }
 
 type Execution struct {
@@ -60,6 +62,11 @@ func (s *Service) List(ctx context.Context) ([]Problem, error) {
 	if err != nil {
 		return nil, loadError(ctx, "list", "", err)
 	}
+	root, err := os.OpenRoot(s.repo)
+	if err != nil {
+		return nil, loadError(ctx, "list", "", err)
+	}
+	defer root.Close()
 	results := make([]Problem, 0, len(challenges))
 	completed, err := s.Completions(ctx)
 	if err != nil {
@@ -67,6 +74,10 @@ func (s *Service) List(ctx context.Context) ([]Problem, error) {
 	}
 	for _, c := range challenges {
 		item := problem(c)
+		item.SearchText, err = readDescription(ctx, c, root)
+		if err != nil {
+			return nil, loadError(ctx, "list", c.Slug, err)
+		}
 		if saved, ok := completed[c.Slug]; ok {
 			item.SolvedAt = &saved.SolvedAt
 		}

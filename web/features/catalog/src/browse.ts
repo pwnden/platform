@@ -10,7 +10,7 @@ export function filterProblems(problems: readonly Problem[], query: string, cate
   const terms = normalize(query).split(/\s+/).filter(Boolean);
   return problems.filter(problem => (!category || problem.category === category) &&
     (!difficulty || (difficulty === 'unrated' ? problem.difficulty === undefined : String(problem.difficulty) === difficulty)) &&
-    terms.every(term => normalize(`${problem.title} ${problem.slug} ${categoryLabel(problem.category)} ${problem.category}`).includes(term)))
+    terms.every(term => normalize(`${problem.title} ${problem.slug} ${categoryLabel(problem.category)} ${problem.category} ${problem.searchText ?? ''}`).includes(term)))
     .toSorted((a, b) => {
       const categoryOrder = categoryLabel(a.category).localeCompare(categoryLabel(b.category), 'ko');
       if (categoryOrder) return categoryOrder;

@@ -52,6 +52,14 @@ func TestPlayerResponsesDoNotExposeExecutionInternals(t *testing.T) {
 	}
 }
 
+func TestProblemListIncludesPublicSearchText(t *testing.T) {
+	list := ProblemsFrom([]application.Problem{{Slug: "diagnostic-port", Title: "개발용 점검 포트", Kind: application.KindService, SearchText: "Use nmap to inspect ports."}})
+	data, err := json.Marshal(list)
+	if err != nil || !strings.Contains(string(data), `"search_text":"Use nmap to inspect ports."`) {
+		t.Fatal("public search text omitted", string(data), err)
+	}
+}
+
 func TestPublicErrorClassificationAndPrivacy(t *testing.T) {
 	for code, expected := range map[application.Code]int{
 		application.InvalidArgument: http.StatusBadRequest, application.NotFound: http.StatusNotFound,

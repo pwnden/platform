@@ -32,6 +32,7 @@ type Problem struct {
 	Difficulty int              `json:"difficulty,omitempty"`
 	Kind       application.Kind `json:"kind"`
 	SolvedAt   *time.Time       `json:"solved_at,omitempty"`
+	SearchText string           `json:"search_text,omitempty"`
 }
 
 type ProblemList struct {
@@ -105,7 +106,7 @@ type ErrorResponse struct {
 func ProblemsFrom(result []application.Problem) ProblemList {
 	response := ProblemList{Problems: make([]Problem, 0, len(result))}
 	for _, p := range result {
-		response.Problems = append(response.Problems, Problem{Slug: p.Slug, Title: p.Title, Category: p.Category, Kind: p.Kind, Difficulty: p.Difficulty, SolvedAt: p.SolvedAt})
+		response.Problems = append(response.Problems, Problem{Slug: p.Slug, Title: p.Title, Category: p.Category, Kind: p.Kind, Difficulty: p.Difficulty, SolvedAt: p.SolvedAt, SearchText: p.SearchText})
 	}
 	return response
 }

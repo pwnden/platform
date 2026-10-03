@@ -81,6 +81,22 @@ func TestDetailAndDeclaredDownload(t *testing.T) {
 	if err != nil || result.Description != "" {
 		t.Fatalf("optional description: %+v %v", result, err)
 	}
+	items, err := s.List(ctx)
+	if err != nil || len(items) != 1 || items[0].SearchText != "" {
+		t.Fatalf("legacy catalog without brief: %+v %v", items, err)
+	}
+}
+
+func TestCatalogSearchIndexesPublicToolNames(t *testing.T) {
+	s, c := fixture(t, false)
+	brief := "# 개발용 점검 포트\nUse `nmap --unprivileged -sT` to inspect the service.\n"
+	if err := os.WriteFile(filepath.Join(c.Dir, "README.md"), []byte(brief), 0600); err != nil {
+		t.Fatal(err)
+	}
+	items, err := s.List(context.Background())
+	if err != nil || len(items) != 1 || items[0].SearchText != brief {
+		t.Fatalf("tool search text missing: %+v %v", items, err)
+	}
 }
 
 func TestDistributionDirectoriesAndRepositoryBoundaries(t *testing.T) {
@@ -136,6 +152,8 @@ func TestDescriptionAndCatalogCancellation(t *testing.T) {
 		os.WriteFile(path, content, 0600)
 		_, err := s.Detail(context.Background(), c.Slug)
 		requireCode(t, err, InvalidArgument)
+		_, err = s.List(context.Background())
+		requireCode(t, err, InvalidArgument)
 	}
 	os.Remove(path)
 	if err := os.Symlink(filepath.Join(t.TempDir(), "missing"), path); err != nil {
@@ -145,11 +163,16 @@ func TestDescriptionAndCatalogCancellation(t *testing.T) {
 	if err == nil {
 		t.Fatal("outside description was accepted")
 	}
+	if _, err := s.List(context.Background()); err == nil {
+		t.Fatal("catalog search accepted an outside description")
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	_, err = s.Detail(ctx, c.Slug)
 	requireCode(t, err, Canceled)
 	_, err = s.Download(ctx, c.Slug, strings.Repeat("a", 64))
+	requireCode(t, err, Canceled)
+	_, err = s.List(ctx)
 	requireCode(t, err, Canceled)
 }
 
@@ -169,6 +192,10 @@ func TestDeclaredPlayerContentAndSpoilerReads(t *testing.T) {
 	detail, err := s.Detail(ctx, c.Slug)
 	if err != nil || detail.Description != "Find the key." || detail.HintCount != 1 || !detail.Walkthrough {
 		t.Fatalf("player detail: %+v %v", detail, err)
+	}
+	items, err := s.List(ctx)
+	if err != nil || len(items) != 1 || items[0].SearchText != "Find the key." {
+		t.Fatalf("search indexed something other than the declared public brief: %+v %v", items, err)
 	}
 	for id, want := range map[string]string{"hint-1": "Look at the address.", "walkthrough": "The complete answer."} {
 		got, err := s.Guidance(ctx, c.Slug, id)

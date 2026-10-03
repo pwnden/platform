@@ -16,6 +16,7 @@ import UICode from '../packages/ui/src/UICode.vue';
 import UIReveal from '../packages/ui/src/UIReveal.vue';
 import UIToggleButton from '../packages/ui/src/UIToggleButton.vue';
 import * as syntax from '../packages/ui/src/syntax';
+import { createAPI } from '../packages/api/src/index';
 
 function browserSession(target: string) { return { target, url: target + '/__pwnden_browser/' + 'a'.repeat(64) }; }
 const unusedBrowser = vi.fn();
@@ -592,6 +593,27 @@ it('uses the real Sectile selected button to emit controlled changes and block b
   expect(button(root, '문제').props.disabled).toBe(true);
   await click(button(root, '문제')); await settle();
   expect(changed).not.toHaveBeenCalled();
+  renderer.render(null, root);
+});
+
+it('finds a CLI problem by tool name through the API-backed catalog search', async () => {
+  const fetch = vi.fn(async () => new Response(JSON.stringify({ problems: [
+    { slug: 'diagnostic-port', title: '개발용 점검 포트', category: 'misc', kind: 'service', difficulty: 2, search_text: 'Use nmap --unprivileged -sT to inspect ports.' },
+    { slug: 'note-vault', title: '다른 사람의 메모', category: 'web', kind: 'service' },
+  ] }), { headers: { 'Content-Type': 'application/json' } }));
+  const catalog = createAPI({ token: 'a'.repeat(64), fetch }).catalog;
+  const selected = vi.fn();
+  const root = node('root');
+  renderer.render(h(ProblemList, { catalog, onSelect: selected }), root); await settle();
+  const search = flatten(root).find(item => item.props.id === 'problem-search')!;
+  (search.props['onUpdate:modelValue'] as (value: string) => void)('nmap'); await settle();
+  const rows = flatten(root).filter(item => item.type === 'button' && item.props.variant === 'row');
+  expect(rows).toHaveLength(1);
+  expect(text(root)).toContain('개발용 점검 포트');
+  expect(text(root)).not.toContain('다른 사람의 메모');
+  await click(rows[0]!);
+  expect(selected.mock.calls[0]?.[0].slug).toBe('diagnostic-port');
+  expect(fetch).toHaveBeenCalledOnce();
   renderer.render(null, root);
 });
 

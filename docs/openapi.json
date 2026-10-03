@@ -245,7 +245,8 @@
           "category": {"type": "string"},
           "kind": {"$ref": "#/components/schemas/Kind"},
           "difficulty": {"$ref": "#/components/schemas/Difficulty"},
-          "solved_at": {"type": "string", "format": "date-time"}
+          "solved_at": {"type": "string", "format": "date-time"},
+          "search_text": {"type": "string", "maxLength": 1048576, "description": "Declared public problem brief for catalog search; excludes hints and walkthroughs."}
         }
       },
       "WorkspaceList": {

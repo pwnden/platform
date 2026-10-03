@@ -22,6 +22,9 @@ The server prints one private session URL such as `http://127.0.0.1:49152/#<toke
 
 The root page serves the Vue player. Choose a problem and read its description,
 hints and walkthrough in the reading pane. Submit the discovered flag there.
+Catalog search matches titles, identifiers, categories and public problem
+descriptions, including CLI names such as `nmap`. Hints and walkthroughs are
+excluded from search.
 The right-side tool pane provides Terminal, Files for declared materials, and Web
 for declared HTTP services through common isolated ingress. Files immediately displays the selected source.
 The common tab strip places terminal refresh, selected-file download, or web

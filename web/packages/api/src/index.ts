@@ -178,7 +178,8 @@ export function createAPI(options: APIOptions): APIClient {
         const payload = await request('/problems');
         return array(payload.problems).map(value => {
           const item = object(value);
-          return { slug: string(item.slug), title: string(item.title), category: string(item.category), kind: kind(item.kind), ...difficulty(item.difficulty), ...completion(item.solved_at) };
+          return { slug: string(item.slug), title: string(item.title), category: string(item.category), kind: kind(item.kind), ...difficulty(item.difficulty), ...completion(item.solved_at),
+            ...(item.search_text === undefined ? {} : { searchText: string(item.search_text) }) };
         });
       },
       async detail(slug): Promise<ProblemDetail> {

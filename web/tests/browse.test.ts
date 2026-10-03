@@ -16,6 +16,19 @@ it('searches all words across titles, identifiers and readable categories withou
   expect(problems.map(p => p.slug)).toEqual(['rotor-lock', 'note-vault', 'test-new']);
 });
 
+it('finds tool names and other public brief words while respecting category and difficulty', () => {
+  const problems: readonly Problem[] = [
+    { slug: 'diagnostic-port', title: '개발용 점검 포트', category: 'misc', kind: 'service', difficulty: 2, searchText: 'nmap --unprivileged -sT로 포트를 조사하고 ncat으로 응답을 읽는다.' },
+    { slug: 'note-vault', title: '다른 사람의 메모', category: 'web', kind: 'service', difficulty: 1 },
+  ];
+  expect(filterProblems(problems, '  ＮＭＡＰ ', '').map(p => p.slug)).toEqual(['diagnostic-port']);
+  expect(filterProblems(problems, 'nmap 포트', 'misc', '2').map(p => p.slug)).toEqual(['diagnostic-port']);
+  expect(filterProblems(problems, 'ncat', '').map(p => p.slug)).toEqual(['diagnostic-port']);
+  expect(filterProblems(problems, 'nmap', 'web')).toEqual([]);
+  expect(filterProblems(problems, 'nmap', '', '1')).toEqual([]);
+  expect(filterProblems(problems, 'undefined', '')).toEqual([]);
+});
+
 it('combines difficulty with search and category, sorts within categories and keeps unrated problems last', () => {
   const problems: readonly Problem[] = [
     { slug: 'a-hard', title: 'A', category: 'web', kind: 'service', difficulty: 4 },

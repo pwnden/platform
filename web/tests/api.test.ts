@@ -15,6 +15,14 @@ it('maps durable completion state and rejects a missing saved answer', async () 
 });
 const response = (payload: unknown, status = 200) => new Response(JSON.stringify(payload), { status, headers: { 'Content-Type': 'application/json' } });
 
+it('maps optional public search text from the catalog response', async () => {
+  const problem = { slug: 'diagnostic-port', title: '개발용 점검 포트', category: 'misc', kind: 'service' };
+  const client = createAPI({ token, fetch: async () => response({ problems: [{ ...problem, search_text: 'Use nmap to inspect ports.' }] }) });
+  expect(await client.catalog.list()).toEqual([{ ...problem, searchText: 'Use nmap to inspect ports.' }]);
+  const malformed = createAPI({ token, fetch: async () => response({ problems: [{ ...problem, search_text: ['nmap'] }] }) });
+  await expect(malformed.catalog.list()).rejects.toMatchObject({ code: 'invalid_response' });
+});
+
 it.each([1, 2, 3, 4, 5] as const)('maps difficulty %i for list and detail', async difficulty => {
   const problem = { slug: 'test', title: 'Test', category: 'web', kind: 'service', difficulty };
   const replies = [response({ problems: [problem] }), response({ ...problem, description: '', files: [], tools: ['web'], hint_count: 0, walkthrough: false })];

@@ -67,7 +67,7 @@ onMounted(load);
   <UIPanel title="문제 목록" headingID="catalog-heading" :aria-busy="pending" class="catalog-panel">
     <template #actions><UIIconButton label="문제 목록 새로고침" icon="refresh" :busy="pending" @click="load" /></template>
     <div class="catalog-filters">
-      <UITextField id="problem-search" v-model="query" label="검색" type="search" placeholder="문제 이름 또는 키워드" />
+      <UITextField id="problem-search" v-model="query" label="검색" type="search" placeholder="문제 이름·설명·도구 이름" />
       <UISelect id="problem-category" v-model="category" label="분야" :options="options" />
       <div class="catalog-filter-row">
         <UISelect id="problem-difficulty" v-model="difficulty" label="난이도" :options="difficultyOptions" />

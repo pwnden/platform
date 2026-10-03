@@ -76,7 +76,7 @@ jobs:
         run: python3 platform/tools/verify.py --challenges challenges
       - name: Verify actual isolation, web ingress and automatic resource recovery
         working-directory: platform
-        run: PWNDEN_TEST_CHALLENGES="$(realpath ../challenges)" go test ./internal/httpapi -run '^Test(IsolatedNoteVault|WorkspaceResourcePressure)Docker$' -count=1 -v
+        run: PWNDEN_TEST_CHALLENGES="$(realpath ../challenges)" go test ./internal/httpapi -run '^Test(IsolatedNoteVaultDocker|WorkspaceResourcePressureDocker|PublishedCatalogSearch)$' -count=1 -v
       - name: Build native Linux package
         working-directory: platform
         run: go run ./tools/package --challenges ../challenges --out dist --target linux/amd64
