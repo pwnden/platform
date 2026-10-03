@@ -106,7 +106,8 @@ func OpenTerminal(ctx context.Context, c *challenge.Loaded, project string, cols
 	}()
 	// Readline excludes color bytes from the prompt width. Bash expands the
 	// current directory and privilege marker each time it displays this prompt.
-	prompt := "\\[\\e[36m\\]\\w\\[\\e[0m\\] \\$ "
+	// A leading newline keeps unterminated command output separate from input.
+	prompt := "\\n\\[\\e[36m\\]\\w\\[\\e[0m\\] \\$ "
 	config := &dockerContainer.Config{
 		// Readline owns editing, completion and history. UTF-8 applies to both
 		// Readline's character widths and the daemon TTY's canonical erase mode.

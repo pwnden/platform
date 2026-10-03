@@ -36,7 +36,11 @@ uses `#` for root or `$` for other users. Color sequences are enclosed in
 Readline nonprinting delimiters so cursor movement and line wrapping use the
 visible prompt width. The platform supplies `PS1` inside the toolbox; players
 can change it with normal Bash assignments. Existing retained shells keep their
-current prompt until replaced.
+current prompt until replaced. Every prompt starts on a new line, keeping output
+such as a JSON response without a trailing newline separate from the next input.
+Output that already ends in a newline has one blank separator line before the
+prompt. This affects interactive presentation; command output and redirected
+files retain their original bytes.
 
 xterm translates keyboard and IME input into terminal bytes. Bash/Readline owns
 completion, history and editing: Tab, arrows, Home/End, Delete, Ctrl+A/E,

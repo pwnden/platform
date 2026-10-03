@@ -77,6 +77,9 @@ jobs:
       - name: Verify actual isolation, web ingress and automatic resource recovery
         working-directory: platform
         run: PWNDEN_TEST_CHALLENGES="$(realpath ../challenges)" go test ./internal/httpapi -run '^Test(IsolatedNoteVaultDocker|WorkspaceResourcePressureDocker|PublishedCatalogSearch)$' -count=1 -v
+      - name: Verify Docker shell editing and prompt separation
+        working-directory: platform
+        run: PWNDEN_TEST_CHALLENGES="$(realpath ../challenges)" go test ./internal/runtime -run '^TestTerminalFilenameCompletionDocker$' -count=1 -v
       - name: Build native Linux package
         working-directory: platform
         run: go run ./tools/package --challenges ../challenges --out dist --target linux/amd64

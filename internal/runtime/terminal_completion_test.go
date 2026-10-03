@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/charmbracelet/x/vt"
 	"github.com/pwnden/platform/internal/challenge"
 )
 
@@ -56,6 +57,10 @@ func TestTerminalFilenameCompletionDocker(t *testing.T) {
 		{"disable input echo", "stty -echo; printf '\\137\\137READY__\\n'\r", "__READY__\r\n"},
 		{"prompt follows working directory", "cd /tmp\r", "\x1b[36m/tmp\x1b[0m "},
 		{"return to problem directory", "cd /challenge\r", "\x1b[36m/challenge\x1b[0m "},
+		{"JSON without final newline", "printf '{\"error\": \"staff_access_required\"}'\r", "{\"error\": \"staff_access_required\"}\r\n\x1b[36m/challenge\x1b[0m "},
+		{"text without final newline", "printf '\\137\\137PARTIAL__'\r", "__PARTIAL__\r\n\x1b[36m/challenge\x1b[0m "},
+		{"already terminated output", "printf '\\137\\137TERMINATED__\\n'\r", "__TERMINATED__\r\n\r\n\x1b[36m/challenge\x1b[0m "},
+		{"empty output", "true\r", "\r\n\x1b[36m/challenge\x1b[0m "},
 		{"relative filename ignoring case", "printf '\\137\\137RELATIVE__:%s\\n' readme\t\r", "__RELATIVE__:README.md\r\n"},
 		{"absolute filename ignoring case", "printf '\\137\\137ABSOLUTE__:%s\\n' /challenge/readme\t\r", "__ABSOLUTE__:/challenge/README.md\r\n"},
 		{"directory completion", "printf '\\137\\137DIRECTORY__:%s\\n' /challenge/sol\t\r", "__DIRECTORY__:/challenge/solve/\r\n"},
@@ -69,6 +74,12 @@ func TestTerminalFilenameCompletionDocker(t *testing.T) {
 		{"UTF-8 erase", "printf '\\137\\137ERASE__:%s\\n' '가나\x7f\x7fok'\r", "__ERASE__:ok\r\n"},
 		{"command history", "\x1b[A\r", "__ERASE__:ok\r\n"},
 	}
+	promptScreens := map[string]string{
+		"JSON without final newline": "{\"error\": \"staff_access_required\"}\n/challenge",
+		"text without final newline": "__PARTIAL__\n/challenge",
+		"already terminated output":  "__TERMINATED__\n\n/challenge",
+		"empty output":               "\n/challenge",
+	}
 	for _, check := range cases {
 		t.Run(check.name, func(t *testing.T) {
 			if _, err := io.WriteString(terminal, check.input); err != nil {
@@ -77,13 +88,22 @@ func TestTerminalFilenameCompletionDocker(t *testing.T) {
 			deadline := time.NewTimer(5 * time.Second)
 			defer deadline.Stop()
 			var received strings.Builder
-			for !strings.Contains(received.String(), check.want) {
+			screen := vt.NewEmulator(80, 24)
+			defer screen.Close()
+			matches := func() bool {
+				if want, ok := promptScreens[check.name]; ok {
+					return strings.Contains(screen.String(), want)
+				}
+				return strings.Contains(received.String(), check.want)
+			}
+			for !matches() {
 				select {
 				case chunk, ok := <-output:
 					if !ok {
 						t.Fatal("toolbox output ended before the result")
 					}
 					received.WriteString(chunk)
+					screen.WriteString(chunk)
 				case <-deadline.C:
 					t.Fatalf("expected %q in PTY output %q", check.want, received.String())
 				case <-ctx.Done():
