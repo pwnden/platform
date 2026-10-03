@@ -52,11 +52,20 @@ it('supports unnamed messages while preserving ordinary blockquotes', async () =
   expect(html).not.toContain('markdown-message-from');
 });
 
-it('renders explicitly marked people as plain inline text with a shared color class', async () => {
+it('identifies explicit and repeated narrative names without emphasis', async () => {
   const html = await render('운영 담당자 :person[솔개로그]는 서버를 관리한다. 이후 솔개로그는 자료를 전달했다.\n\n:person[moru17]도 참여했다.');
-  expect(html).toContain('운영 담당자 <span class="markdown-person">솔개로그</span>는 서버를 관리한다. 이후 솔개로그는 자료를 전달했다.');
+  expect(html).toContain('운영 담당자 <span class="markdown-person">솔개로그</span>는 서버를 관리한다. 이후 <span class="markdown-person">솔개로그</span>는 자료를 전달했다.');
   expect(html).toContain('<span class="markdown-person">moru17</span>도 참여했다.');
   expect(html).not.toMatch(/<strong|<em|<a\b|<code|:person/);
+});
+
+it('keeps name recognition inside prose and the current document', async () => {
+  const html = await render(':person[moru17]에게 연락했다. moru17은 답했다. moru170과 premoru17은 다른 값이다.\n\n`moru17` [moru17](https://example.com)\n\n```text\nmoru17\n```');
+  expect(html.match(/class="markdown-person"/g)).toHaveLength(2);
+  expect(html).toContain('<span class="markdown-person">moru17</span>은 답했다. moru170과 premoru17은 다른 값이다.');
+  expect(html).toContain('<code>moru17</code>');
+  expect(html).toContain('noopener noreferrer">moru17</a>');
+  expect(await render('moru17은 답했다.')).not.toContain('markdown-person');
 });
 
 it('drops person attributes and escapes names using the ordinary Markdown allowlist', async () => {

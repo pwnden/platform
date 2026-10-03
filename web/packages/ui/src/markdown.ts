@@ -11,7 +11,44 @@ export async function parseMarkdown(source: string): Promise<ComarkNode[]> {
     await module.init();
     return module;
   }).catch(error => { parser = undefined; throw error; });
-  return (await parser).parseAST(source).nodes;
+  return personMentions((await parser).parseAST(source).nodes);
+}
+
+// An explicit person label declares a narrative name for this document.
+// Keep repeated prose mentions identifiable without touching code or links.
+function personMentions(nodes: ComarkNode[]): ComarkNode[] {
+  const names = new Set<string>();
+  function collect(node: ComarkNode) {
+    if (typeof node === 'string') return;
+    const [tag, , ...content] = node;
+    if (tag === 'person' && content.every(child => typeof child === 'string')) {
+      const name = content.join('').trim();
+      if (name) names.add(name);
+    }
+    if (tag !== 'pre' && tag !== 'code') content.forEach(collect);
+  }
+  nodes.forEach(collect);
+  if (!names.size) return nodes;
+  const alternatives = [...names].sort((a, b) => b.length - a.length)
+    .map(name => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  const pattern = new RegExp(`(?<![\\p{L}\\p{N}_])(?:${alternatives})(?=$|[^\\p{L}\\p{N}_]|(?:은|는|이|가|을|를|의|에게|한테|와|과|도|만|께|님|씨|라고|라는|보다|부터|까지|처럼|조차|마저|랑))`, 'gu');
+  function decorate(node: ComarkNode): ComarkNode[] {
+    if (typeof node !== 'string') {
+      const [tag, attributes, ...content] = node;
+      if (tag === 'person' || tag === 'pre' || tag === 'code' || tag === 'a') return [node];
+      return [[tag, attributes, ...content.flatMap(decorate)]];
+    }
+    const result: ComarkNode[] = [];
+    let offset = 0;
+    for (const match of node.matchAll(pattern)) {
+      if (match.index > offset) result.push(node.slice(offset, match.index));
+      result.push(['person', {}, match[0]]);
+      offset = match.index + match[0].length;
+    }
+    if (offset < node.length) result.push(node.slice(offset));
+    return result;
+  }
+  return nodes.flatMap(decorate);
 }
 
 const elements = new Set(['p', 'ul', 'ol', 'li', 'blockquote', 'pre', 'code', 'strong', 'em', 'del', 's', 'hr', 'br', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'span', 'div', 'mark']);

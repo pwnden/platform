@@ -8,7 +8,7 @@ colors:
   surface-hover: "#122239"
   surface-pressed: "#19324b"
   foreground: "#d2dfef"
-  person: "#c8d6e7"
+  person: "#c7bedc"
   muted: "#8a9db6"
   border: "#1b2d43"
   border-active: "#3a729e"
@@ -347,6 +347,11 @@ Source: [UIStatus.vue](packages/ui/src/UIStatus.vue), [UIIconButton.vue](package
 Source: [UITerminal.vue](packages/ui/src/UITerminal.vue), [UIIconButton.vue](packages/ui/src/UIIconButton.vue), [TerminalPanel.vue](features/terminal/src/TerminalPanel.vue).
 
 ### Markdown
+
+Narrative names use the muted lavender person token and a 1px dotted underline
+at 35% opacity, offset by 0.18em. They retain the body's size and weight and have
+no interaction. An explicit `:person[name]` declares the name within its document;
+later prose mentions share the treatment. Code and links retain their formatting.
 
 `UIMarkdown` renders source through md4x's WASM parser and an allowlisted Vue AST renderer. Source headings fit below the panel title. Inline code uses the accent and raised surface; code blocks use the terminal background. Tables scroll inside their own region. Quotes use a thin active stroke, and task markers are read-only. Links use the shared accent and keyboard focus. Images display alternative text. Loading is announced; failure offers retry and escaped source.
 
