@@ -387,7 +387,9 @@ tag and runs Vite in Docker against the live workspace. Vue, TypeScript and CSS
 edits update through HMR, including workspace UI and feature packages. The Vite
 watcher includes domain, feature and shared package directories so changes to
 type-only Vue props imports invalidate the compiler's type cache. Go proxies
-Vite assets and WebSockets on the player's origin; API and terminal requests keep
+Vite assets and WebSockets on the player's origin. The same player page routes
+serve Vite's HTML entry on direct navigation and reload, preserving catalog
+queries and the browser URL. API and terminal requests keep
 their existing authentication and origin checks. Vite's CSP nonce also authorizes
 its generated HMR styles. Restart after Go or dependency changes. Full verification
 runs separately through `pnpm verify` or the `Dockerfile.web` verification target.

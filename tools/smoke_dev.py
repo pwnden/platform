@@ -12,6 +12,7 @@ import tempfile
 import time
 from urllib.parse import urlsplit
 from urllib.error import URLError
+from urllib.request import urlopen
 
 from smoke_http import api, download
 from smoke_hmr import check_hmr
@@ -67,6 +68,11 @@ def main():
                     time.sleep(0.05)
                 if origin is None:
                     raise RuntimeError("pwnden dev startup timed out")
+                for path in ("/", "/challenges", "/challenges/diagnostic-port?q=nmap"):
+                    with urlopen(origin + path, timeout=10) as response:
+                        assert response.status == 200
+                        assert response.headers.get_content_type() == "text/html"
+                        assert b"<!doctype html>" in response.read().lower()
                 problems = api(origin, token, "GET", "/problems")
                 assert {"rotor-lock", "note-vault"} <= {item["slug"] for item in problems["problems"]}
                 check_hmr(origin, root)

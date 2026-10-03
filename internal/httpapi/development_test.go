@@ -76,6 +76,65 @@ func TestDevelopmentAssetProxyKeepsAPIBoundaries(t *testing.T) {
 	}
 }
 
+func TestDevelopmentPlayerRoutesServeEntry(t *testing.T) {
+	calls := 0
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		if r.URL.Path != "/" || r.Header.Get("Authorization") != "" || r.Header.Get("Cookie") != "" {
+			t.Errorf("invalid entry request: %s", r.URL.Path)
+		}
+		if r.URL.RawQuery != "q=nmap&page=2" {
+			t.Error("page query was changed")
+		}
+		w.Header().Set("Content-Type", "text/html")
+		if r.Method != "HEAD" {
+			io.WriteString(w, "<!doctype html><title>Player</title>")
+		}
+	}))
+	defer upstream.Close()
+	frontend, err := DevelopmentFrontend(upstream.URL, strings.Repeat("a", 64))
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := newHandler(context.Background(), fakeBackend{}, testHost, testToken, io.Discard)
+	h.frontend = frontend
+	for _, path := range []string{"/", "/challenges", "/challenges/", "/challenges/diagnostic-port", "/challenges/diagnostic-port/"} {
+		for _, method := range []string{"GET", "HEAD"} {
+			r := request(method, path+"?q=nmap&page=2", "")
+			r.Header.Set("Cookie", "secret=value")
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, r)
+			if w.Code != 200 || w.Header().Get("Content-Type") != "text/html" || w.Header().Get("Cache-Control") != "no-store" {
+				t.Fatalf("page %s %s: %d", method, path, w.Code)
+			}
+			if r.URL.Path != path {
+				t.Fatal("proxy mutated the original page request")
+			}
+			if method == "GET" && !strings.HasPrefix(w.Body.String(), "<!doctype html>") {
+				t.Fatal("page did not serve the HTML entry")
+			}
+		}
+	}
+	before := calls
+	for _, test := range []struct {
+		method, path string
+		code         int
+	}{
+		{"GET", "/challenges/x/extra", 404},
+		{"GET", "/challenges/" + strings.Repeat("a", 41), 404},
+		{"GET", "/challenges/%64iagnostic-port", 400},
+		{"GET", "/unknown", 404},
+		{"GET", "/api/v1/missing", 404},
+		{"POST", "/challenges/diagnostic-port", 405},
+	} {
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, request(test.method, test.path, ""))
+		if w.Code != test.code || calls != before {
+			t.Fatalf("route boundary %s %s: %d", test.method, test.path, w.Code)
+		}
+	}
+}
+
 func TestDevelopmentWebSocketAndShutdown(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/__vite_hmr" || r.URL.RawQuery != "token=dev" {

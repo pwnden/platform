@@ -59,7 +59,12 @@ func ServeDevelopment(ctx context.Context, backend Backend, stdout, stderr io.Wr
 
 func (h *handler) development(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
-	allowed := path == "/" || path == "/__vite_hmr"
+	page := playerPage(path)
+	if page && r.URL.RawPath != "" {
+		transportError(w, 400, "invalid_request", "Encoded page paths are not accepted.")
+		return
+	}
+	allowed := page || path == "/__vite_hmr"
 	for _, prefix := range []string{"/src/", "/@vite/", "/@id/", "/@fs/web/", "/node_modules/", "/assets/"} {
 		allowed = allowed || strings.HasPrefix(path, prefix)
 	}
@@ -85,6 +90,13 @@ func (h *handler) development(w http.ResponseWriter, r *http.Request) {
 		response.Header.Del("Access-Control-Allow-Origin")
 		response.Header.Del("Set-Cookie")
 		return nil
+	}
+	if page {
+		// Serve Vite's entry independently of its Accept-based SPA fallback.
+		// The browser keeps the requested route for the client router.
+		r = r.Clone(r.Context())
+		r.URL.Path = "/"
+		r.URL.RawPath = ""
 	}
 	proxy.ServeHTTP(w, r)
 }
