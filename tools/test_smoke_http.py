@@ -119,6 +119,31 @@ class GuidanceCoverageTests(unittest.TestCase):
             with self.subTest(names=names), self.assertRaises(AssertionError):
                 self.check()
 
+    def test_learning_closure_documents_and_installed_metadata(self):
+        self.fixture(1, schema=7)
+        manifest = self.directory / "challenge.toml"
+        manifest.write_text(manifest.read_text() + "\n[learning]\nrequires=['ownership']\nteaches=['export']\n")
+        knowledge = self.directory.parents[1] / "knowledge"
+        knowledge.mkdir()
+        concepts = []
+        for id in ('base', 'ownership', 'export'):
+            requires = ['base'] if id == 'ownership' else []
+            concepts.append({'id': id, 'title': id, 'requires': requires, 'related': []})
+            text = f"# {id}\n\nExplanation.\n"
+            (knowledge / f'{id}.md').write_text(text)
+            self.documents[f'concept-{id}'] = text
+        registry = '\n'.join(f'[[concepts]]\nid="{item["id"]}"\ntitle="{item["title"]}"\nrequires={json.dumps(item["requires"])}\nrelated=[]\n' for item in concepts)
+        (knowledge / 'catalog.toml').write_text(registry)
+        self.brief['learning'] = {'requires': [concepts[1], concepts[0]], 'teaches': [concepts[2]]}
+        self.check()
+        self.documents['concept-base'] = 'Wrong content'
+        with self.assertRaises(AssertionError):
+            self.check()
+        self.documents['concept-base'] = (knowledge / 'base.md').read_text()
+        self.brief['learning']['requires'] = [concepts[1]]
+        with self.assertRaises(AssertionError):
+            self.check()
+
     def test_authored_line_endings_are_preserved(self):
         self.fixture(1)
         text = "Declared walkthrough\r\n"

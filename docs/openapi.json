@@ -2,7 +2,7 @@
   "openapi": "3.1.2",
   "info": {
     "title": "pwnden local player API",
-    "version": "1.6.0",
+    "version": "1.7.0",
     "description": "Local player API implemented by the Go server and serve command."
   },
   "servers": [{"url": "/api/v1"}],
@@ -92,10 +92,10 @@
       }
     },
     "/problems/{slug}/guidance/{id}": {
-      "parameters": [{"$ref": "#/components/parameters/Slug"}, {"name": "id", "in": "path", "required": true, "schema": {"type": "string", "pattern": "^(walkthrough|hint-([1-9]|10))$"}}],
+      "parameters": [{"$ref": "#/components/parameters/Slug"}, {"name": "id", "in": "path", "required": true, "schema": {"type": "string", "pattern": "^(walkthrough|hint-([1-9]|10)|concept-[a-z0-9]+(-[a-z0-9]+)*)$", "maxLength": 72}}],
       "get": {
         "operationId": "getProblemGuidance",
-        "summary": "Read one explicitly requested hint or walkthrough",
+        "summary": "Read one explicitly requested hint, walkthrough or scoped concept",
         "description": "Bearer-authenticated request with no body. Only declared guidance is available; absent entries return 404. Arbitrary paths are unsupported. The brief does not load this content. Walkthroughs intentionally contain answers.",
         "responses": {
           "200": {"description": "Declared guidance Markdown", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Guidance"}}}},
@@ -209,6 +209,23 @@
         "type": "object", "additionalProperties": false, "required": ["id", "name", "size"],
         "properties": {"id": {"$ref": "#/components/schemas/FileID"}, "name": {"type": "string"}, "size": {"type": "integer", "minimum": 0}}
       },
+      "ConceptID": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "maxLength": 64},
+      "Concept": {
+        "type": "object", "required": ["id", "title", "requires", "related"],
+        "properties": {
+          "id": {"$ref": "#/components/schemas/ConceptID"},
+          "title": {"type": "string", "minLength": 1, "maxLength": 120},
+          "requires": {"type": "array", "maxItems": 32, "uniqueItems": true, "items": {"$ref": "#/components/schemas/ConceptID"}},
+          "related": {"type": "array", "maxItems": 32, "uniqueItems": true, "items": {"$ref": "#/components/schemas/ConceptID"}}
+        }
+      },
+      "Learning": {
+        "type": "object", "required": ["requires", "teaches"],
+        "properties": {
+          "requires": {"type": "array", "maxItems": 256, "items": {"$ref": "#/components/schemas/Concept"}},
+          "teaches": {"type": "array", "maxItems": 32, "items": {"$ref": "#/components/schemas/Concept"}}
+        }
+      },
       "ProblemDetail": {
         "type": "object", "additionalProperties": false,
         "required": ["slug", "title", "category", "kind", "description", "files", "hint_count", "walkthrough", "tools"],
@@ -216,6 +233,7 @@
           "slug": {"$ref": "#/components/schemas/Slug"}, "title": {"type": "string", "minLength": 1}, "category": {"type": "string"},
           "kind": {"$ref": "#/components/schemas/Kind"}, "description": {"type": "string"},
           "difficulty": {"$ref": "#/components/schemas/Difficulty"},
+          "learning": {"$ref": "#/components/schemas/Learning"},
           "cli": {"type": "array", "maxItems": 32, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9.+_-]{0,63}$"}, "description": "Declared primary learner CLI command names."},
           "solved_at": {"type": "string", "format": "date-time"},
           "answer": {"type": "string", "description": "Previously accepted input; present only for a completed problem."},
@@ -226,7 +244,7 @@
       },
       "Guidance": {
         "type": "object", "additionalProperties": false, "required": ["id", "content"],
-        "properties": {"id": {"type": "string", "pattern": "^(walkthrough|hint-([1-9]|10))$"}, "content": {"type": "string"}}
+        "properties": {"id": {"type": "string", "pattern": "^(walkthrough|hint-([1-9]|10)|concept-[a-z0-9]+(-[a-z0-9]+)*)$", "maxLength": 72}, "content": {"type": "string"}}
       },
       "Status": {
         "type": "object", "additionalProperties": false, "required": ["slug", "kind", "state", "endpoints"],
@@ -247,6 +265,7 @@
           "kind": {"$ref": "#/components/schemas/Kind"},
           "difficulty": {"$ref": "#/components/schemas/Difficulty"},
           "solved_at": {"type": "string", "format": "date-time"},
+          "learning": {"$ref": "#/components/schemas/Learning"},
           "cli": {"type": "array", "maxItems": 32, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9.+_-]{0,63}$"}, "description": "Declared primary learner CLI command names."}
         }
       },

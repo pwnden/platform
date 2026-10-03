@@ -15,6 +15,23 @@ it('maps durable completion state and rejects a missing saved answer', async () 
 });
 const response = (payload: unknown, status = 200) => new Response(JSON.stringify(payload), { status, headers: { 'Content-Type': 'application/json' } });
 
+it('maps learning metadata and requests only scoped concept document IDs', async () => {
+  const learning = { requires: [{ id: 'ownership', title: '소유권', requires: ['cookies'], related: [] }], teaches: [] };
+  const problem = { slug: 'test', title: 'Test', category: 'web', kind: 'service', learning };
+  const fetch = vi.fn().mockResolvedValueOnce(response({ problems: [problem] })).mockResolvedValueOnce(response({ ...problem, description: '', tools: ['web'], files: [], hint_count: 0, walkthrough: false })).mockResolvedValueOnce(response({ id: 'concept-ownership', content: '# 소유권' }));
+  const client = createAPI({ token, fetch });
+  expect((await client.catalog.list())[0]?.learning).toEqual(learning);
+  expect((await client.catalog.detail('test')).learning).toEqual(learning);
+  expect(await client.catalog.guidance('test', 'concept-ownership')).toBe('# 소유권');
+  expect(fetch.mock.calls[2]?.[0]).toBe('/api/v1/problems/test/guidance/concept-ownership');
+  await expect(client.catalog.guidance('test', 'concept-../../private')).rejects.toMatchObject({ code: 'invalid_argument' });
+});
+
+it.each([null, {}, { requires: 'ownership', teaches: [] }, { requires: [{ id: '../private', title: 'X', requires: [], related: [] }], teaches: [] }, { requires: [], teaches: [{ id: 'x', title: ' ', requires: [], related: [] }] }])('rejects malformed learning metadata %j', async learning => {
+  const client = createAPI({ token, fetch: async () => response({ problems: [{ slug: 'test', title: 'Test', category: 'web', kind: 'service', learning }] }) });
+  await expect(client.catalog.list()).rejects.toMatchObject({ code: 'invalid_response' });
+});
+
 it('maps optional declared CLI from list and detail', async () => {
   const problem = { slug: 'diagnostic-port', title: '개발용 점검 포트', category: 'misc', kind: 'service' };
   const replies = [response({ problems: [{ ...problem, cli: ['nmap', 'ncat'] }] }), response({ ...problem, cli: ['nmap'], description: '', files: [], tools: ['terminal'], hint_count: 0, walkthrough: false })];

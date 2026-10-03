@@ -3,6 +3,7 @@ import { createRenderer, h, nextTick } from 'vue';
 import type { Catalog } from '../domains/catalog/src/index';
 import type { Player, RunStatus, Workspaces } from '../domains/play/src/index';
 import ProblemDetail from '../features/catalog/src/ProblemDetail.vue';
+import ProblemConnections from '../features/catalog/src/ProblemConnections.vue';
 import ProblemFiles from '../features/catalog/src/ProblemFiles.vue';
 import ProblemList from '../features/catalog/src/ProblemList.vue';
 import PlayPanel from '../features/play/src/PlayPanel.vue';
@@ -36,6 +37,44 @@ it('restores an accepted answer without submitting again and marks saved complet
   renderer.render(h(ProblemList, { catalog: { list: async () => [problem], detail: vi.fn(), download: vi.fn(), guidance: vi.fn() } }), root);
   await settle();
   expect(text(root)).toContain('해결 완료');
+  renderer.render(null, root);
+});
+
+it('reads prerequisite notes in place and selects linked problems only on explicit activation', async () => {
+  const concept = { id: 'ownership', title: '소유권', requires: [], related: [] };
+  const prior = { slug: 'prior', title: '먼저 배우는 문제', category: 'web', kind: 'service' as const, learning: { requires: [], teaches: [concept] } };
+  const current = { slug: 'current', title: '현재 배우는 문제', category: 'web', kind: 'service' as const, learning: { requires: [concept], teaches: [] } };
+  const catalog: Catalog = { list: vi.fn(async () => [prior, current]), detail: vi.fn(), download: vi.fn(), guidance: vi.fn(async () => '# 선수 설명') };
+  const selected = vi.fn();
+  const root = node('root');
+  renderer.render(h(ProblemConnections, { catalog, problem: current, onSelect: selected }), root); await settle();
+  expect(text(root)).toContain('먼저 배우는 문제');
+  expect(catalog.guidance).not.toHaveBeenCalled();
+  const reveal = flatten(root).find(item => item.type === 'reveal' && item.props.label === '소유권')!;
+  (reveal.props['onUpdate:modelValue'] as (value: boolean) => void)(true); await settle();
+  expect(catalog.guidance).toHaveBeenCalledExactlyOnceWith('current', 'concept-ownership');
+  expect(text(root)).toContain('선수 설명');
+  expect(selected).not.toHaveBeenCalled();
+  await click(button(root, '먼저 배우는 문제'));
+  expect(selected).toHaveBeenCalledExactlyOnceWith(prior);
+  renderer.render(h(ProblemConnections, { catalog, problem: current, onSelect: selected, disabled: true }), root); await settle();
+  expect(button(root, '먼저 배우는 문제').props.disabled).toBe(true);
+  renderer.render(null, root);
+});
+
+it('retries failed relationship reads and keeps learning goals closed initially', async () => {
+  const current = { slug: 'test', title: 'Test', category: 'web', kind: 'service' as const, learning: { requires: [], teaches: [{ id: 'private-goal', title: '풀이 핵심 원리', requires: [], related: [] }] } };
+  const catalog: Catalog = { list: vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce([]), detail: vi.fn(), download: vi.fn(), guidance: vi.fn() };
+  const root = node('root');
+  renderer.render(h(ProblemConnections, { catalog, problem: current }), root); await settle();
+  expect(text(root)).toContain('문제 연결을 불러오지 못했습니다.');
+  expect(text(root)).not.toContain('풀이 핵심 원리');
+  await click(button(root, '연결 다시 불러오기')); await settle();
+  expect(text(root)).not.toContain('문제 연결을 불러오지 못했습니다.');
+  const reveal = flatten(root).find(item => item.type === 'reveal' && item.props.label === '학습 목표 보기 · 풀이 원리 포함')!;
+  (reveal.props['onUpdate:modelValue'] as (value: boolean) => void)(true); await settle();
+  expect(text(root)).toContain('풀이 핵심 원리');
+  expect(catalog.guidance).not.toHaveBeenCalled();
   renderer.render(null, root);
 });
 function workspace(status: RunStatus): Workspaces {

@@ -69,7 +69,7 @@ function select(problem: Problem) {
               </div>
             </header>
             <div class="briefing-scroll" tabindex="0" role="region" aria-labelledby="problem-heading">
-              <ProblemDetail :catalog="client.catalog" :slug="selected.slug" @loaded="loaded" />
+              <ProblemDetail :catalog="client.catalog" :slug="selected.slug" :selection-disabled="busy" @loaded="loaded" @select="select" />
             </div>
           </div></template>
           <template #after>

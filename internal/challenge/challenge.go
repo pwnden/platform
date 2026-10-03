@@ -13,7 +13,7 @@ import (
 
 var slugPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 
-const SupportedContractVersion = 6
+const SupportedContractVersion = 7
 
 // Installed snapshots remain readable with the consumer's current isolation.
 func supportedVersion(version int) bool { return version >= 1 && version <= SupportedContractVersion }
@@ -55,6 +55,7 @@ type Challenge struct {
 	Patched    *Patched   `toml:"patched"`
 	Content    Content    `toml:"content"`
 	Player     Player     `toml:"player"`
+	Learning   *Learning  `toml:"learning"`
 }
 
 type Player struct {

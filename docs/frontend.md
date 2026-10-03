@@ -364,3 +364,11 @@ first-frame authentication, a render acknowledgement per output frame and cleanu
 on disconnect/unmount. Its UI styles use a page-specific CSP nonce through xterm's
 document override. Submission history remains a subsequent stage. Reopening a full server URL and
 selecting the problem recovers its current run from Go, without browser persistence.
+
+## Learning connections
+
+Selected problems show prerequisite reading and a predecessor/current/successor
+view, plus related practice. Pure catalog-domain logic derives edges from declared
+concepts. Teaching objectives start collapsed with a solving-principle disclosure.
+Concept reading preserves the current workspace. Problem navigation uses the
+existing selection path and busy guard. Older catalogs hide this panel.

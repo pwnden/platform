@@ -149,6 +149,26 @@ def check_catalog(work, problems):
         declaration = tomllib.loads(manifest.read_text(encoding="utf-8"))
         names = declaration["player"]["cli"] if declaration.get("schema", 1) >= 6 else []
         assert problem.get("cli", []) == names, f'{problem["slug"]}: catalog CLI differs from installed declaration'
+        check_learning(work, declaration, problem)
+
+
+def check_learning(work, declaration, problem):
+    if declaration.get("schema", 1) < 7:
+        assert "learning" not in problem, "legacy catalog unexpectedly declares learning"
+        return {}
+    registry = installed_catalog(work) / "knowledge/catalog.toml"
+    concepts = {item["id"]: item for item in tomllib.loads(registry.read_text(encoding="utf-8"))["concepts"]}
+    queue = list(declaration["learning"]["requires"])
+    required = []
+    while queue:
+        id = queue.pop(0)
+        if id not in required:
+            required.append(id)
+            queue.extend(concepts[id]["requires"])
+    expected = {"requires": [concepts[id] for id in required],
+                "teaches": [concepts[id] for id in declaration["learning"]["teaches"]]}
+    assert problem.get("learning") == expected, "HTTP learning differs from installed declaration"
+    return {item["id"]: item for items in expected.values() for item in items}
 
 
 def check_guidance(work, origin, token, slug):
@@ -160,11 +180,13 @@ def check_guidance(work, origin, token, slug):
     brief = api(origin, token, "GET", f"/problems/{slug}")
     names = declaration["player"]["cli"] if declaration["schema"] >= 6 else []
     assert brief.get("cli", []) == names, f"{slug}: detail CLI differs from installed declaration"
+    concepts = check_learning(work, declaration, brief)
     assert brief["hint_count"] == len(hints), f"{slug}: hint count differs from installed declaration"
     assert brief["walkthrough"] == bool(walkthrough), f"{slug}: walkthrough availability differs from installed declaration"
     documents = {f"hint-{index}": path for index, path in enumerate(hints, 1)}
     if walkthrough:
         documents["walkthrough"] = walkthrough
+    documents.update({f"concept-{id}": f"../../knowledge/{id}.md" for id in concepts})
     for id, path in documents.items():
         result = api(origin, token, "GET", f"/problems/{slug}/guidance/{id}")
         expected = (directory / path).read_bytes().decode("utf-8")
@@ -173,6 +195,9 @@ def check_guidance(work, origin, token, slug):
     if not walkthrough:
         assert api(origin, token, "GET", f"/problems/{slug}/guidance/walkthrough", expected=404)["error"]["code"] == "not_found"
     assert api(origin, "incorrect", "GET", f"/problems/{slug}/guidance/walkthrough", expected=401)["error"]["code"] == "unauthorized"
+    assert api(origin, token, "GET", f"/problems/{slug}/guidance/concept-unknown-concept", expected=404)["error"]["code"] == "not_found"
+    for id in concepts:
+        assert api(origin, "incorrect", "GET", f"/problems/{slug}/guidance/concept-{id}", expected=401)["error"]["code"] == "unauthorized"
 
 
 def terminal(driver, origin, token, work, slug, mode):

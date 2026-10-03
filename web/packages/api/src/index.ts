@@ -67,6 +67,28 @@ function cli(value: unknown): { cli?: readonly string[] } {
   return { cli: names };
 }
 
+function learning(value: unknown): Pick<Problem, 'learning'> {
+  if (value === undefined) return {};
+  const info = object(value);
+  const keys = (value: unknown) => {
+    const ids = array(value).map(value => string(value));
+    if (ids.length > 32 || new Set(ids).size !== ids.length || ids.some(id => id.length > 64 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id))) throw new APIError('invalid_response', 0);
+    return ids;
+  };
+  const concepts = (value: unknown) => {
+    const items = array(value).map(value => {
+      const item = object(value);
+      const id = keys([item.id])[0]!;
+      const title = string(item.title);
+      if (!title.trim() || [...title].length > 120) throw new APIError('invalid_response', 0);
+      return { id, title, requires: keys(item.requires), related: keys(item.related) };
+    });
+    if (items.length > 256 || new Set(items.map(item => item.id)).size !== items.length) throw new APIError('invalid_response', 0);
+    return items;
+  };
+  return { learning: { requires: concepts(info.requires), teaches: concepts(info.teaches) } };
+}
+
 function route(slug: string): string {
   if (slug.length > 40 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
     throw new APIError('invalid_argument', 0);
@@ -186,7 +208,7 @@ export function createAPI(options: APIOptions): APIClient {
         return array(payload.problems).map(value => {
           const item = object(value);
           return { slug: string(item.slug), title: string(item.title), category: string(item.category), kind: kind(item.kind), ...difficulty(item.difficulty), ...completion(item.solved_at),
-            ...cli(item.cli) };
+            ...cli(item.cli), ...learning(item.learning) };
         });
       },
       async detail(slug): Promise<ProblemDetail> {
@@ -198,6 +220,7 @@ export function createAPI(options: APIOptions): APIClient {
           slug, title: string(item.title), category: string(item.category), kind: kind(item.kind),
           ...difficulty(item.difficulty),
           ...cli(item.cli),
+          ...learning(item.learning),
           ...completion(item.solved_at),
           ...(item.solved_at === undefined ? {} : { answer: string(item.answer) }),
           description: string(item.description),
@@ -215,7 +238,7 @@ export function createAPI(options: APIOptions): APIClient {
         };
       },
       async guidance(slug, id): Promise<string> {
-        if (!/^(walkthrough|hint-([1-9]|10))$/.test(id)) throw new APIError('invalid_argument', 0);
+        if (id.length > 72 || !/^(walkthrough|hint-([1-9]|10)|concept-[a-z0-9]+(-[a-z0-9]+)*)$/.test(id)) throw new APIError('invalid_argument', 0);
         const item = await request(`${route(slug)}/guidance/${id}`);
         if (item.id !== id) throw new APIError('invalid_response', 0);
         return string(item.content);

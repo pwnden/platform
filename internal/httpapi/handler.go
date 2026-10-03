@@ -336,7 +336,7 @@ func (h *handler) stopUndelivered(ctx context.Context, slug string) error {
 
 var apiSlug = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 var fileID = regexp.MustCompile(`^[a-f0-9]{64}$`)
-var guidanceID = regexp.MustCompile(`^(walkthrough|hint-([1-9]|10))$`)
+var guidanceID = regexp.MustCompile(`^(walkthrough|hint-([1-9]|10)|concept-[a-z0-9]+(-[a-z0-9]+)*)$`)
 
 func contextError(err error) error {
 	code := application.Canceled

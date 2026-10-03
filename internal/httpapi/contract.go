@@ -33,6 +33,33 @@ type Problem struct {
 	Kind       application.Kind `json:"kind"`
 	SolvedAt   *time.Time       `json:"solved_at,omitempty"`
 	CLI        []string         `json:"cli,omitempty"`
+	Learning   *Learning        `json:"learning,omitempty"`
+}
+
+type Concept struct {
+	ID       string   `json:"id"`
+	Title    string   `json:"title"`
+	Requires []string `json:"requires"`
+	Related  []string `json:"related"`
+}
+
+type Learning struct {
+	Requires []Concept `json:"requires"`
+	Teaches  []Concept `json:"teaches"`
+}
+
+func learningFrom(value *application.Learning) *Learning {
+	if value == nil {
+		return nil
+	}
+	result := &Learning{Requires: []Concept{}, Teaches: []Concept{}}
+	for _, item := range value.Requires {
+		result.Requires = append(result.Requires, Concept{item.ID, item.Title, append([]string{}, item.Requires...), append([]string{}, item.Related...)})
+	}
+	for _, item := range value.Teaches {
+		result.Teaches = append(result.Teaches, Concept{item.ID, item.Title, append([]string{}, item.Requires...), append([]string{}, item.Related...)})
+	}
+	return result
 }
 
 type ProblemList struct {
@@ -106,13 +133,13 @@ type ErrorResponse struct {
 func ProblemsFrom(result []application.Problem) ProblemList {
 	response := ProblemList{Problems: make([]Problem, 0, len(result))}
 	for _, p := range result {
-		response.Problems = append(response.Problems, Problem{Slug: p.Slug, Title: p.Title, Category: p.Category, Kind: p.Kind, Difficulty: p.Difficulty, SolvedAt: p.SolvedAt, CLI: p.CLI})
+		response.Problems = append(response.Problems, Problem{Slug: p.Slug, Title: p.Title, Category: p.Category, Kind: p.Kind, Difficulty: p.Difficulty, SolvedAt: p.SolvedAt, CLI: p.CLI, Learning: learningFrom(p.Learning)})
 	}
 	return response
 }
 
 func DetailFrom(result application.ProblemDetail) ProblemDetail {
-	response := ProblemDetail{Problem: Problem{Slug: result.Slug, Title: result.Title, Category: result.Category, Kind: result.Kind, Difficulty: result.Difficulty, CLI: result.CLI}, Description: result.Description, Files: make([]ProblemFile, 0, len(result.Files))}
+	response := ProblemDetail{Problem: Problem{Slug: result.Slug, Title: result.Title, Category: result.Category, Kind: result.Kind, Difficulty: result.Difficulty, CLI: result.CLI, Learning: learningFrom(result.Learning)}, Description: result.Description, Files: make([]ProblemFile, 0, len(result.Files))}
 	response.HintCount, response.Walkthrough = result.HintCount, result.Walkthrough
 	response.SolvedAt = result.SolvedAt
 	if result.Completion != nil {

@@ -36,7 +36,7 @@ the API returns a sanitized `409 resource_limit`. Existing managed containers
 cause this check to skip; their environments are left intact. CI runs it after
 the isolation check has completed cleanup.
 
-The CLI implements [problem contract version 6](https://github.com/pwnden/challenges/blob/main/docs/contract.md), retains version 1, 2, 3, 4 and 5 execution compatibility with the current isolation policy, checks each problem's version, and reads execution defaults and the attack rejection exit code from the challenges checkout's `contract.toml`. Problem format and learning-content validation belong to the challenges repository. The CLI checks real paths and Docker resource policy before execution, verifies flags and patch behavior, and cleans up its projects.
+The CLI implements [problem contract version 7](https://github.com/pwnden/challenges/blob/main/docs/contract.md), retains version 1, 2, 3, 4, 5 and 6 execution compatibility with the current isolation policy, checks each problem's version, and reads execution defaults and the attack rejection exit code from the challenges checkout's `contract.toml`. Problem format and learning-content validation belong to the challenges repository. The CLI checks real paths and Docker resource policy before execution, verifies flags and patch behavior, and cleans up its projects.
 
 Start with the problems stopped before running the complete check. After a successful start, the verifier stops the problem even if verification fails. On interruption it signals the active CLI, waits for its cleanup, and stops the problem it started. A failed start performs its own cleanup; a pre-existing run remains owned by its original caller.
 
@@ -85,3 +85,8 @@ problems, changing hint counts and incorrect guidance responses without Docker.
 The workflow also runs `tools/test_bootstrap.py` for activation and output-boundary failures, then runs `tools/smoke_package.py --checkout .` with only Docker and ordinary shell utilities on the child PATH. The checkout check builds inside Docker and fetches the exact official problem commit from `catalog.lock`. That commit must already be published; unpublished content fails this gate rather than switching revisions.
 
 `tools/smoke_catalog.py` checks catalog selection through the checkout entry in an isolated temporary checkout. With host Git, Go, Node, pnpm and Python absent from the child PATH, it fetches published main, reselects the explicit commit, rejects an unpublished revision and verifies lock preservation and temporary-output cleanup. The workflow runs this check before problem execution. It leaves the checked-in catalog and active installation untouched.
+
+Packaged HTTP smoke checks compare prerequisite closure and teaching metadata
+with the installed concept catalog for every problem. They read each scoped
+concept document through the authenticated API and compare exact content,
+including tests for unauthorized reads and unknown IDs.

@@ -103,13 +103,13 @@ func TestLoadErrors(t *testing.T) {
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatal("original filesystem error lost")
 	}
-	if err := os.WriteFile(filepath.Join(c.RepoRoot, "contract.toml"), []byte("version=7\n"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(c.RepoRoot, "contract.toml"), []byte("version=8\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	_, err = s.Validate(context.Background(), c.Slug)
 	requireCode(t, err, IncompatibleContract)
 	var version *challenge.VersionError
-	if !errors.As(err, &version) || version.Version != 7 {
+	if !errors.As(err, &version) || version.Version != 8 {
 		t.Fatal("original version error lost")
 	}
 }

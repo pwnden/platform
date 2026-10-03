@@ -19,7 +19,7 @@ See [durable state](storage.md) for ownership and catalog identity.
 | `GET /api/v1/workspaces` | `Workspaces.List` | `200`, retained problem environments, limit and idle duration. |
 | `GET /api/v1/problems/{slug}/workspace` | `Workspaces.View` | `200`, authenticated NDJSON ready/heartbeat stream that prepares and retains the visible environment without a terminal. |
 | `GET /api/v1/problems/{slug}` | `Details.Detail` | `200`, summary, description text and declared file metadata. |
-| `GET /api/v1/problems/{slug}/guidance/{id}` | `Guidance.Guidance` | `200`, declared hint or walkthrough Markdown after explicit activation. |
+| `GET /api/v1/problems/{slug}/guidance/{id}` | `Guidance.Guidance` | `200`, declared hint, walkthrough or scoped concept Markdown after explicit activation. |
 | `GET /api/v1/problems/{slug}/files/{id}` | `Files.Download` | `200`, binary attachment for a current declared file ID. |
 | `GET /api/v1/problems/{slug}/status` | `Observer.Status` | `200`, observed run status and owned local HTTP ingress endpoints. |
 | `POST /api/v1/problems/{slug}/browser` | HTTP adapter browsing session | `200`, `slug`, endpoint `name`, wrapper `url` and original `target` origin. |
@@ -35,6 +35,18 @@ Summaries and details include optional `cli`, an array of primary learner CLI na
 declared in contract 6 through `[player].cli`. Empty lists omit the field. The
 player searches these names alongside titles, identifiers and categories. Catalog
 listing reads metadata only. Installed contract 1–5 catalogs omit CLI metadata.
+
+Contract 7 summaries and details also include `learning` with `requires` and
+`teaches` arrays of concept objects: `id`, `title`, `requires` and `related`.
+Reference arrays contain canonical concept IDs. Prerequisites include transitive
+ancestors; teaching objectives preserve declaration order. Installed contracts
+1–6 omit this field. Listing reads metadata without opening document bodies or
+starting environments.
+
+`concept-<id>` guidance reads `knowledge/<id>.md` only for a resolved prerequisite
+or teaching objective of that problem. Unknown or undeclared IDs return
+`404 not_found`. Authentication, containment, UTF-8 and the 1 MiB limit match
+hint reads.
 
 Details add `description`, `files`, `tools`, `hint_count` and `walkthrough`. Contract 4 declares the ordered `tools` array through `[player].tools`: `web`, `files` or `terminal`. The player displays these tools and opens the first by default. Earlier catalogs derive their tools from declared resources. Contract 2 and later read the declared player brief; hint and walkthrough bodies are absent from this response. Contract 1 installations retain optional README text and have no guidance. Markdown is UTF-8, at most 1 MiB. Guidance IDs are `hint-1` through `hint-10` and `walkthrough`; only entries declared by that problem resolve. They use the same authentication, request-body and repository containment rules as other reads. The response contains `id` and Markdown `content`. It intentionally includes answer content on a walkthrough request.
 

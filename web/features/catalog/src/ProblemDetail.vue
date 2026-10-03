@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
-import type { Catalog, ProblemDetail } from '@pwnden/catalog';
+import type { Catalog, Problem, ProblemDetail } from '@pwnden/catalog';
 import { UIButton, UIPanel, UIMarkdown, UIReveal } from '@pwnden/ui';
+import ProblemConnections from './ProblemConnections.vue';
 
-const props = defineProps<{ catalog: Catalog; slug: string }>();
-const emit = defineEmits<{ loaded: [detail: ProblemDetail] }>();
+const props = defineProps<{ catalog: Catalog; slug: string; selectionDisabled?: boolean }>();
+const emit = defineEmits<{ loaded: [detail: ProblemDetail]; select: [problem: Problem] }>();
 const detail = ref<ProblemDetail>();
 const pending = ref(false);
 const failed = ref(false);
@@ -63,6 +64,7 @@ onMounted(load);
     </template>
     <slot name="play" />
     <template v-if="detail">
+      <ProblemConnections v-if="detail.learning" :catalog="catalog" :problem="detail" :disabled="selectionDisabled" class="content-section" @select="emit('select', $event)" />
       <UIPanel v-if="detail.hintCount" title="힌트" headingID="hints-heading" :heading-level="3" class="content-section">
         <UIReveal v-for="n in detail.hintCount" :key="n" :label="`힌트 ${n}`" :model-value="reading(`hint-${n}`).open" @update:model-value="open => reveal(`hint-${n}`, open)">
           <p v-if="reading(`hint-${n}`).pending" role="status">힌트를 불러오는 중…</p>

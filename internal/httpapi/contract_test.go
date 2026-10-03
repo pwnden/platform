@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/pwnden/platform/internal/application"
+	"github.com/pwnden/platform/internal/challenge"
 	"github.com/pwnden/platform/internal/progress"
 )
 
@@ -62,6 +63,21 @@ func TestProblemResponsesIncludeDeclaredCLI(t *testing.T) {
 	data, err = json.Marshal(DetailFrom(application.ProblemDetail{Problem: p}))
 	if err != nil || !strings.Contains(string(data), `"cli":["nmap","ncat"]`) {
 		t.Fatal("detail CLI omitted", string(data), err)
+	}
+}
+
+func TestLearningResponsesPreserveArrayShapeAndLegacyOmission(t *testing.T) {
+	p := application.Problem{Slug: "example", Learning: &application.Learning{Requires: []challenge.Concept{{ID: "base", Title: "Starting ability"}}}}
+	for _, response := range []any{ProblemsFrom([]application.Problem{p}), DetailFrom(application.ProblemDetail{Problem: p})} {
+		data, err := json.Marshal(response)
+		if err != nil || !strings.Contains(string(data), `"learning":`) || !strings.Contains(string(data), `"requires":[],"related":[]`) || !strings.Contains(string(data), `"teaches":[]`) {
+			t.Fatalf("learning shape: %s %v", data, err)
+		}
+	}
+	p.Learning = nil
+	data, err := json.Marshal(ProblemsFrom([]application.Problem{p}))
+	if err != nil || strings.Contains(string(data), "learning") {
+		t.Fatalf("legacy metadata: %s %v", data, err)
 	}
 }
 

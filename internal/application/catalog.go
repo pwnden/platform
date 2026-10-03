@@ -150,6 +150,16 @@ func (s *Service) Detail(ctx context.Context, slug string) (ProblemDetail, error
 		return ProblemDetail{}, loadError(ctx, "detail", slug, err)
 	}
 	result := ProblemDetail{Problem: problem(c), Files: make([]ProblemFile, 0, len(files)), Tools: c.PlayerTools()}
+	if c.Schema >= 7 {
+		concepts, err := challenge.LoadConcepts(c.RepoRoot)
+		if err != nil {
+			return ProblemDetail{}, loadError(ctx, "detail", slug, err)
+		}
+		result.Learning, err = learning(c, concepts)
+		if err != nil {
+			return ProblemDetail{}, loadError(ctx, "detail", slug, err)
+		}
+	}
 	completed, err := s.Completions(ctx)
 	if err != nil {
 		return ProblemDetail{}, err
@@ -202,6 +212,25 @@ func (s *Service) Guidance(ctx context.Context, slug, id string) (string, error)
 			n, err := strconv.Atoi(strings.TrimPrefix(id, "hint-"))
 			if err == nil && id == fmtHint(n) && n > 0 && n <= len(c.Content.Hints) {
 				name = c.Content.Hints[n-1]
+			}
+		}
+	}
+	if name == "" {
+		if c.Schema >= 7 && strings.HasPrefix(id, "concept-") {
+			concepts, err := challenge.LoadConcepts(c.RepoRoot)
+			if err != nil {
+				return "", loadError(ctx, "guidance", slug, err)
+			}
+			info, err := learning(c, concepts)
+			if err != nil {
+				return "", loadError(ctx, "guidance", slug, err)
+			}
+			key := strings.TrimPrefix(id, "concept-")
+			for _, item := range append(append([]challenge.Concept{}, info.Requires...), info.Teaches...) {
+				if item.ID == key {
+					name = "../../knowledge/" + item.ID + ".md"
+					break
+				}
 			}
 		}
 	}

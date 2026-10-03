@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pwnden/platform/internal/challenge"
 	"github.com/pwnden/platform/internal/progress"
 	"github.com/pwnden/platform/internal/runtime"
 )
@@ -29,6 +30,7 @@ type Problem struct {
 	Kind       Kind
 	SolvedAt   *time.Time
 	CLI        []string
+	Learning   *Learning
 }
 
 type Execution struct {
@@ -62,12 +64,26 @@ func (s *Service) List(ctx context.Context) ([]Problem, error) {
 		return nil, loadError(ctx, "list", "", err)
 	}
 	results := make([]Problem, 0, len(challenges))
+	var concepts map[string]challenge.Concept
+	for _, c := range challenges {
+		if c.Schema >= 7 {
+			concepts, err = challenge.LoadConcepts(s.repo)
+			if err != nil {
+				return nil, loadError(ctx, "list", "", err)
+			}
+			break
+		}
+	}
 	completed, err := s.Completions(ctx)
 	if err != nil {
 		return nil, err
 	}
 	for _, c := range challenges {
 		item := problem(c)
+		item.Learning, err = learning(c, concepts)
+		if err != nil {
+			return nil, loadError(ctx, "list", c.Slug, err)
+		}
 		if saved, ok := completed[c.Slug]; ok {
 			item.SolvedAt = &saved.SolvedAt
 		}

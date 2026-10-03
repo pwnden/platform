@@ -29,3 +29,8 @@ The name is `pwnden`. The player uses a hacker terminal visual language, subtly 
 ## Evidence on Hand
 
 The local challenges checkout contains `rotor-lock` and `note-vault`, each with a player brief, three progressive hints and a complete explanation. The player supports list, detail, automatic source preview, optional download, hints, walkthrough, automatic environment preparation and cleanup, status, flag submission and interactive terminals. The selected tool's icon actions share the common tab strip. Demonstration content used in visual verification is synthetic and stays separate from player data.
+
+Selected problems expose prerequisite reading and connections to earlier, later
+and related exercises from declared concepts. Every problem remains directly
+accessible. Teaching objectives start collapsed because labels may reveal
+solving principles.
