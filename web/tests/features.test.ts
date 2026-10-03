@@ -64,17 +64,24 @@ it('reads prerequisite notes in place and selects linked problems only on explic
 
 it('retries failed relationship reads and keeps learning goals closed initially', async () => {
   const current = { slug: 'test', title: 'Test', category: 'web', kind: 'service' as const, learning: { requires: [], teaches: [{ id: 'private-goal', title: '풀이 핵심 원리', requires: [], related: [] }] } };
-  const catalog: Catalog = { list: vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce([]), detail: vi.fn(), download: vi.fn(), guidance: vi.fn() };
+  const catalog: Catalog = { list: vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce([]), detail: vi.fn(), download: vi.fn(), guidance: vi.fn(async () => '# 풀이 핵심 원리\n설명 내용') };
   const root = node('root');
   renderer.render(h(ProblemConnections, { catalog, problem: current }), root); await settle();
   expect(text(root)).toContain('문제 연결을 불러오지 못했습니다.');
   expect(text(root)).not.toContain('풀이 핵심 원리');
+  expect(catalog.guidance).not.toHaveBeenCalled();
   await click(button(root, '연결 다시 불러오기')); await settle();
   expect(text(root)).not.toContain('문제 연결을 불러오지 못했습니다.');
   const reveal = flatten(root).find(item => item.type === 'reveal' && item.props.label === '학습 목표 보기 · 풀이 원리 포함')!;
   (reveal.props['onUpdate:modelValue'] as (value: boolean) => void)(true); await settle();
   expect(text(root)).toContain('풀이 핵심 원리');
-  expect(catalog.guidance).not.toHaveBeenCalled();
+  expect(catalog.guidance).toHaveBeenCalledExactlyOnceWith('test', 'concept-private-goal');
+  expect(flatten(reveal).filter(item => item.type === 'reveal')).toHaveLength(1);
+  (reveal.props['onUpdate:modelValue'] as (value: boolean) => void)(false); await settle();
+  expect(text(root)).not.toContain('설명 내용');
+  (reveal.props['onUpdate:modelValue'] as (value: boolean) => void)(true); await settle();
+  expect(text(root)).toContain('설명 내용');
+  expect(catalog.guidance).toHaveBeenCalledTimes(1);
   renderer.render(null, root);
 });
 function workspace(status: RunStatus): Workspaces {
