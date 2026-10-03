@@ -55,7 +55,10 @@ After problem verification, the workflow builds a native Linux platform package 
 `tools/smoke_http.py` also exercises the packaged local server with only Docker on its child PATH: embedded HTML/script/style delivery, authenticated catalog, both problem kinds, web problem solving, incorrect and correct submissions, preserved state and rotated credentials after server restart, and repeatable stop. This driver checks HTTP behavior; browser interaction is a separate check. See [local server](local-server.md) for the local command and unit/concurrency coverage.
 
 The HTTP catalog check compares the API response with all manifests in the
-installed catalog. The same smoke also solves Note Vault through the common
+installed catalog. It derives each problem's hint count, hint order and
+walkthrough availability from its manifest, compares every guidance response
+with the declared file, and checks missing-document and authentication responses.
+The same smoke also solves Note Vault through the common
 browser proxy and compares its flag with the common HTTP ingress endpoint, checking wrapper
 isolation and authenticated preparation. It exercises HTTP; native iframe
 history and visual interaction require a Browser Plugin check.
@@ -64,7 +67,7 @@ The catalog comparison includes newly added problems. Rotor Lock and Note Vault
 exercise representative file and service flows. New declarations join catalog
 and execution checks automatically. Run `python3 -B tools/test_smoke_http.py` to
 check discovery coverage for additional, missing, unexpected and duplicate
-problems without Docker.
+problems, changing hint counts and incorrect guidance responses without Docker.
 
 The workflow also runs `tools/test_bootstrap.py` for activation and output-boundary failures, then runs `tools/smoke_package.py --checkout .` with only Docker and ordinary shell utilities on the child PATH. The checkout check builds inside Docker and fetches the exact official problem commit from `catalog.lock`. That commit must already be published; unpublished content fails this gate rather than switching revisions.
 

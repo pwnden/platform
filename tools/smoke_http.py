@@ -146,6 +146,28 @@ def check_catalog(work, problems):
     assert expected and set(actual) == expected and len(actual) == len(expected), "HTTP catalog differs from installed problems"
 
 
+def check_guidance(work, origin, token, slug):
+    directory = installed_catalog(work) / "challenges" / slug
+    declaration = tomllib.loads((directory / "challenge.toml").read_text(encoding="utf-8"))
+    content = declaration.get("content", {}) if declaration["schema"] >= 2 else {}
+    hints = content.get("hints", [])
+    walkthrough = content.get("walkthrough", "")
+    brief = api(origin, token, "GET", f"/problems/{slug}")
+    assert brief["hint_count"] == len(hints), f"{slug}: hint count differs from installed declaration"
+    assert brief["walkthrough"] == bool(walkthrough), f"{slug}: walkthrough availability differs from installed declaration"
+    documents = {f"hint-{index}": path for index, path in enumerate(hints, 1)}
+    if walkthrough:
+        documents["walkthrough"] = walkthrough
+    for id, path in documents.items():
+        result = api(origin, token, "GET", f"/problems/{slug}/guidance/{id}")
+        expected = (directory / path).read_bytes().decode("utf-8")
+        assert result["id"] == id and result["content"].strip() and result["content"] == expected, f"{slug}: {id} differs from installed document"
+    assert api(origin, token, "GET", f"/problems/{slug}/guidance/hint-{len(hints)+1}", expected=404)["error"]["code"] == "not_found"
+    if not walkthrough:
+        assert api(origin, token, "GET", f"/problems/{slug}/guidance/walkthrough", expected=404)["error"]["code"] == "not_found"
+    assert api(origin, "incorrect", "GET", f"/problems/{slug}/guidance/walkthrough", expected=401)["error"]["code"] == "unauthorized"
+
+
 def terminal(driver, origin, token, work, slug, mode):
     settings = {"origin": origin, "token": token, "root": str(installed_catalog(work)), "slug": slug, "mode": mode}
     result = subprocess.run([str(driver)], input=json.dumps(settings), capture_output=True, text=True, timeout=120)
@@ -188,26 +210,16 @@ def main():
         check_assets(origin, token)
         problems = api(origin, token, "GET", "/problems")["problems"]
         check_catalog(work, problems)
+        for problem in problems:
+            check_guidance(work, origin, token, problem["slug"])
         assert api(origin, "incorrect", "GET", "/problems", expected=401)["error"]["code"] == "unauthorized"
         detail = api(origin, token, "GET", "/problems/rotor-lock")
         assert detail["description"] and len(detail["files"]) == 1
-        with tarfile.open(binary.with_name("catalog.tar.gz"), "r:gz") as archive:
-            name = next(name for name in archive.getnames() if name.endswith("/contract.toml"))
-            with archive.extractfile(name) as source:
-                content_expected = tomllib.loads(source.read().decode())["version"] >= 2
-        assert detail["walkthrough"] == content_expected, "catalog content availability disagrees with contract"
-        if content_expected:
-            assert detail["hint_count"] == 3
+        if detail["walkthrough"]:
             assert "go run" not in detail["description"] and file_flag not in detail["description"]
             for slug in ("rotor-lock", "note-vault"):
                 brief = api(origin, token, "GET", f"/problems/{slug}")
-                assert brief["hint_count"] == 3 and brief["walkthrough"]
                 assert "go run" not in brief["description"] and "solve/README.md" not in brief["description"]
-                for id in ("hint-1", "hint-2", "hint-3", "walkthrough"):
-                    content = api(origin, token, "GET", f"/problems/{slug}/guidance/{id}")
-                    assert content["id"] == id and content["content"].strip()
-                assert api(origin, token, "GET", f"/problems/{slug}/guidance/hint-4", expected=404)["error"]["code"] == "not_found"
-                assert api(origin, "incorrect", "GET", f"/problems/{slug}/guidance/walkthrough", expected=401)["error"]["code"] == "unauthorized"
         file = detail["files"][0]
         assert file["name"] == "files/checker.py" and len(file["id"]) == 64
         with tarfile.open(binary.with_name("catalog.tar.gz"), "r:gz") as archive:
