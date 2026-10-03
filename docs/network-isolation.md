@@ -93,6 +93,13 @@ containers in total, including connectors and workspace keepers. Docker-reported
 CPU/RAM capacity clips those limits. Created and stopped managed containers count
 until removal; unrelated applications do not count.
 
+The local server responds to a budget denial by removing its oldest disconnected
+workspace and retrying creation. It keeps connected views and terminals and
+never reclaims CLI runs or another installation's environments. Removal discards
+that workspace's temporary files and shell state. Cleanup failure stops retries
+and retains ownership for recovery. Admission still enforces the same budget on
+every attempt; automatic recovery does not increase limits.
+
 `PWNDEN_CONTAINER_CPUS` selects a per-service, command and terminal CPU ceiling
 of 1 or 2 (default 2). This can tighten the policy on a smaller machine; restart
 existing problems after changing it. Connectors and workspace keepers retain

@@ -33,8 +33,14 @@ The [interactive terminal](terminal.md) automatically prepares the selected
 problem and connects its toolbox shell. Terminal refresh reattaches while retaining
 the environment. Problem
 switching, page refresh and hidden browser tabs retain the same shell and service
-state for ten inactive minutes. Returning cancels expiry. Up to ten problem
-environments are retained; the player explicitly ends one when capacity is reached.
+state for up to ten inactive minutes. Returning cancels expiry. Up to ten problem
+environments are retained. When that limit or the shared Docker resource budget
+is reached, the server removes its oldest disconnected environment and retries
+preparation automatically, repeating only while cleanup succeeds. Connected
+views and terminals, CLI runs and other installations remain protected. An
+automatically removed environment loses its temporary files and shell state;
+returning prepares a new environment. If no eligible idle environment can free
+enough capacity, preparation reports `workspace_full` or `resource_limit`.
 Shell exit removes the toolbox while a visible problem retains its services.
 Inactivity cleanup and normal server shutdown remove both. TCP endpoints are
 displayed as addresses for terminal tools. Answer checking remains in Go through

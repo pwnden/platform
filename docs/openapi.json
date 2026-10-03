@@ -333,7 +333,7 @@
             "properties": {
               "code": {
                 "type": "string",
-                "enum": ["invalid_argument", "not_found", "already_running", "not_running", "workspace_full", "terminal_busy", "workspace_busy", "incompatible_contract", "validation_failed", "setup_required", "setup_failed", "storage_failed", "canceled", "deadline_exceeded", "execution_failed", "cleanup_failed", "internal_error", "invalid_request", "unauthorized", "forbidden", "method_not_allowed", "payload_too_large", "unsupported_media_type"]
+                "enum": ["invalid_argument", "not_found", "already_running", "not_running", "workspace_full", "resource_limit", "terminal_busy", "workspace_busy", "incompatible_contract", "validation_failed", "setup_required", "setup_failed", "storage_failed", "canceled", "deadline_exceeded", "execution_failed", "cleanup_failed", "internal_error", "invalid_request", "unauthorized", "forbidden", "method_not_allowed", "payload_too_large", "unsupported_media_type"]
               },
               "message": {"type": "string"},
               "operation": {"type": "string"},

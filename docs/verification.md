@@ -23,6 +23,19 @@ The local default is 2; the only accepted values are 1 and 2. Restart existing
 problems after changing this setting. Unit tests exercise the default and the
 tighter policy separately.
 
+Automatic resource recovery has a separate actual Docker regression check:
+
+```sh
+PWNDEN_TEST_CHALLENGES="$(realpath ../challenges)" go test ./internal/httpapi -run '^TestWorkspaceResourcePressureDocker$' -count=1 -v
+```
+
+It uses a disposable catalog and a three-container budget. An HTTP request for a
+new problem automatically replaces a disconnected run while preserving a
+connected problem and a CLI-owned run. With all remaining environments protected,
+the API returns a sanitized `409 resource_limit`. Existing managed containers
+cause this check to skip; their environments are left intact. CI runs it after
+the isolation check has completed cleanup.
+
 The CLI implements [problem contract version 5](https://github.com/pwnden/challenges/blob/main/docs/contract.md), retains version 1, 2, 3 and 4 execution compatibility with the current isolation policy, checks each problem's version, and reads execution defaults and the attack rejection exit code from the challenges checkout's `contract.toml`. Problem format and learning-content validation belong to the challenges repository. The CLI checks real paths and Docker resource policy before execution, verifies flags and patch behavior, and cleans up its projects.
 
 Start with the problems stopped before running the complete check. After a successful start, the verifier stops the problem even if verification fails. On interruption it signals the active CLI, waits for its cleanup, and stops the problem it started. A failed start performs its own cleanup; a pre-existing run remains owned by its original caller.

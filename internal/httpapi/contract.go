@@ -150,7 +150,9 @@ func ErrorFrom(err error) (int, ErrorResponse) {
 	message := ""
 	switch failure.Code {
 	case application.WorkspaceFull:
-		status, message = http.StatusConflict, "End a retained environment before opening another."
+		status, message = http.StatusConflict, "The environment limit is occupied by connected or unavailable environments."
+	case application.ResourceLimit:
+		status, message = http.StatusConflict, "Runtime resources are occupied; no idle environment could be reclaimed."
 	case application.TerminalBusy:
 		status, message = http.StatusConflict, "The terminal is attached in another tab."
 	case application.WorkspaceBusy:

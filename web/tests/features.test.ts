@@ -824,6 +824,27 @@ it('offers environment limit recovery without requiring the terminal tool', asyn
   renderer.render(null, root);
 });
 
+it('explains protected resource pressure in both workspace and terminal preparation', async () => {
+  const environments: Workspaces = {
+    connect: vi.fn((_slug, failed) => { failed('resource_limit'); return { ready: Promise.reject(new Error('resource_limit')), close: vi.fn() }; }),
+    list: vi.fn(), stop: vi.fn(),
+  };
+  const player: Player = { browser: unusedBrowser, status: vi.fn(), run: vi.fn(), stop: vi.fn(), submit: vi.fn() };
+  const root = node('root');
+  renderer.render(h(PlayPanel, { player, workspaces: environments, slug: 'test', kind: 'service' }), root); await settle();
+  expect(text(root)).toContain('자동으로 정리할 대기 환경이 없습니다');
+  expect(environments.stop).not.toHaveBeenCalled();
+  renderer.render(null, root);
+  const terminals = {
+    connect: vi.fn((_slug, _size, receive) => { receive({ type: 'error', code: 'resource_limit' }); return { ready: Promise.reject(new Error('resource_limit')), close: vi.fn() }; }),
+    list: vi.fn(), stop: vi.fn(),
+  };
+  renderer.render(h(TerminalPanel, { terminals, slug: 'test' }), root); await settle();
+  expect(text(root)).toContain('자동으로 정리할 대기 환경이 없습니다');
+  expect(terminals.stop).not.toHaveBeenCalled();
+  renderer.render(null, root);
+});
+
 it('downloads only the selected declared file from the materials panel', async () => {
   const id = 'a'.repeat(64);
   const catalog: Catalog = {

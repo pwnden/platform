@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -17,7 +18,7 @@ func TestRuntimeBudget(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, cost := range []resourceCost{{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}} {
-		if err := checkBudget(limits, cost, limits); err == nil {
+		if err := checkBudget(limits, cost, limits); !errors.Is(err, ErrResourceLimit) {
 			t.Fatal("budget dimension not enforced", cost)
 		}
 	}

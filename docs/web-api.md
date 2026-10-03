@@ -85,7 +85,7 @@ Every unsuccessful response has this shape:
 | `403` | transport `forbidden` |
 | `404` | `not_found` |
 | `405` | transport `method_not_allowed` |
-| `409` | `already_running`, `not_running` |
+| `409` | `already_running`, `not_running`, `workspace_full`, `resource_limit`, `terminal_busy`, `workspace_busy` |
 | `413` | transport `payload_too_large` |
 | `415` | transport `unsupported_media_type` |
 | `422` | `incompatible_contract`, `validation_failed` |

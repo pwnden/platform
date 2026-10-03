@@ -71,6 +71,7 @@ Use `errors.As(err, &applicationError)` with `var applicationError *application.
 | `incompatible_contract` | Repository or problem contract version is unsupported. |
 | `already_running` | A service run is already recorded. |
 | `not_running` | A service operation requires saved run state that is absent. |
+| `resource_limit` | Container creation would exceed the shared Docker resource budget. Managed workspaces first reclaim their own disconnected environments and retry; connected environments and other owners remain protected. |
 | `validation_failed` | Resolved Compose validation could not complete or rejected the execution configuration. |
 | `execution_failed` | Startup, endpoint discovery, or user toolbox execution failed. |
 | `verification_failed` | Automatic solution or patch verification failed, including execution errors without a more specific code. |

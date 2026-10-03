@@ -15,10 +15,11 @@ type WorkspaceView struct {
 }
 
 func (m *Workspaces) View(ctx context.Context, slug string) (*WorkspaceView, error) {
-	e, err := m.reserve(slug)
+	e, err := m.reserve(ctx, slug)
 	if err != nil {
 		return nil, err
 	}
+	defer m.finishPreparation(e)
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if m.entry(slug) != e {
@@ -28,7 +29,7 @@ func (m *Workspaces) View(ctx context.Context, slug string) (*WorkspaceView, err
 	if err == nil && status.Kind == KindService {
 		e.service = true
 		if status.State == "stopped" {
-			_, err = m.backend.Run(ctx, slug)
+			err = m.startService(ctx, e)
 			if err == nil {
 				status, err = m.backend.Status(ctx, slug)
 			}

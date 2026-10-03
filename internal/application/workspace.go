@@ -34,15 +34,18 @@ type Workspaces struct {
 	failures error
 }
 type workspace struct {
-	mu       sync.Mutex
-	slug     string
-	service  bool
-	terminal *terminalProcess
-	attached *TerminalAttachment
-	viewers  int
-	timer    *time.Timer
-	expires  *time.Time
-	cancel   context.CancelFunc
+	// Accessed under the manager mutex, including before this entry is locked.
+	preparing  int
+	reclaiming chan struct{}
+	mu         sync.Mutex
+	slug       string
+	service    bool
+	terminal   *terminalProcess
+	attached   *TerminalAttachment
+	viewers    int
+	timer      *time.Timer
+	expires    *time.Time
+	cancel     context.CancelFunc
 }
 
 func NewWorkspaces(ctx context.Context, backend WorkspaceBackend) *Workspaces {
@@ -52,19 +55,56 @@ func NewWorkspaces(ctx context.Context, backend WorkspaceBackend) *Workspaces {
 func workspaceError(slug string, code Code, cause error) error {
 	return &Error{Code: code, Operation: "workspace", Slug: slug, Cause: cause}
 }
-func (m *Workspaces) reserve(slug string) (*workspace, error) {
+func (m *Workspaces) reserve(ctx context.Context, slug string) (*workspace, error) {
+	for attempts := 0; ; attempts++ {
+		if err := errors.Join(ctx.Err(), m.ctx.Err()); err != nil {
+			return nil, operationError(ctx, "workspace", slug, Canceled, err)
+		}
+		e, err := m.reserveSlot(slug)
+		var pending *workspaceReclaim
+		if errors.As(err, &pending) {
+			select {
+			case <-pending.done:
+				continue
+			case <-ctx.Done():
+				return nil, operationError(ctx, "workspace", slug, Canceled, ctx.Err())
+			case <-m.ctx.Done():
+				return nil, workspaceError(slug, Canceled, m.ctx.Err())
+			}
+		}
+		var failure *Error
+		if !errors.As(err, &failure) || failure.Code != WorkspaceFull {
+			return e, err
+		}
+		if attempts >= m.limit {
+			return nil, err
+		}
+		reclaimed, cleanup := m.reclaimIdle(ctx, nil)
+		if cleanup != nil {
+			return nil, cleanup
+		}
+		if !reclaimed {
+			return nil, err
+		}
+	}
+}
+func (m *Workspaces) reserveSlot(slug string) (*workspace, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.closed || m.ctx.Err() != nil {
 		return nil, workspaceError(slug, Canceled, context.Canceled)
 	}
 	if e := m.entries[slug]; e != nil {
+		if e.reclaiming != nil {
+			return nil, &workspaceReclaim{e.reclaiming}
+		}
+		e.preparing++
 		return e, nil
 	}
 	if len(m.entries) >= m.limit {
 		return nil, workspaceError(slug, WorkspaceFull, errors.New("retained environment limit reached"))
 	}
-	e := &workspace{slug: slug}
+	e := &workspace{slug: slug, preparing: 1}
 	if journal, ok := m.backend.(WorkspaceJournal); ok {
 		if err := journal.TrackWorkspace(slug); err != nil {
 			return nil, err
@@ -110,8 +150,9 @@ func (m *Workspaces) idleLocked(e *workspace) {
 	e.timer = time.AfterFunc(m.idle, func() {
 		e.mu.Lock()
 		defer e.mu.Unlock()
-		if m.entry(e.slug) == e && e.attached == nil && e.viewers == 0 && e.expires == &at {
+		if e.attached == nil && e.viewers == 0 && e.expires == &at && m.claimIdle(e) {
 			m.stopLocked(e)
+			m.finishReclaim(e)
 		}
 	})
 }
@@ -164,16 +205,22 @@ func (m *Workspaces) List() []WorkspaceInfo {
 	return result
 }
 func (m *Workspaces) Run(ctx context.Context, slug string) (RunInfo, error) {
-	e, err := m.reserve(slug)
+	e, err := m.reserve(ctx, slug)
 	if err != nil {
 		return RunInfo{}, err
 	}
+	defer m.finishPreparation(e)
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if m.entry(slug) != e {
 		return RunInfo{}, workspaceError(slug, Canceled, context.Canceled)
 	}
-	result, err := m.backend.Run(ctx, slug)
+	var result RunInfo
+	err = m.retryResources(ctx, e, func() error {
+		var failure error
+		result, failure = m.backend.Run(ctx, slug)
+		return failure
+	})
 	if err != nil {
 		var operation *Error
 		if errors.As(err, &operation) && (operation.Code == CleanupFailed || operation.Code == AlreadyRunning) {
@@ -238,10 +285,11 @@ func (m *Workspaces) EndTerminal(slug string) error {
 	return nil
 }
 func (m *Workspaces) Attach(slug string, cols, rows int) (*TerminalAttachment, error) {
-	e, err := m.reserve(slug)
+	e, err := m.reserve(m.ctx, slug)
 	if err != nil {
 		return nil, err
 	}
+	defer m.finishPreparation(e)
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if m.entry(slug) != e || m.ctx.Err() != nil {
@@ -268,12 +316,16 @@ func (m *Workspaces) Attach(slug string, cols, rows int) (*TerminalAttachment, e
 		if failure == nil && status.Kind == KindService {
 			e.service = true
 			if status.State == "stopped" {
-				_, failure = m.backend.Run(ctx, slug)
+				failure = m.startService(ctx, e)
 			}
 		}
 		var shell TerminalSession
 		if failure == nil {
-			shell, failure = m.backend.OpenTerminal(ctx, slug, cols, rows)
+			failure = m.retryResources(ctx, e, func() error {
+				var err error
+				shell, err = m.backend.OpenTerminal(ctx, slug, cols, rows)
+				return err
+			})
 		}
 		deadline.Stop()
 		if failure != nil {

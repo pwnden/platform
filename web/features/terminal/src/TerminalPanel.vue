@@ -43,7 +43,8 @@ async function connect() {
         failed.value = true;
         const reasons: Record<string, string> = {
           terminal_busy: '다른 탭에서 이 문제의 터미널을 사용 중입니다.',
-          workspace_full: '최대 10개 환경이 유지 중입니다. 환경 하나를 종료한 뒤 다시 연결하세요.',
+          workspace_full: '최대 10개 환경이 사용 중이거나 정리할 수 없는 상태입니다. 여유가 생긴 뒤 다시 연결하세요.',
+          resource_limit: '실행 자원 한도가 사용 중이며 자동으로 정리할 대기 환경이 없습니다. 여유가 생긴 뒤 다시 연결하세요.',
           unauthorized: '서버가 출력한 전체 주소로 다시 접속하세요.',
           invalid_request: '페이지를 새로고침한 뒤 다시 연결하세요.',
           deadline_exceeded: '환경 준비 시간이 끝났습니다. 다시 연결하세요.',

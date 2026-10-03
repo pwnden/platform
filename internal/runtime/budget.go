@@ -19,6 +19,8 @@ import (
 const managedLabel = "pwnden.managed"
 const budgetInfoFormat = `{"ID":{{json .ID}},"NCPU":{{.NCPU}},"MemTotal":{{.MemTotal}}}`
 
+var ErrResourceLimit = errors.New("pwnden runtime budget exceeded")
+
 type resourceCost struct {
 	CPUs, Memory, PIDs int64
 	Containers         int64
@@ -78,7 +80,7 @@ func runtimeBudget(cpus int64, memory int64) (resourceCost, error) {
 func checkBudget(used, requested, limits resourceCost) error {
 	total := used.add(requested)
 	if total.CPUs > limits.CPUs || total.Memory > limits.Memory || total.PIDs > limits.PIDs || total.Containers > limits.Containers {
-		return fmt.Errorf("pwnden runtime budget exceeded: would use %.1f/%.1f CPUs, %d/%d MiB memory, %d/%d PIDs, %d/%d containers; close another environment or adjust PWNDEN_RUNTIME_*", float64(total.CPUs)/1e9, float64(limits.CPUs)/1e9, total.Memory>>20, limits.Memory>>20, total.PIDs, limits.PIDs, total.Containers, limits.Containers)
+		return fmt.Errorf("%w: would use %.1f/%.1f CPUs, %d/%d MiB memory, %d/%d PIDs, %d/%d containers", ErrResourceLimit, float64(total.CPUs)/1e9, float64(limits.CPUs)/1e9, total.Memory>>20, limits.Memory>>20, total.PIDs, limits.PIDs, total.Containers, limits.Containers)
 	}
 	return nil
 }

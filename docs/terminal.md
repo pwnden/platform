@@ -3,7 +3,7 @@
 Selecting a problem prepares its environment through the independent workspace
 view stream. The challenges-owned tool declaration determines whether Terminal
 is displayed. Opening its tab for the first time starts the shell automatically.
-Reentering within ten inactive minutes attaches to the same shell: working
+Reentering within ten inactive minutes, while capacity remains available, attaches to the same shell: working
 directory, environment variables, history, temporary files and background jobs
 remain available. A hidden page or problem switch releases problem presence and
 terminal attachment; returning cancels expiry. Tool switches within the selected
@@ -21,8 +21,12 @@ inactivity cleanup to finish.
 
 Up to ten problem environments are retained per server. An environment includes
 its service containers and, when used, one toolbox; the limit counts problems, not containers.
-At capacity, existing work remains intact. The fixed submission bar offers a retained-environment recovery overlay even
-when the problem has no Terminal tool.
+At the environment limit or shared resource budget, the server automatically
+removes its oldest disconnected environment and retries. Connected views and
+terminals remain intact, as do CLI runs and other installations. Removal discards
+temporary files, shell history and background jobs; returning starts a new
+environment. If only connected or uncleanable environments remain, the fixed
+submission bar reports the limit even when the problem has no Terminal tool.
 
 ## Input and isolation
 

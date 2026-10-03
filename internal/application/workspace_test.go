@@ -213,7 +213,7 @@ func TestWorkspaceReconnectToShorterScreenPreservesRecentOutput(t *testing.T) {
 	}
 	next.Close()
 }
-func TestWorkspaceLimitPreservesExistingEnvironments(t *testing.T) {
+func TestWorkspaceLimitReclaimsOldestDisconnectedEnvironment(t *testing.T) {
 	b := &workspaceBackend{}
 	m := NewWorkspaces(context.Background(), b)
 	t.Cleanup(func() { m.Close() })
@@ -221,15 +221,23 @@ func TestWorkspaceLimitPreservesExistingEnvironments(t *testing.T) {
 		a := attachWorkspace(t, m, string(rune('a'+i)))
 		a.Close()
 	}
-	_, err := m.Attach("overflow", 80, 24)
-	var failure *Error
-	if !errors.As(err, &failure) || failure.Code != WorkspaceFull || b.opens.Load() != 10 {
-		t.Fatalf("limit not enforced: %v", err)
-	}
-	if err := m.Stop("a"); err != nil {
-		t.Fatal(err)
-	}
 	attachWorkspace(t, m, "overflow")
+	if m.entry("a") != nil || m.entry("b") == nil || len(m.List()) != WorkspaceLimit || b.opens.Load() != 11 {
+		t.Fatal("oldest disconnected environment was not automatically replaced")
+	}
+}
+func TestWorkspaceLimitProtectsAttachedTerminals(t *testing.T) {
+	b := &workspaceBackend{}
+	m := NewWorkspaces(context.Background(), b)
+	t.Cleanup(func() { m.Close() })
+	for i := 0; i < WorkspaceLimit; i++ {
+		attachWorkspace(t, m, string(rune('a'+i)))
+	}
+	_, err := m.Attach("overflow", 80, 24)
+	requireCode(t, err, WorkspaceFull)
+	if b.opens.Load() != WorkspaceLimit || len(m.List()) != WorkspaceLimit {
+		t.Fatal("capacity pressure interrupted attached terminals")
+	}
 }
 func TestWorkspaceDetachedOutputAndScreenRestore(t *testing.T) {
 	b := &workspaceBackend{}

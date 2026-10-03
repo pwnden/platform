@@ -56,6 +56,7 @@ func TestPublicErrorClassificationAndPrivacy(t *testing.T) {
 	for code, expected := range map[application.Code]int{
 		application.InvalidArgument: http.StatusBadRequest, application.NotFound: http.StatusNotFound,
 		application.AlreadyRunning: http.StatusConflict, application.NotRunning: http.StatusConflict,
+		application.WorkspaceFull: http.StatusConflict, application.ResourceLimit: http.StatusConflict,
 		application.IncompatibleContract: http.StatusUnprocessableEntity, application.ValidationFailed: http.StatusUnprocessableEntity,
 		application.SetupRequired: http.StatusServiceUnavailable, application.SetupFailed: http.StatusServiceUnavailable,
 		application.StorageFailed: http.StatusServiceUnavailable,

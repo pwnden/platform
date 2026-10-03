@@ -13,6 +13,7 @@ type Code string
 
 const (
 	WorkspaceFull        Code = "workspace_full"
+	ResourceLimit        Code = "resource_limit"
 	TerminalBusy         Code = "terminal_busy"
 	WorkspaceBusy        Code = "workspace_busy"
 	InvalidArgument      Code = "invalid_argument"
@@ -57,6 +58,8 @@ func operationError(ctx context.Context, operation, slug string, code Code, caus
 			code = AlreadyRunning
 		case errors.Is(cause, runtime.ErrNotRunning):
 			code = NotRunning
+		case errors.Is(cause, runtime.ErrResourceLimit):
+			code = ResourceLimit
 		}
 	}
 	return &Error{Code: code, Operation: operation, Slug: slug, Cause: cause}

@@ -38,7 +38,8 @@ async function prepare() {
       if (!active || current !== generation) return;
       status.value = undefined; emit('status', undefined);
       const reasons: Record<string, string> = {
-        workspace_full: '환경 10개가 유지 중입니다. 환경 하나를 정리한 뒤 다시 준비하세요.',
+        workspace_full: '환경 10개가 사용 중이거나 정리할 수 없는 상태입니다. 여유가 생긴 뒤 다시 연결하세요.',
+        resource_limit: '실행 자원 한도가 사용 중이며 자동으로 정리할 대기 환경이 없습니다. 여유가 생긴 뒤 다시 연결하세요.',
         unauthorized: '서버가 출력한 전체 주소로 다시 접속하세요.',
         network_error: '서버 연결을 확인한 뒤 다시 연결하세요.',
         not_running: '풀이 환경이 종료되었습니다. 다시 연결하세요.',
