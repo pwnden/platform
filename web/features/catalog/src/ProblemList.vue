@@ -3,18 +3,19 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import type { Catalog, Problem } from '@pwnden/catalog';
 import { UIButton, UIToggleButton, UIPagination, UITextField, UISelect, UIPanel, UIIconButton, UIIcon, UIDifficultyBadge, difficultyLevels } from '@pwnden/ui';
 import { categoryLabel, filterProblems } from './browse';
+import type { BrowseState } from './browse';
 
-const props = defineProps<{ catalog: Catalog; selectionDisabled?: boolean; selectedSlug?: string | undefined; completedSlug?: string }>();
-const emit = defineEmits<{ select: [problem: Problem] }>();
+const props = defineProps<{ catalog: Catalog; selectionDisabled?: boolean; selectedSlug?: string | undefined; completedSlug?: string; browse?: BrowseState }>();
+const emit = defineEmits<{ select: [problem: Problem]; 'update:browse': [state: BrowseState] }>();
 const problems = ref<readonly Problem[]>([]);
 watch(() => props.completedSlug, slug => { if (slug) problems.value = problems.value.map(problem => problem.slug === slug ? { ...problem, solvedAt: new Date().toISOString() } : problem); });
 const pending = ref(false);
 const failed = ref(false);
-const query = ref('');
-const category = ref('');
-const difficulty = ref('');
-const order = ref('title');
-const page = ref(1);
+const query = ref(props.browse?.query ?? '');
+const category = ref(props.browse?.category ?? '');
+const difficulty = ref(props.browse?.difficulty ?? '');
+const order = ref(props.browse?.order ?? 'title');
+const page = ref(props.browse?.page ?? 1);
 const pageSize = 20;
 const results = ref<HTMLElement>();
 const filtered = computed(() => filterProblems(problems.value, query.value, category.value, difficulty.value, order.value));
@@ -39,7 +40,18 @@ const options = computed(() => {
   return [{ value: '', label: '전체 분야' }, ...[...counts].sort(([a], [b]) => categoryLabel(a).localeCompare(categoryLabel(b), 'ko'))
     .map(([value, count]) => ({ value, label: `${categoryLabel(value)} (${count})` }))];
 });
-watch([query, category, difficulty, order], () => { page.value = 1; });
+let restoring = false;
+watch(() => props.browse, state => {
+  if (!state) return;
+  restoring = true;
+  query.value = state.query; category.value = state.category; difficulty.value = state.difficulty;
+  order.value = state.order; page.value = state.page;
+  restoring = false;
+});
+watch([query, category, difficulty, order], () => { if (!restoring) page.value = 1; }, { flush: 'sync' });
+watch([query, category, difficulty, order, page], () => {
+  emit('update:browse', { query: query.value, category: category.value, difficulty: difficulty.value, order: order.value, page: page.value });
+});
 watch([query, category, difficulty, order, currentPage], () => { if (results.value) results.value.scrollTop = 0; }, { flush: 'post' });
 let active = true;
 onUnmounted(() => { active = false; });

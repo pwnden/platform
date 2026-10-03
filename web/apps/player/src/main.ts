@@ -4,6 +4,8 @@ import type { APIClient } from '@pwnden/api';
 import '@pwnden/ui/theme.css';
 import App from './App.vue';
 import { takeSessionToken, forgetSessionToken } from './session';
+import { createPlayerRouter } from './router';
+import { handleHotUpdate } from 'vue-router/auto-routes';
 
 const token = takeSessionToken();
 const client = shallowRef<APIClient>();
@@ -13,4 +15,6 @@ if (token) client.value = createAPI({ token, onUnauthorized() {
   sessionRejected.value = true;
   client.value = undefined;
 } });
-createApp({ setup: () => () => h(App, { client: client.value, sessionRejected: sessionRejected.value }) }).mount('#app');
+const router = createPlayerRouter();
+if (import.meta.hot) handleHotUpdate(router);
+createApp({ setup: () => () => h(App, { client: client.value, sessionRejected: sessionRejected.value }) }).use(router).mount('#app');

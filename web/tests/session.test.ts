@@ -2,15 +2,15 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { takeSessionToken, forgetSessionToken } from '../apps/player/src/session';
 
 const first = 'a'.repeat(64), second = 'b'.repeat(64);
-let location: { hash: string; pathname: string };
+let location: { hash: string; pathname: string; search: string };
 let stored: Map<string, string>;
 let replaceState: ReturnType<typeof vi.fn>;
 beforeEach(() => {
-  location = { hash: `#${first}`, pathname: '/' };
+  location = { hash: `#${first}`, pathname: '/', search: '' };
   stored = new Map();
   replaceState = vi.fn(() => { location.hash = ''; });
   vi.stubGlobal('location', location);
-  vi.stubGlobal('history', { replaceState });
+  vi.stubGlobal('history', { replaceState, state: null });
   vi.stubGlobal('sessionStorage', {
     getItem: (key: string) => stored.get(key) ?? null,
     setItem: (key: string, value: string) => stored.set(key, value),
@@ -34,6 +34,18 @@ it('replaces a previous server credential when a fresh full URL is opened', () =
   expect(takeSessionToken()).toBe(second);
   forgetSessionToken(second);
   expect(takeSessionToken()).toBeUndefined();
+});
+
+it('preserves the challenge path, filters and router history while removing the credential', () => {
+  location.pathname = '/challenges/note-vault';
+  location.search = '?q=nmap&page=2';
+  const state = { position: 3 };
+  vi.stubGlobal('history', { replaceState, state });
+  expect(takeSessionToken()).toBe(first);
+  expect(replaceState).toHaveBeenCalledWith(state, '', '/challenges/note-vault?q=nmap&page=2');
+  replaceState.mockClear();
+  expect(takeSessionToken()).toBe(first);
+  expect(replaceState).not.toHaveBeenCalled();
 });
 
 it.each(['#bad', `#${'a'.repeat(63)}`, `#${'A'.repeat(64)}`])('rejects an invalid explicit fragment and clears old credentials: %s', hash => {

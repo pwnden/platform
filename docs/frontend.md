@@ -52,6 +52,7 @@ their upstream spelling. Repository guidance records the general convention.
 | Node LTS | `24.21.0` |
 | pnpm | `12.8.1` |
 | Vue / compiler / renderer | `3.5.43` |
+| Vue Router / file routing plugin | `5.3.1` |
 | Vite / Vue plugin | `8.3.1` / `6.0.9` |
 | TypeScript native bridge | `6.0.3-bridge.18.tsgo.7.0.2` |
 | vue-tsc | `3.3.11` |
@@ -66,6 +67,33 @@ checking. Direct, peer and development dependencies use exact versions, and
 internal dependencies use `workspace:0.1.0`. `saveExact` is enabled. pnpm 12
 records package-manager resolution and application resolution as two YAML
 documents in the committed lockfile; use the pinned pnpm to consume it.
+
+Vue Router's pinned type declarations need a three-line patch under
+`web/patches/` for `exactOptionalPropertyTypes`. It permits explicit `undefined`
+in the base resolver's optional name, path and hash fields, matching the upstream
+derived types. Runtime code and the workspace's strict checking stay unchanged.
+
+## Pages and layouts
+
+Vue Router's built-in Vite plugin generates routes from
+`web/apps/player/src/pages/` and their committed `typed-router.d.ts` declarations.
+`/` redirects to `/challenges`; `/challenges` shows the catalog and empty workspace;
+`/challenges/:slug` loads the selected problem. Unknown client routes show a missing
+page. `pages/challenges.vue` supplies the shared catalog layout to its nested pages.
+`AppLayout` owns the application shell, `ChallengeLayout` the catalog split, and
+`ChallengeWorkspace` composes `ChallengeBriefing` and `ChallengeTools`.
+
+Problem selection pushes browser history. Catalog search, category, difficulty,
+order and page use query parameters; the selected tool uses `tool`. These changes
+replace the current history entry and browser back/forward restores their values.
+Changing the problem releases its view and terminal attachments while retaining
+the environment under the existing inactivity policy. Submission blocks problem
+navigation, including browser back/forward, until the result arrives. Features and
+domains receive props and events; router imports remain in the player app.
+
+New pages belong under `pages/`; choose their layout through a parent page and
+`RouterView`. Register new production page paths in the Go `playerPage` allowlist
+and extend its HTTP tests so direct links and reloads reach the same page.
 
 ## Visual system
 
@@ -334,14 +362,17 @@ The API client uses a fixed same-origin
 `/api/v1` base, keeps the fragment token in memory and uses a bearer header. It follows the server's
 snake_case DTOs and tolerates extra response fields. Flags are checked on Go;
 an incorrect answer is an ordinary rejected submission. Requests do not follow
-redirects or persist credentials. The app removes the initial token fragment
+redirects. Credentials remain in memory and the current tab's session storage.
+The app removes the initial token fragment
 before rendering and provides recovery text for missing sessions.
 
-Go embeds the built HTML and assets through `internal/playerweb`. `/` serves the
-Vue app and `/assets/` serves exact embedded files without directory listings,
-redirects or route fallbacks. Host/origin checks and security headers apply to
-these requests. The Vue entry point owns fragment initialization. Reloading
-after fragment removal requires reopening the server's printed full URL.
+Go embeds the built HTML and assets through `internal/playerweb`. `/`,
+`/challenges` and valid `/challenges/:slug` paths serve the Vue app, including
+catalog query parameters. `/assets/` serves exact embedded files; missing assets
+and API paths never fall back to HTML. Host/origin checks and security headers
+apply to these requests. Fragment initialization preserves the route, query and
+history state when removing the token. The session bootstrap restores the current
+tab's credentials on reload from session storage; unauthorized responses clear them.
 
 `./pwnden setup` builds the pinned Node frontend inside Docker, copies its assets
 into the Go stage and packages the official catalog. The executable needs neither

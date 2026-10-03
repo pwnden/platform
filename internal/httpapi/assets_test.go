@@ -40,6 +40,31 @@ func TestEmbeddedPlayerAssets(t *testing.T) {
 	if next := get("GET", "/"); strings.Contains(next.Body.String(), nonce[1]) {
 		t.Fatal("style nonce reused")
 	}
+	for _, path := range []string{"/challenges", "/challenges/", "/challenges/note-vault", "/challenges/note-vault?q=nmap&page=2", "/?q=nmap"} {
+		w := get("GET", path)
+		if w.Code != 200 || w.Header().Get("Content-Type") != "text/html; charset=utf-8" || !strings.Contains(w.Body.String(), `type="module"`) || !strings.Contains(w.Header().Get("Content-Security-Policy"), "nonce-") {
+			t.Fatalf("player route did not serve protected HTML: %s HTTP %d", path, w.Code)
+		}
+		if head := get("HEAD", path); head.Code != 200 || head.Body.Len() != 0 {
+			t.Fatalf("player route HEAD failed: %s", path)
+		}
+		if post := get("POST", path); post.Code != 405 {
+			t.Fatalf("player route allowed mutation: %s", path)
+		}
+	}
+	for _, path := range []string{"/challenges/x/extra", "/challenges/../go.mod", "/unknown", "/assets/missing.js"} {
+		if w := get("GET", path); w.Code != 404 || strings.Contains(w.Body.String(), `type="module"`) {
+			t.Fatalf("non-page path received player HTML: %s HTTP %d", path, w.Code)
+		}
+	}
+	if w := get("GET", "/api/v1/missing"); w.Code != 401 || strings.Contains(w.Body.String(), `type="module"`) {
+		t.Fatal("unknown API bypassed authentication or received player HTML")
+	}
+	for _, path := range []string{"/api/v1/problems?q=x", "/assets/missing.js?q=x", "/challenges/%6eote-vault"} {
+		if w := get("GET", path); w.Code != 400 {
+			t.Fatalf("restricted path accepted query or encoding: %s HTTP %d", path, w.Code)
+		}
+	}
 	if len(assets) < 2 {
 		t.Fatal("missing script or style references")
 	}

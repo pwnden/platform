@@ -4,9 +4,9 @@ import type { Catalog, Problem, ProblemDetail } from '@pwnden/catalog';
 import { UIButton, UIPanel, UIMarkdown, UIReveal } from '@pwnden/ui';
 import ProblemConnections from './ProblemConnections.vue';
 
-const props = defineProps<{ catalog: Catalog; slug: string; selectionDisabled?: boolean }>();
+const props = defineProps<{ catalog: Catalog; slug: string; selectionDisabled?: boolean; initialDetail?: ProblemDetail | undefined }>();
 const emit = defineEmits<{ loaded: [detail: ProblemDetail]; select: [problem: Problem] }>();
-const detail = ref<ProblemDetail>();
+const detail = ref<ProblemDetail | undefined>(props.initialDetail);
 const pending = ref(false);
 const failed = ref(false);
 interface Reading { open: boolean; pending: boolean; failed: boolean; content?: string }
@@ -46,7 +46,7 @@ async function load() {
   }
 }
 
-onMounted(load);
+onMounted(() => { if (detail.value) emit('loaded', detail.value); else void load(); });
 </script>
 
 <template>

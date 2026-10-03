@@ -1,5 +1,13 @@
 import type { Problem } from '@pwnden/catalog';
 
+export interface BrowseState {
+  query: string;
+  category: string;
+  difficulty: string;
+  order: string;
+  page: number;
+}
+
 const categories: Readonly<Record<string, string>> = {
   web: '웹', pwn: '시스템 해킹', rev: '리버싱', crypto: '암호', forensics: '포렌식', misc: '기타',
 };

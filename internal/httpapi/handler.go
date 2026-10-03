@@ -96,12 +96,20 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.development(w, r)
 		return
 	}
+	if playerPage(r.URL.Path) && r.URL.RawPath == "" {
+		h.asset(w, r)
+		return
+	}
 	if r.URL.RawQuery != "" || r.URL.ForceQuery || r.URL.RawPath != "" {
 		transportError(w, 400, "invalid_request", "Query parameters and encoded paths are not accepted.")
 		return
 	}
-	if r.URL.Path == "/" || strings.HasPrefix(r.URL.Path, "/assets/") {
+	if strings.HasPrefix(r.URL.Path, "/assets/") {
 		h.asset(w, r)
+		return
+	}
+	if !strings.HasPrefix(r.URL.Path, "/api/") {
+		transportError(w, 404, "not_found", "The player page was not found.")
 		return
 	}
 	if strings.HasPrefix(r.URL.Path, BasePath+"/problems/") && strings.HasSuffix(r.URL.Path, "/terminal") {
@@ -469,17 +477,28 @@ func writeJSON(w http.ResponseWriter, status int, value any) error {
 	return err
 }
 
+var playerRoute = regexp.MustCompile(`^/challenges(?:/[a-z0-9]+(?:-[a-z0-9]+)*)?/?$`)
+
+func playerPage(path string) bool {
+	return path == "/" || (len(strings.TrimSuffix(path, "/")) <= len("/challenges/")+40 && playerRoute.MatchString(path))
+}
+
 func (h *handler) asset(w http.ResponseWriter, r *http.Request) {
 	if !method(w, r, "GET", "HEAD") || !emptyBody(w, r) {
 		return
 	}
-	content, err := playerweb.Read(r.URL.Path)
+	page := playerPage(r.URL.Path)
+	path := r.URL.Path
+	if page {
+		path = "/"
+	}
+	content, err := playerweb.Read(path)
 	if err != nil {
 		transportError(w, 404, "not_found", "The web asset was not found.")
 		return
 	}
 	typeName := "text/html; charset=utf-8"
-	if r.URL.Path != "/" {
+	if !page {
 		switch {
 		case strings.HasSuffix(r.URL.Path, ".js"):
 			typeName = "text/javascript; charset=utf-8"

@@ -1,5 +1,6 @@
 import { defineConfig, searchForWorkspaceRoot } from 'vite';
 import vue from '@vitejs/plugin-vue';
+import VueRouter from 'vue-router/vite';
 import fontLicenses from '@pwnden/ui/licenses' with { type: 'json' };
 
 const styleNonce = process.env.PWNDEN_STYLE_NONCE;
@@ -15,7 +16,10 @@ export default defineConfig({
     fs: { allow: ['../..'] },
     forwardConsole: false,
   },
-  plugins: [vue(), {
+  plugins: [VueRouter({
+    routesFolder: new URL('./src/pages', import.meta.url).pathname,
+    dts: new URL('./src/typed-router.d.ts', import.meta.url).pathname,
+  }), vue(), {
     name: 'workspace-source-watch',
     configureServer(server) {
       // Type-only SFC dependencies do not enter Vite's runtime module graph.

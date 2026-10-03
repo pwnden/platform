@@ -3,7 +3,7 @@ const validToken = (value: string | null): value is string => value !== null && 
 
 export function takeSessionToken(): string | undefined {
   const token = location.hash.slice(1);
-  history.replaceState(null, '', location.pathname);
+  if (token) history.replaceState(history.state, '', location.pathname + location.search);
   if (token) {
     try {
       if (validToken(token)) sessionStorage.setItem(sessionKey, token);

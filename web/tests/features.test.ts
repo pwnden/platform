@@ -1,6 +1,9 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { createRenderer, h, nextTick } from 'vue';
-import type { Catalog } from '../domains/catalog/src/index';
+import { createMemoryHistory } from 'vue-router';
+import { createPlayerRouter } from '../apps/player/src/router';
+import type { APIClient } from '@pwnden/api';
+import type { Catalog, ProblemDetail as ProblemDetails } from '../domains/catalog/src/index';
 import type { Player, RunStatus, Workspaces } from '../domains/play/src/index';
 import ProblemDetail from '../features/catalog/src/ProblemDetail.vue';
 import ProblemConnections from '../features/catalog/src/ProblemConnections.vue';
@@ -17,10 +20,25 @@ import UICode from '../packages/ui/src/UICode.vue';
 import UIReveal from '../packages/ui/src/UIReveal.vue';
 import UIToggleButton from '../packages/ui/src/UIToggleButton.vue';
 import * as syntax from '../packages/ui/src/syntax';
-import { createAPI } from '../packages/api/src/index';
+import { APIError, createAPI } from '../packages/api/src/index';
 
 function browserSession(target: string) { return { target, url: target + '/__pwnden_browser/' + 'a'.repeat(64) }; }
 const unusedBrowser = vi.fn();
+async function renderPlayer(client: APIClient, root: Node, path = '/challenges') {
+  const router = createPlayerRouter(createMemoryHistory());
+  const app = renderer.createApp(App, { client });
+  app.use(router);
+  await router.push(path);
+  await router.isReady();
+  app.mount(root);
+  await settle();
+  return router;
+}
+async function selectChallenge(router: ReturnType<typeof createPlayerRouter>, root: Node, title: string, slug: string) {
+  await click(flatten(root).find(item => item.type === 'button' && text(item).includes(title))!);
+  await vi.waitFor(() => expect(router.currentRoute.value.path).toBe(`/challenges/${slug}`));
+  await settle();
+}
 
 it('restores an accepted answer without submitting again and marks saved completions', async () => {
   const problem = { slug: 'test', title: '복원 문제', category: 'web', kind: 'file' as const, solvedAt: '2026-10-02T00:00:00Z' };
@@ -119,6 +137,73 @@ function workspace(status: RunStatus): Workspaces {
   return { connect: vi.fn(() => ({ ready: Promise.resolve(status), close: vi.fn() })), list: vi.fn(async () => []), stop: vi.fn() };
 }
 
+it('loads deep links, restores challenge and search state through history, and guards pending submissions', async () => {
+  const problems = [
+    { slug: 'first', title: 'First', category: 'web', kind: 'file' as const },
+    { slug: 'second', title: 'Second', category: 'web', kind: 'file' as const },
+  ];
+  let resolveSubmission: (value: { accepted: boolean }) => void = () => {};
+  const submission = new Promise<{ accepted: boolean }>(done => { resolveSubmission = done; });
+  const close = vi.fn();
+  const client: APIClient = {
+    catalog: { list: vi.fn(async () => problems), detail: vi.fn(async slug => ({ ...problems.find(item => item.slug === slug)!, tools: ['files'], files: [], hintCount: 0, walkthrough: false, description: '설명' })), download: vi.fn(), guidance: vi.fn() },
+    player: { browser: vi.fn(), status: vi.fn(), run: vi.fn(), stop: vi.fn(), submit: vi.fn(() => submission) },
+    terminals: { connect: vi.fn(), list: vi.fn(), stop: vi.fn() },
+    workspaces: { connect: vi.fn(slug => ({ ready: Promise.resolve({ slug, kind: 'file' as const, state: 'ready' as const, endpoints: [] }), close })), list: vi.fn(async () => []), stop: vi.fn() },
+  };
+  const root = node('root');
+  const router = await renderPlayer(client, root, '/challenges/first?q=First');
+  expect(text(root)).toContain('First분야: 웹');
+  expect(client.catalog.detail).toHaveBeenCalledExactlyOnceWith('first');
+  await router.push('/challenges/second?q=Second'); await settle();
+  expect(text(root)).toContain('Second분야: 웹');
+  expect(close).toHaveBeenCalledOnce();
+  router.back();
+  await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/challenges/first')); await settle();
+  expect(flatten(root).find(item => item.props.id === 'problem-search')?.props.modelValue).toBe('First');
+  expect(text(root)).toContain('First분야: 웹');
+  router.forward();
+  await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/challenges/second')); await settle();
+  const flag = flatten(root).find(item => item.props.id === 'flag')!;
+  (flag.props['onUpdate:modelValue'] as (value: string) => void)('pwnden{test}'); await settle();
+  const form = flatten(root).find(item => item.type === 'form')!;
+  const submitted = (form.props.onSubmit as () => Promise<void>)(); await settle();
+  router.back();
+  await settle();
+  await vi.waitFor(() => expect(router.currentRoute.value.fullPath).toBe('/challenges/second?q=Second'));
+  await router.push('/challenges/first');
+  expect(router.currentRoute.value.path).toBe('/challenges/second');
+  resolveSubmission({ accepted: true }); await submitted; await settle();
+  router.back();
+  await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/challenges/first')); await settle();
+  expect(client.workspaces.stop).not.toHaveBeenCalled();
+  renderer.render(null, root);
+});
+
+it('ignores a delayed detail response after navigating to another challenge and renders missing problems', async () => {
+  let resolve: (detail: ProblemDetails) => void = () => {};
+  const delayed = new Promise<ProblemDetails>(done => { resolve = done; });
+  const problem = { slug: 'second', title: 'Second', category: 'web', kind: 'file' as const, tools: ['files'] as const, files: [], hintCount: 0, walkthrough: false, description: '' };
+  const client: APIClient = {
+    catalog: { list: vi.fn(async () => []), detail: vi.fn().mockImplementationOnce(() => delayed).mockResolvedValueOnce(problem).mockRejectedValueOnce(new APIError('not_found', 404)), download: vi.fn(), guidance: vi.fn() },
+    player: { browser: vi.fn(), status: vi.fn(), run: vi.fn(), stop: vi.fn(), submit: vi.fn() },
+    terminals: { connect: vi.fn(), list: vi.fn(), stop: vi.fn() },
+    workspaces: workspace({ slug: 'second', kind: 'file', state: 'ready', endpoints: [] }),
+  };
+  const root = node('root');
+  const router = await renderPlayer(client, root, '/challenges/first');
+  expect(text(root)).toContain('문제 설명을 불러오는 중');
+  await router.push('/challenges/second'); await settle();
+  resolve({ ...problem, slug: 'first', title: 'Old response' }); await settle();
+  expect(text(root)).not.toContain('Old response');
+  expect(text(root)).toContain('Second분야: 웹');
+  expect(client.workspaces.connect).toHaveBeenCalledOnce();
+  await router.push('/challenges/missing'); await settle();
+  expect(text(root)).toContain('문제를 찾을 수 없습니다.');
+  expect(client.workspaces.connect).toHaveBeenCalledOnce();
+  renderer.render(null, root);
+});
+
 
 // Exercise feature lifecycle and real tool tabs on a small host renderer.
 vi.mock('../packages/ui/src/index.ts', async () => {
@@ -203,8 +288,8 @@ it('opens only the declared web tool for Note Vault and retains its view during 
     workspaces: environments,
   };
   const root = node('root');
-  renderer.render(h(App, { client }), root); await settle();
-  await click(flatten(root).find(item => item.type === 'button' && text(item).includes('Note Vault'))!); await settle();
+  const router = await renderPlayer(client, root);
+  await selectChallenge(router, root, 'Note Vault', 'note-vault');
   expect(flatten(root).filter(item => item.props.role === 'tab').map(text)).toEqual(['웹']);
   expect(button(root, '웹').props['aria-selected']).toBe('true');
   expect(client.terminals.connect).not.toHaveBeenCalled();
@@ -249,8 +334,8 @@ it('keeps terminal, source and web state across tool tabs and resets tools on pr
     },
   };
   const root = node('root');
-  renderer.render(h(App, { client }), root); await settle();
-  await click(flatten(root).find(item => item.type === 'button' && text(item).includes('Note Vault'))!); await settle();
+  const router = await renderPlayer(client, root);
+  await selectChallenge(router, root, 'Note Vault', 'note-vault');
   const terminal = flatten(root).find(item => item.type === 'terminal')!;
   expect(client.catalog.detail).toHaveBeenCalledOnce();
   expect(flatten(root).filter(item => item.props.role === 'tab').map(text)).toEqual(['터미널', '파일', '웹']);
@@ -260,6 +345,7 @@ it('keeps terminal, source and web state across tool tabs and resets tools on pr
   Object.defineProperties(key, { key: { value: 'ArrowRight' }, currentTarget: { value: list } });
   (list.props.onKeydown as (event: Event) => void)(key); await settle();
   expect(button(root, '파일').props['aria-selected']).toBe('true');
+  await vi.waitFor(() => expect(router.currentRoute.value.query.tool).toBe('files'));
   expect(button(root, 'checker.py 미리보기 열기')).toBeUndefined();
   const actions = flatten(root).find(item => item.props.class === 'ui-tabs-actions')!;
   expect(button(root, 'checker.py 다운로드').parent).toBe(actions);
@@ -269,11 +355,13 @@ it('keeps terminal, source and web state across tool tabs and resets tools on pr
   expect(flatten(root).some(item => item.type === 'script')).toBe(false);
   await click(button(root, '웹')); await settle();
   const frame = flatten(root).find(item => item.type === 'iframe')!;
+  await vi.waitFor(() => expect(router.currentRoute.value.query.tool).toBe('web'));
   expect(frame.props.src).toBe(browserSession('http://127.0.0.1:43123').url);
   expect(button(root, '문제 웹 새로고침').parent?.props['aria-label']).toBe('웹 탐색');
   expect(button(root, 'checker.py 다운로드')).toBeUndefined();
   expect(flatten(root).find(item => item.type === 'a')?.props.rel).toBe('noopener noreferrer');
   await click(button(root, '터미널')); await settle();
+  await vi.waitFor(() => expect(router.currentRoute.value.query.tool).toBeUndefined());
   expect(flatten(root).find(item => item.type === 'terminal')).toBe(terminal);
   expect(client.terminals.connect).toHaveBeenCalledOnce();
   expect(close).not.toHaveBeenCalled();
@@ -293,7 +381,7 @@ it('keeps terminal, source and web state across tool tabs and resets tools on pr
   await click(button(root, '풀이 환경 다시 연결')); await settle();
   await click(button(root, '웹')); await settle();
   expect(flatten(root).find(item => item.type === 'iframe')?.props.src).toBe(browserSession('http://127.0.0.1:43124').url);
-  await click(flatten(root).find(item => item.type === 'button' && text(item).includes('Rotor Lock'))!); await settle();
+  await selectChallenge(router, root, 'Rotor Lock', 'rotor-lock');
   expect(flatten(root).filter(item => item.props.role === 'tab').map(text)).toEqual(['파일', '터미널']);
   expect(button(root, '파일').props['aria-selected']).toBe('true');
   expect(flatten(root).some(item => item.type === 'iframe')).toBe(false);
@@ -411,8 +499,8 @@ it('opens the declared web tab while environment preparation is pending without 
     workspaces: { connect: vi.fn(() => ({ ready, close: vi.fn() })), list: vi.fn(async () => []), stop: vi.fn() },
   };
   const root = node('root');
-  renderer.render(h(App, { client }), root); await settle();
-  await click(flatten(root).find(item => item.type === 'button' && text(item).includes('Note Vault'))!); await settle();
+  const router = await renderPlayer(client, root);
+  await selectChallenge(router, root, 'Note Vault', 'note-vault');
   expect(button(root, '웹').props['aria-selected']).toBe('true');
   const form = flatten(root).find(item => item.props.class === 'web-address-bar');
   resolve({ slug: problem.slug, kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:43123' }] }); await settle();
@@ -435,8 +523,8 @@ it('shows preparation and connection errors inside tools while submission stays 
     workspaces: { connect: vi.fn().mockImplementationOnce((_slug, failed) => { fail = failed; return { ready, close: vi.fn() }; }).mockReturnValue({ ready: Promise.resolve(status), close: vi.fn() }), list: vi.fn(async () => []), stop: vi.fn() },
   };
   const root = node('root');
-  renderer.render(h(App, { client }), root); await settle();
-  await click(button(root, problem.title)); await settle();
+  const router = await renderPlayer(client, root);
+  await selectChallenge(router, root, problem.title, problem.slug);
   const submission = flatten(root).find(item => item.props['aria-label'] === '플래그 제출')!;
   const structure = layoutStructure(submission);
   const panels = flatten(root).find(item => item.props.class === 'ui-tabs-panels')!;

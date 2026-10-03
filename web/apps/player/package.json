@@ -12,7 +12,8 @@
     "@pwnden/play-feature": "workspace:0.1.0",
     "@pwnden/terminal-feature": "workspace:0.1.0",
     "@pwnden/ui": "workspace:0.1.0",
-    "vue": "3.5.43"
+    "vue": "3.5.43",
+    "vue-router": "5.3.1"
   },
   "devDependencies": { "@vitejs/plugin-vue": "6.0.9", "vite": "8.3.1" }
 }

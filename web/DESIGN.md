@@ -320,6 +320,14 @@ Source: [UIPanel.vue](packages/ui/src/UIPanel.vue), [PlayPanel.vue](features/pla
 
 ### Navigation
 
+Vue Router owns application navigation through file-based pages. The application
+shell wraps page layouts; the challenge layout keeps its catalog beside the nested
+empty or selected-problem page. Selecting a problem adds a history entry. Search,
+filters, pagination and tool selection replace URL query state, allowing browser
+back/forward to restore them. Submission temporarily blocks problem navigation.
+Changing pages releases the current view's attachments and retains its environment
+under the existing inactivity policy.
+
 Problem rows are compact full-width title buttons, grouped under readable Korean category headings. Search matches all words across titles, identifiers and categories; a category filter narrows results. Pages contain at most (20) rows, with the result range and previous/next controls below. `aria-pressed` identifies the current selection through accent fill and stroke. Keyboard focus remains a separate indicator. Search and pagination preserve the current problem and terminal session. The responsive sidebar behavior follows Layout.
 
 Every catalog row reserves a (1rem) completion slot. Solved problems show a success-colored check there with “해결 완료” tooltip and screen-reader text. The slot keeps titles and badges aligned across completion states. Catalog data restores saved completion; accepting an answer updates its row immediately.
