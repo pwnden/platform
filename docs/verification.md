@@ -65,7 +65,7 @@ The workflow runs on pushes to the platform's `main`, pull requests, manual disp
 
 After problem verification, the workflow builds a native Linux platform package and runs `tools/smoke_package.py`. That check uses the package with only Docker on its child PATH, exercising managed setup and player commands without Go, Git, or a separately supplied problem path. See [distribution](distribution.md) for local package checks.
 
-`tools/smoke_http.py` also exercises the packaged local server with only Docker on its child PATH: embedded HTML/script/style delivery, authenticated catalog, both problem kinds, web problem solving, incorrect and correct submissions, preserved state and rotated credentials after server restart, and repeatable stop. This driver checks HTTP behavior; browser interaction is a separate check. See [local server](local-server.md) for the local command and unit/concurrency coverage.
+`tools/smoke_http.py` also exercises the packaged local server with only Docker on its child PATH: embedded HTML/script/style delivery, authenticated catalog, both problem kinds, web problem solving, incorrect and correct submissions, preserved state and rotated credentials after server restart, and repeatable stop. It compares CLI metadata in catalog summaries and details with the installed problem declarations. This driver checks HTTP behavior; browser interaction is a separate check. See [local server](local-server.md) for the local command and unit/concurrency coverage.
 
 The HTTP catalog check compares the API response with all manifests in the
 installed catalog. It derives each problem's hint count, hint order and

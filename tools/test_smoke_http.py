@@ -35,6 +35,17 @@ class CatalogCoverageTests(unittest.TestCase):
         with self.assertRaises(AssertionError):
             check_catalog(self.work, [])
 
+    def test_catalog_cli_matches_installed_metadata(self):
+        manifest = self.catalog / 'challenges/note-vault/challenge.toml'
+        manifest.write_text('schema = 6\n[player]\ncli = ["nmap", "ncat"]\n')
+        problems = [{"slug": slug} for slug in self.slugs]
+        problems[0]['cli'] = ['nmap', 'ncat']
+        check_catalog(self.work, problems)
+        for names in [[], ['ncat', 'nmap'], ['curl'], None]:
+            problems[0]['cli'] = names
+            with self.subTest(names=names), self.assertRaises(AssertionError):
+                check_catalog(self.work, problems)
+
 
 class GuidanceCoverageTests(unittest.TestCase):
     def setUp(self):
@@ -44,15 +55,19 @@ class GuidanceCoverageTests(unittest.TestCase):
         self.directory = self.work / "config/pwnden/catalogs/fixture/catalog/challenges/example"
         self.directory.mkdir(parents=True)
 
-    def fixture(self, count, *, walkthrough=True, schema=5):
+    def fixture(self, count, *, walkthrough=True, schema=5, cli=()):
         paths = [f"notes/clue-{count-index}.md" for index in range(count)]
         declaration = f"schema = {schema}\n"
         if schema >= 2:
             declaration += "[content]\nhints = " + json.dumps(paths) + "\n"
             if walkthrough:
                 declaration += 'walkthrough = "answer.md"\n'
+        if schema >= 6:
+            declaration += '[player]\ncli = ' + json.dumps(list(cli)) + '\n'
         (self.directory / "challenge.toml").write_text(declaration, encoding="utf-8")
         self.brief = {"hint_count": count, "walkthrough": walkthrough}
+        if cli:
+            self.brief['cli'] = list(cli)
         self.documents = {}
         for index, path in enumerate(paths, 1):
             target = self.directory / path
@@ -95,6 +110,14 @@ class GuidanceCoverageTests(unittest.TestCase):
     def test_legacy_problem_has_no_guidance(self):
         self.fixture(0, walkthrough=False, schema=1)
         self.check()
+
+    def test_detail_cli_matches_installed_metadata(self):
+        self.fixture(1, schema=6, cli=['nmap', 'ncat'])
+        self.check()
+        for names in [[], ['ncat', 'nmap'], ['curl'], None]:
+            self.brief['cli'] = names
+            with self.subTest(names=names), self.assertRaises(AssertionError):
+                self.check()
 
     def test_authored_line_endings_are_preserved(self):
         self.fixture(1)

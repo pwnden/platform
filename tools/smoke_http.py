@@ -144,6 +144,11 @@ def check_catalog(work, problems):
     expected = {manifest.parent.name for manifest in installed_catalog(work).glob("challenges/*/challenge.toml")}
     actual = [problem["slug"] for problem in problems]
     assert expected and set(actual) == expected and len(actual) == len(expected), "HTTP catalog differs from installed problems"
+    for problem in problems:
+        manifest = installed_catalog(work) / "challenges" / problem["slug"] / "challenge.toml"
+        declaration = tomllib.loads(manifest.read_text(encoding="utf-8"))
+        names = declaration["player"]["cli"] if declaration.get("schema", 1) >= 6 else []
+        assert problem.get("cli", []) == names, f'{problem["slug"]}: catalog CLI differs from installed declaration'
 
 
 def check_guidance(work, origin, token, slug):
@@ -153,6 +158,8 @@ def check_guidance(work, origin, token, slug):
     hints = content.get("hints", [])
     walkthrough = content.get("walkthrough", "")
     brief = api(origin, token, "GET", f"/problems/{slug}")
+    names = declaration["player"]["cli"] if declaration["schema"] >= 6 else []
+    assert brief.get("cli", []) == names, f"{slug}: detail CLI differs from installed declaration"
     assert brief["hint_count"] == len(hints), f"{slug}: hint count differs from installed declaration"
     assert brief["walkthrough"] == bool(walkthrough), f"{slug}: walkthrough availability differs from installed declaration"
     documents = {f"hint-{index}": path for index, path in enumerate(hints, 1)}
