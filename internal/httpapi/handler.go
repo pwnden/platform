@@ -11,6 +11,7 @@ import (
 	"io"
 	"mime"
 	"net/http"
+	"path"
 	"regexp"
 	"strings"
 	"sync"
@@ -92,7 +93,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		transportError(w, 403, "forbidden", "The request origin is not allowed.")
 		return
 	}
-	if h.frontend != nil && !strings.HasPrefix(r.URL.Path, "/api/") {
+	if h.frontend != nil && !apiPath(r.URL.Path) {
 		h.development(w, r)
 		return
 	}
@@ -477,10 +478,35 @@ func writeJSON(w http.ResponseWriter, status int, value any) error {
 	return err
 }
 
-var playerRoute = regexp.MustCompile(`^/challenges(?:/[a-z0-9]+(?:-[a-z0-9]+)*)?/?$`)
+func apiPath(value string) bool {
+	return value == "/api" || strings.HasPrefix(value, "/api/")
+}
 
-func playerPage(path string) bool {
-	return path == "/" || (len(strings.TrimSuffix(path, "/")) <= len("/challenges/")+40 && playerRoute.MatchString(path))
+// Page ownership belongs to the client router. Reserve server namespaces and
+// file paths instead of mirroring the frontend's page route table here.
+func playerPage(value string) bool {
+	if value == "/" {
+		return true
+	}
+	clean := strings.TrimSuffix(value, "/")
+	if !strings.HasPrefix(clean, "/") || path.Clean(clean) != clean || path.Ext(clean) != "" {
+		return false
+	}
+	segments := strings.Split(strings.TrimPrefix(clean, "/"), "/")
+	for _, segment := range segments {
+		if strings.HasPrefix(segment, ".") || strings.Contains(segment, "\\") {
+			return false
+		}
+	}
+	root := segments[0]
+	if strings.HasPrefix(root, "@") || strings.HasPrefix(root, "__") {
+		return false
+	}
+	switch root {
+	case "api", "assets", "src", "node_modules":
+		return false
+	}
+	return true
 }
 
 func (h *handler) asset(w http.ResponseWriter, r *http.Request) {

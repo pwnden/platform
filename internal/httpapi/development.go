@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"log"
+	"mime"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -83,6 +84,19 @@ func (h *handler) development(w http.ResponseWriter, r *http.Request) {
 	// Override upstream headers while retaining Vite's MIME and cache semantics.
 	proxy := *h.frontend.proxy
 	proxy.ModifyResponse = func(response *http.Response) error {
+		media, _, _ := mime.ParseMediaType(response.Header.Get("Content-Type"))
+		if !page && media == "text/html" {
+			// Vite's SPA fallback must not turn missing modules/assets into pages.
+			response.Body.Close()
+			body := "{\"error\":{\"code\":\"not_found\",\"message\":\"The development asset was not found.\"}}\n"
+			response.Body = io.NopCloser(strings.NewReader(body))
+			response.StatusCode = http.StatusNotFound
+			response.Status = "404 Not Found"
+			response.ContentLength = int64(len(body))
+			response.Header.Set("Content-Type", "application/json")
+			response.Header.Set("Content-Length", strconv.Itoa(len(body)))
+			response.Header.Del("Content-Encoding")
+		}
 		response.Header.Set("Content-Security-Policy", pagePolicy(h.host, h.frontend.nonce))
 		response.Header.Set("Cache-Control", "no-store")
 		response.Header.Set("X-Content-Type-Options", "nosniff")

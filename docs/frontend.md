@@ -92,8 +92,13 @@ navigation, including browser back/forward, until the result arrives. Features a
 domains receive props and events; router imports remain in the player app.
 
 New pages belong under `pages/`; choose their layout through a parent page and
-`RouterView`. Register new production page paths in the Go `playerPage` allowlist
-and extend its HTTP tests so direct links and reloads reach the same page.
+`RouterView`. Go forwards page requests to the app entry in both production and
+development, so page additions, renames and removals require only frontend changes.
+Page URLs use extensionless paths outside the reserved `api`, `assets`, `src`,
+`node_modules`, `@*` and `__*` server namespaces. File paths, hidden path segments
+and unnormalized paths stay outside the page fallback. Unknown page URLs reach
+the client router's missing-page view; missing files and API paths retain server
+errors. Page queries are preserved; encoded paths retain the existing restriction.
 The Docker development server scans routes with HMR while sources stay read-only;
 it disables declaration writes through `PWNDEN_READONLY_SOURCES=1`. Production
 builds regenerate `typed-router.d.ts`. Dependency image contexts include pnpm
@@ -372,10 +377,9 @@ redirects. Credentials remain in memory and the current tab's session storage.
 The app removes the initial token fragment
 before rendering and provides recovery text for missing sessions.
 
-Go embeds the built HTML and assets through `internal/playerweb`. `/`,
-`/challenges` and valid `/challenges/:slug` paths serve the Vue app, including
-catalog query parameters. `/assets/` serves exact embedded files; missing assets
-and API paths never fall back to HTML. Host/origin checks and security headers
+Go embeds the built HTML and assets through `internal/playerweb`. Page paths
+serve the Vue app, including query parameters. `/assets/` serves exact embedded
+files; missing assets and API paths never fall back to HTML. Host/origin checks and security headers
 apply to these requests. Fragment initialization preserves the route, query and
 history state when removing the token. The session bootstrap restores the current
 tab's credentials on reload from session storage; unauthorized responses clear them.

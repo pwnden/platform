@@ -98,7 +98,7 @@ func TestDevelopmentPlayerRoutesServeEntry(t *testing.T) {
 	}
 	h := newHandler(context.Background(), fakeBackend{}, testHost, testToken, io.Discard)
 	h.frontend = frontend
-	for _, path := range []string{"/", "/challenges", "/challenges/", "/challenges/diagnostic-port", "/challenges/diagnostic-port/"} {
+	for _, path := range []string{"/", "/challenges", "/challenges/", "/challenges/diagnostic-port", "/challenges/diagnostic-port/", "/settings", "/courses/basics/lesson-1", "/unknown", "/challenges/x/extra", "/challenges/" + strings.Repeat("a", 41)} {
 		for _, method := range []string{"GET", "HEAD"} {
 			r := request(method, path+"?q=nmap&page=2", "")
 			r.Header.Set("Cookie", "secret=value")
@@ -120,10 +120,15 @@ func TestDevelopmentPlayerRoutesServeEntry(t *testing.T) {
 		method, path string
 		code         int
 	}{
-		{"GET", "/challenges/x/extra", 404},
-		{"GET", "/challenges/" + strings.Repeat("a", 41), 404},
 		{"GET", "/challenges/%64iagnostic-port", 400},
-		{"GET", "/unknown", 404},
+		{"GET", "/missing.css", 404},
+		{"GET", "/favicon.ico", 404},
+		{"GET", "/.git/config", 404},
+		{"GET", "/@fs/etc/passwd", 404},
+		{"GET", "/__open-in-editor", 404},
+		{"GET", "/api", 404},
+		{"GET", "/assets", 404},
+		{"GET", "/courses//lesson", 404},
 		{"GET", "/api/v1/missing", 404},
 		{"POST", "/challenges/diagnostic-port", 405},
 	} {
@@ -131,6 +136,27 @@ func TestDevelopmentPlayerRoutesServeEntry(t *testing.T) {
 		h.ServeHTTP(w, request(test.method, test.path, ""))
 		if w.Code != test.code || calls != before {
 			t.Fatalf("route boundary %s %s: %d", test.method, test.path, w.Code)
+		}
+	}
+}
+
+func TestDevelopmentMissingFilesDoNotReceiveSPAEntry(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		io.WriteString(w, "<!doctype html><title>Vite fallback</title>")
+	}))
+	defer upstream.Close()
+	frontend, err := DevelopmentFrontend(upstream.URL, strings.Repeat("a", 64))
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := newHandler(context.Background(), fakeBackend{}, testHost, testToken, io.Discard)
+	h.frontend = frontend
+	for _, path := range []string{"/src/missing", "/assets/missing", "/node_modules/missing.js"} {
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, request("GET", path, ""))
+		if w.Code != 404 || w.Header().Get("Content-Type") != "application/json" || strings.Contains(w.Body.String(), "<!doctype") {
+			t.Fatalf("missing asset received SPA fallback: %s %d", path, w.Code)
 		}
 	}
 }

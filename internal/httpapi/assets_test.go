@@ -40,7 +40,7 @@ func TestEmbeddedPlayerAssets(t *testing.T) {
 	if next := get("GET", "/"); strings.Contains(next.Body.String(), nonce[1]) {
 		t.Fatal("style nonce reused")
 	}
-	for _, path := range []string{"/challenges", "/challenges/", "/challenges/note-vault", "/challenges/note-vault?q=nmap&page=2", "/?q=nmap"} {
+	for _, path := range []string{"/challenges", "/challenges/", "/challenges/note-vault", "/challenges/note-vault?q=nmap&page=2", "/?q=nmap", "/settings", "/courses/basics/lesson-1?tab=notes", "/unknown", "/challenges/x/extra"} {
 		w := get("GET", path)
 		if w.Code != 200 || w.Header().Get("Content-Type") != "text/html; charset=utf-8" || !strings.Contains(w.Body.String(), `type="module"`) || !strings.Contains(w.Header().Get("Content-Security-Policy"), "nonce-") {
 			t.Fatalf("player route did not serve protected HTML: %s HTTP %d", path, w.Code)
@@ -52,7 +52,7 @@ func TestEmbeddedPlayerAssets(t *testing.T) {
 			t.Fatalf("player route allowed mutation: %s", path)
 		}
 	}
-	for _, path := range []string{"/challenges/x/extra", "/challenges/../go.mod", "/unknown", "/assets/missing.js"} {
+	for _, path := range []string{"/challenges/../go.mod", "/assets/missing.js", "/missing.css", "/favicon.ico", "/.git/config", "/src/missing", "/@fs/etc/passwd", "/__open-in-editor", "/api", "/assets", "/node_modules", "/courses//lesson"} {
 		if w := get("GET", path); w.Code != 404 || strings.Contains(w.Body.String(), `type="module"`) {
 			t.Fatalf("non-page path received player HTML: %s HTTP %d", path, w.Code)
 		}
