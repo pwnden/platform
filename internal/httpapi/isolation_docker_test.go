@@ -42,6 +42,15 @@ func TestIsolatedNoteVaultDocker(t *testing.T) {
 	if err := os.CopyFS(filepath.Join(repo, "challenges", "note-vault"), os.DirFS(filepath.Join(source, "challenges", "note-vault"))); err != nil {
 		t.Fatal(err)
 	}
+	metadata, err := challenge.Load(repo, "note-vault")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if metadata.Schema >= 7 {
+		if err := os.CopyFS(filepath.Join(repo, "knowledge"), os.DirFS(filepath.Join(source, "knowledge"))); err != nil {
+			t.Fatal("copy shared learning resources", err)
+		}
+	}
 	_, frontendErr := os.Stat(filepath.Join(source, "web", "package.json"))
 	vueTarget := frontendErr == nil
 	if frontendErr != nil && !os.IsNotExist(frontendErr) {
@@ -72,6 +81,21 @@ func TestIsolatedNoteVaultDocker(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	detail, err := backend.Detail(ctx, "note-vault")
+	if err != nil || len(detail.Tools) != 1 || detail.Tools[0] != "web" {
+		t.Fatal("web-only tool declaration", detail.Tools, err)
+	}
+	if metadata.Schema >= 7 {
+		if detail.Learning == nil {
+			t.Fatal("copied catalog lost learning metadata")
+		}
+		for _, concept := range append(append([]challenge.Concept{}, detail.Learning.Requires...), detail.Learning.Teaches...) {
+			content, err := backend.Guidance(ctx, "note-vault", "concept-"+concept.ID)
+			if err != nil || strings.TrimSpace(content) == "" {
+				t.Fatal("copied concept document", concept.ID, err)
+			}
+		}
+	}
 	h := newHandler(ctx, backend, testHost, testToken, io.Discard)
 	defer func() {
 		h.browsers.close()
@@ -90,10 +114,6 @@ func TestIsolatedNoteVaultDocker(t *testing.T) {
 	}
 	if e := h.workspaces.List(); len(e) != 1 {
 		t.Fatal("workspace count", e)
-	}
-	detail, err := backend.Detail(ctx, "note-vault")
-	if err != nil || len(detail.Tools) != 1 || detail.Tools[0] != "web" {
-		t.Fatal("web-only tool declaration", detail.Tools, err)
 	}
 	t.Log("Web-only environment prepared and retained without terminal attachment")
 	if len(result.Endpoints) != 1 || result.Endpoints[0].Published || !result.Endpoints[0].Proxied {
