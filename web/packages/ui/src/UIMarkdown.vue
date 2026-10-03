@@ -54,7 +54,7 @@ const MarkdownContent = () => nodes.value.map(node => renderMarkdownNode(node, p
 .ui-markdown :deep(h5) { font-size: 1rem; }
 .ui-markdown :deep(h6) { font-size: 0.9rem; }
 .ui-markdown :deep(h2:first-child), .ui-markdown :deep(h3:first-child), .ui-markdown :deep(h4:first-child), .ui-markdown :deep(h5:first-child), .ui-markdown :deep(h6:first-child) { margin-top: 0; }
-.ui-markdown :deep(ul), .ui-markdown :deep(ol) { padding: var(--ui-space-2); }
+.ui-markdown :deep(ul), .ui-markdown :deep(ol) { padding: 0; margin-inline-start: var(--ui-space-2); }
 .ui-markdown :deep(li > ul), .ui-markdown :deep(li > ol) { margin-block: var(--ui-space-1); }
 .ui-markdown :deep(blockquote) { margin-inline: 0; padding: var(--ui-space-2); border-left: 1px solid var(--ui-border-active); color: var(--ui-muted); }
 .ui-markdown :deep(.markdown-person) { color: var(--ui-person); }
