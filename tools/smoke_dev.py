@@ -63,7 +63,7 @@ def main():
                         origin, token = f"http://{parsed.netloc}", parsed.fragment
                         break
                     if server.poll() is not None:
-                        raise RuntimeError("pwnden dev exited before startup; no credentials printed")
+                        raise RuntimeError("pwnden dev exited before startup; no credentials printed\n" + diagnostic.read_text())
                     time.sleep(0.05)
                 if origin is None:
                     raise RuntimeError("pwnden dev startup timed out")

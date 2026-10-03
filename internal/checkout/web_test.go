@@ -16,7 +16,7 @@ import (
 func TestWebMountsOnlyLiveSourcesAndCleansOwnedVolumes(t *testing.T) {
 	l, _ := fixture(t)
 	root := filepath.Join(l.Root, "web")
-	for _, name := range []string{"package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "apps/player/package.json", "apps/player/src/App.vue", "node_modules/hidden/package.json"} {
+	for _, name := range []string{"package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "patches/vue-router@5.3.1.patch", "patches/README.md", "apps/player/package.json", "apps/player/src/App.vue", "node_modules/hidden/package.json"} {
 		path := filepath.Join(root, name)
 		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 			t.Fatal(err)
@@ -47,13 +47,16 @@ func TestWebMountsOnlyLiveSourcesAndCleansOwnedVolumes(t *testing.T) {
 	if err != nil || target != upstream.URL || len(nonce) != 64 {
 		t.Fatalf("frontend startup: %s %v", target, err)
 	}
-	for _, name := range []string{"apps/player/src/App.vue", "node_modules/hidden/package.json"} {
+	if content, err := os.ReadFile(filepath.Join(directory, "frontend", "patches/vue-router@5.3.1.patch")); err != nil || string(content) != "fixture" {
+		t.Fatalf("dependency patch missing from development image context: %q %v", content, err)
+	}
+	for _, name := range []string{"apps/player/src/App.vue", "node_modules/hidden/package.json", "patches/README.md"} {
 		if _, err := os.Stat(filepath.Join(directory, "frontend", name)); !errors.Is(err, os.ErrNotExist) {
 			t.Fatalf("source/dependency copied into tool image: %s", name)
 		}
 	}
 	run := strings.Join(calls[1], " ")
-	for _, required := range []string{"127.0.0.1::5173", "source=" + root, "readonly", "/web/node_modules", "/web/apps/player/node_modules", "--cap-drop ALL", "no-new-privileges"} {
+	for _, required := range []string{"127.0.0.1::5173", "source=" + root, "readonly", "PWNDEN_READONLY_SOURCES=1", "/web/node_modules", "/web/apps/player/node_modules", "--cap-drop ALL", "no-new-privileges"} {
 		if !strings.Contains(run, required) {
 			t.Fatalf("missing container boundary %q: %s", required, run)
 		}
@@ -81,15 +84,22 @@ func TestWebMountsOnlyLiveSourcesAndCleansOwnedVolumes(t *testing.T) {
 }
 
 func TestWebManifestLinksStayInsideCheckout(t *testing.T) {
-	root := t.TempDir()
-	outside := filepath.Join(t.TempDir(), "package.json")
-	if err := os.WriteFile(outside, []byte("private"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Symlink(outside, filepath.Join(root, "package.json")); err != nil {
-		t.Fatal(err)
-	}
-	if err := copyWebManifests(root, t.TempDir()); err == nil {
-		t.Fatal("external manifest accepted")
+	for _, name := range []string{"package.json", "patches/external.patch"} {
+		t.Run(name, func(t *testing.T) {
+			root := t.TempDir()
+			outside := filepath.Join(t.TempDir(), "package.json")
+			if err := os.WriteFile(outside, []byte("private"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.MkdirAll(filepath.Dir(filepath.Join(root, name)), 0755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Symlink(outside, filepath.Join(root, name)); err != nil {
+				t.Fatal(err)
+			}
+			if err := copyWebManifests(root, t.TempDir()); err == nil {
+				t.Fatal("external manifest accepted")
+			}
+		})
 	}
 }

@@ -94,6 +94,10 @@ domains receive props and events; router imports remain in the player app.
 New pages belong under `pages/`; choose their layout through a parent page and
 `RouterView`. Register new production page paths in the Go `playerPage` allowlist
 and extend its HTTP tests so direct links and reloads reach the same page.
+The Docker development server scans routes with HMR while sources stay read-only;
+it disables declaration writes through `PWNDEN_READONLY_SOURCES=1`. Production
+builds regenerate `typed-router.d.ts`. Dependency image contexts include pnpm
+patch files alongside manifests and the lockfile.
 
 ## Visual system
 

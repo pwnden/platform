@@ -59,7 +59,7 @@ func (l *Launcher) web(ctx context.Context, directory string) (target, nonce str
 	args := []string{"run", "--detach", "--init", "--name", name,
 		"--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "256",
 		"--publish", "127.0.0.1::5173", "--mount", strings.TrimSpace(mount.String()),
-		"--env", "PWNDEN_STYLE_NONCE=" + nonce}
+		"--env", "PWNDEN_STYLE_NONCE=" + nonce, "--env", "PWNDEN_READONLY_SOURCES=1"}
 	// Hide host node_modules at every workspace level; their native modules may
 	// target another OS, and development caches must stay writable in Docker.
 	if err := filepath.WalkDir(manifests, func(path string, entry fs.DirEntry, err error) error {
@@ -149,11 +149,12 @@ func copyWebManifests(root, destination string) error {
 		if err != nil {
 			return err
 		}
-		if entry.Name() != "package.json" && relative != "pnpm-lock.yaml" && relative != "pnpm-workspace.yaml" {
+		patch := strings.HasPrefix(filepath.ToSlash(relative), "patches/") && strings.HasSuffix(relative, ".patch")
+		if entry.Name() != "package.json" && relative != "pnpm-lock.yaml" && relative != "pnpm-workspace.yaml" && !patch {
 			return nil
 		}
 		if entry.Type()&os.ModeSymlink != 0 {
-			return errors.New("frontend manifests must be files inside the checkout")
+			return errors.New("frontend dependency inputs must be files inside the checkout")
 		}
 		content, err := os.ReadFile(path)
 		if err != nil {

@@ -17,8 +17,9 @@ export default defineConfig({
     forwardConsole: false,
   },
   plugins: [VueRouter({
+    root: new URL('.', import.meta.url).pathname,
     routesFolder: new URL('./src/pages', import.meta.url).pathname,
-    dts: new URL('./src/typed-router.d.ts', import.meta.url).pathname,
+    dts: process.env.PWNDEN_READONLY_SOURCES === '1' ? false : new URL('./src/typed-router.d.ts', import.meta.url).pathname,
   }), vue(), {
     name: 'workspace-source-watch',
     configureServer(server) {
