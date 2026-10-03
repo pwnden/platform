@@ -576,9 +576,9 @@ func runTool(ctx context.Context, c *challenge.Loaded, project, image string, ar
 		if err != nil {
 			return "", "", err
 		}
-		mount = "type=volume,source=" + volume + ",target=/challenge,volume-nocopy"
+		mount = "type=volume,source=" + volume + ",target=/workspace,volume-nocopy"
 	}
-	options := []string{"create", "--rm", "--name", container, "--label", managedLabel + "=true", "--label", "pwnden.kind=tool", "--network", network, "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--mount", mount, "--workdir", "/challenge"}
+	options := []string{"create", "--rm", "--name", container, "--label", managedLabel + "=true", "--label", "pwnden.kind=tool", "--network", network, "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--mount", mount, "--workdir", "/workspace"}
 	options = append(options, toolOptions(c.Solve.Writable)...)
 	options = append(options, "--", image)
 	options = append(options, args...)
@@ -624,7 +624,7 @@ func removeTool(ctx context.Context, c *challenge.Loaded, container string) erro
 }
 
 func toolboxMount(source string, writable bool) string {
-	fields := []string{"type=bind", "source=" + source, "target=/challenge"}
+	fields := []string{"type=bind", "source=" + source, "target=/workspace"}
 	if !writable {
 		fields = append(fields, "readonly")
 	}

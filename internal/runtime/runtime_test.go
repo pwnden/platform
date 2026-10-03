@@ -18,7 +18,7 @@ func TestToolboxMountPreservesRepositoryPath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(fields) != 4 || fields[1] != "source="+source || fields[2] != "target=/challenge" || fields[3] != "readonly" {
+	if len(fields) != 4 || fields[1] != "source="+source || fields[2] != "target=/workspace" || fields[3] != "readonly" {
 		t.Fatalf("repository path changed mount options: %v", fields)
 	}
 }

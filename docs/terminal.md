@@ -30,7 +30,7 @@ submission bar reports the limit even when the problem has no Terminal tool.
 
 ## Input and isolation
 
-`/challenge` contains only regular files explicitly declared in the problem's
+`/workspace` contains only regular files explicitly declared in the problem's
 `files` list, preserving their relative paths. A problem with no distributed
 files starts with an empty directory. The terminal does not mount the author
 directory, metadata, hints or solution scripts. Readonly problems use a private
@@ -38,7 +38,7 @@ readonly copy; writable problems seed their bounded temporary volume with the
 same declared files. Trusted automatic solution verification uses a separate
 author workspace. Its scripts and output never enter the player volume.
 
-The prompt shows the current shell directory, for example `/challenge #`.
+The prompt shows the current shell directory, for example `/workspace #`.
 The path uses cyan from the shared terminal palette. Bash updates it after `cd` and
 uses `#` for root or `$` for other users. Color sequences are enclosed in
 Readline nonprinting delimiters so cursor movement and line wrapping use the

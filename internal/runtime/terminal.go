@@ -128,7 +128,7 @@ func OpenTerminal(ctx context.Context, c *challenge.Loaded, project string, cols
 		// startup and pass the value as data before launching interactive Bash.
 		Cmd: []string{"--noprofile", "--norc", "-c", `(umask 077; printf '%s' "$1" > "$INPUTRC") || exit; stty iutf8 || exit; export PS1="$2"; exec /bin/bash --noprofile --norc -i`, "pwnden-terminal", terminalReadline, prompt},
 		Tty: true, OpenStdin: true, StdinOnce: true, AttachStdin: true, AttachStdout: true, AttachStderr: true,
-		WorkingDir: "/challenge", User: toolUser(c.Solve.Writable), Env: append(toolEnv(), "TERM=xterm-256color", "LANG=C.UTF-8", "LC_ALL=C.UTF-8", "INPUTRC=/tmp/pwnden.inputrc", "HISTFILE=/dev/null"),
+		WorkingDir: "/workspace", User: toolUser(c.Solve.Writable), Env: append(toolEnv(), "TERM=xterm-256color", "LANG=C.UTF-8", "LC_ALL=C.UTF-8", "INPUTRC=/tmp/pwnden.inputrc", "HISTFILE=/dev/null"),
 		Labels: map[string]string{managedLabel: "true", "pwnden.kind": "terminal", "pwnden.problem": c.Slug, "pwnden.project": Project(c), "pwnden.repository": repositoryID(c.RepoRoot)},
 	}
 	// Claim the random name before the request: an interrupted response may have
@@ -136,9 +136,9 @@ func OpenTerminal(ctx context.Context, c *challenge.Loaded, project string, cols
 	owned = true
 	host := limitedHostConfig(network, false)
 	host.Tmpfs["/home/pwnden"] = toolHomeOptions(c.Solve.Writable)
-	host.Mounts = []mount.Mount{{Type: mount.TypeBind, Source: source, Target: "/challenge", ReadOnly: true}}
+	host.Mounts = []mount.Mount{{Type: mount.TypeBind, Source: source, Target: "/workspace", ReadOnly: true}}
 	if workspace != "" {
-		host.Mounts = []mount.Mount{{Type: mount.TypeVolume, Source: workspace, Target: "/challenge", VolumeOptions: &mount.VolumeOptions{NoCopy: true}}}
+		host.Mounts = []mount.Mount{{Type: mount.TypeVolume, Source: workspace, Target: "/workspace", VolumeOptions: &mount.VolumeOptions{NoCopy: true}}}
 	}
 	host.ConsoleSize = [2]uint{uint(rows), uint(cols)}
 	var created client.ContainerCreateResult

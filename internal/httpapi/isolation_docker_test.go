@@ -237,7 +237,7 @@ assert pathlib.Path('/sys/fs/cgroup/memory.swap.max').read_text().strip() == '0'
 assert pathlib.Path('/sys/fs/cgroup/pids.max').read_text().strip() == '256'
 assert os.statvfs('/tmp').f_blocks * os.statvfs('/tmp').f_frsize == 128*1024**2
 pathlib.Path('/tmp/pwnden-resource-check').write_text('writable')
-for path in ['/var/tmp/pwnden-forbidden', '/challenge/pwnden-forbidden']:
+for path in ['/var/tmp/pwnden-forbidden', '/workspace/pwnden-forbidden']:
     try:
         pathlib.Path(path).write_text('forbidden')
     except OSError as error:

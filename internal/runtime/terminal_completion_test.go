@@ -57,18 +57,18 @@ func TestTerminalFilenameCompletionDocker(t *testing.T) {
 		}
 	}()
 	cases := []struct{ name, input, want string }{
-		{"directory prompt", "", "\x1b[36m/challenge\x1b[0m "},
+		{"directory prompt", "", "\x1b[36m/workspace\x1b[0m "},
 		{"disable input echo", "stty -echo; printf '\\137\\137READY__\\n'\r", "__READY__\r\n"},
 		{"prompt follows working directory", "cd /tmp\r", "\x1b[36m/tmp\x1b[0m "},
-		{"return to problem directory", "cd /challenge\r", "\x1b[36m/challenge\x1b[0m "},
-		{"JSON without final newline", "printf '{\"error\": \"staff_access_required\"}'\r", "{\"error\": \"staff_access_required\"}\r\n\x1b[36m/challenge\x1b[0m "},
-		{"text without final newline", "printf '\\137\\137PARTIAL__'\r", "__PARTIAL__\r\n\x1b[36m/challenge\x1b[0m "},
-		{"already terminated output", "printf '\\137\\137TERMINATED__\\n'\r", "__TERMINATED__\r\n\r\n\x1b[36m/challenge\x1b[0m "},
-		{"empty output", "true\r", "\r\n\x1b[36m/challenge\x1b[0m "},
+		{"return to problem directory", "cd /workspace\r", "\x1b[36m/workspace\x1b[0m "},
+		{"JSON without final newline", "printf '{\"error\": \"staff_access_required\"}'\r", "{\"error\": \"staff_access_required\"}\r\n\x1b[36m/workspace\x1b[0m "},
+		{"text without final newline", "printf '\\137\\137PARTIAL__'\r", "__PARTIAL__\r\n\x1b[36m/workspace\x1b[0m "},
+		{"already terminated output", "printf '\\137\\137TERMINATED__\\n'\r", "__TERMINATED__\r\n\r\n\x1b[36m/workspace\x1b[0m "},
+		{"empty output", "true\r", "\r\n\x1b[36m/workspace\x1b[0m "},
 		{"private files absent", "test ! -e README.md && test ! -e AUTHORING.md && test ! -e challenge.toml && test ! -e hints && test ! -e solve && printf '\\137\\137PRIVATE__:absent\\n'\r", "__PRIVATE__:absent\r\n"},
 		{"relative filename ignoring case", "printf '\\137\\137RELATIVE__:%s\\n' files/CHECK\t\r", "__RELATIVE__:files/checker.py\r\n"},
-		{"absolute filename ignoring case", "printf '\\137\\137ABSOLUTE__:%s\\n' /challenge/files/CHECK\t\r", "__ABSOLUTE__:/challenge/files/checker.py\r\n"},
-		{"directory completion", "printf '\\137\\137DIRECTORY__:%s\\n' /challenge/fil\t\r", "__DIRECTORY__:/challenge/files/\r\n"},
+		{"absolute filename ignoring case", "printf '\\137\\137ABSOLUTE__:%s\\n' /workspace/files/CHECK\t\r", "__ABSOLUTE__:/workspace/files/checker.py\r\n"},
+		{"directory completion", "printf '\\137\\137DIRECTORY__:%s\\n' /workspace/fil\t\r", "__DIRECTORY__:/workspace/files/\r\n"},
 		{"completion candidates", "mkdir -p /tmp/pwnden-completion; touch /tmp/pwnden-completion/choice-{alpha,beta,gamma}; printf '\\137\\137CANDIDATES__:ok\\n'\r", "__CANDIDATES__:ok\r\n"},
 		{"first candidate", "printf '\\137\\137FIRST__:%s\\n' /tmp/pwnden-completion/choice-\t\r", "__FIRST__:/tmp/pwnden-completion/choice-alpha\r\n"},
 		{"next candidate", "printf '\\137\\137SECOND__:%s\\n' /tmp/pwnden-completion/choice-\t\t\r", "__SECOND__:/tmp/pwnden-completion/choice-beta\r\n"},
@@ -80,10 +80,10 @@ func TestTerminalFilenameCompletionDocker(t *testing.T) {
 		{"command history", "\x1b[A\r", "__ERASE__:ok\r\n"},
 	}
 	promptScreens := map[string]string{
-		"JSON without final newline": "{\"error\": \"staff_access_required\"}\n/challenge",
-		"text without final newline": "__PARTIAL__\n/challenge",
-		"already terminated output":  "__TERMINATED__\n\n/challenge",
-		"empty output":               "\n/challenge",
+		"JSON without final newline": "{\"error\": \"staff_access_required\"}\n/workspace",
+		"text without final newline": "__PARTIAL__\n/workspace",
+		"already terminated output":  "__TERMINATED__\n\n/workspace",
+		"empty output":               "\n/workspace",
 	}
 	for _, check := range cases {
 		t.Run(check.name, func(t *testing.T) {

@@ -18,7 +18,7 @@ import (
 
 const workspaceSize = 256 << 20
 const workspaceInodes = 32768
-const workspacePolicy = "tmpfs-player-files-v2"
+const workspacePolicy = "tmpfs-player-files-v3"
 const workspaceOptions = "size=256m,nosuid,nodev,nr_inodes=32768,uid=10001,gid=10001,mode=0700"
 
 func workspaceCost() resourceCost { return resourceCost{25e7, 512 << 20, 32, 1} }
@@ -94,7 +94,7 @@ func ensureWorkspaceFor(ctx context.Context, c *challenge.Loaded, project string
 		if err := checkWorkspaceVolume(ctx, c, project); err != nil {
 			return err
 		}
-		args = []string{"create", "--name", name, "--network", "none", "--user", "10001:10001", "--read-only", "--cgroupns", "private", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--cpus", "0.25", "--memory", "512m", "--memory-swap", "512m", "--pids-limit", "32", "--log-driver", "local", "--log-opt", "max-size=10m", "--log-opt", "max-file=3", "--tmpfs", "/state:rw,noexec,nosuid,nodev,size=1m,nr_inodes=32,uid=10001,gid=10001,mode=0700", "--mount", "type=volume,source=" + volume + ",target=/challenge,volume-nocopy", "--entrypoint", "/bin/sleep"}
+		args = []string{"create", "--name", name, "--network", "none", "--user", "10001:10001", "--read-only", "--cgroupns", "private", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--cpus", "0.25", "--memory", "512m", "--memory-swap", "512m", "--pids-limit", "32", "--log-driver", "local", "--log-opt", "max-size=10m", "--log-opt", "max-file=3", "--tmpfs", "/state:rw,noexec,nosuid,nodev,size=1m,nr_inodes=32,uid=10001,gid=10001,mode=0700", "--mount", "type=volume,source=" + volume + ",target=/workspace,volume-nocopy", "--entrypoint", "/bin/sleep"}
 		for _, label := range labels {
 			args = append(args, "--label", label)
 		}
@@ -105,7 +105,7 @@ func ensureWorkspaceFor(ctx context.Context, c *challenge.Loaded, project string
 		if _, stderr, err := command(ctx, "", nil, "docker", "start", name); err != nil {
 			return fmt.Errorf("start workspace keeper: %w: %s", err, stderr)
 		}
-		if _, stderr, err := commandInput(ctx, "", nil, archive, "docker", "exec", "-i", name, "/bin/tar", "-x", "-f", "-", "-C", "/challenge"); err != nil {
+		if _, stderr, err := commandInput(ctx, "", nil, archive, "docker", "exec", "-i", name, "/bin/tar", "-x", "-f", "-", "-C", "/workspace"); err != nil {
 			return fmt.Errorf("seed bounded workspace: %w: %s", err, stderr)
 		}
 		_, stderr, err := command(ctx, "", nil, "docker", "exec", name, "/bin/touch", "/state/ready")
@@ -153,7 +153,7 @@ func inspectWorkspace(ctx context.Context, c *challenge.Loaded, project string) 
 		if mounted.Destination == "/state" && string(mounted.Type) == "tmpfs" {
 			continue
 		}
-		if mounted.Destination != "/challenge" || string(mounted.Type) != "volume" || mounted.Name != project+"_pwnden-workspace" || !mounted.RW {
+		if mounted.Destination != "/workspace" || string(mounted.Type) != "volume" || mounted.Name != project+"_pwnden-workspace" || !mounted.RW {
 			return errors.New("workspace mount changed")
 		}
 	}

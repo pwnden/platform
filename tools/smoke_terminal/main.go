@@ -222,7 +222,7 @@ func run(c config) error {
 	if owned.Config.Labels["pwnden.kind"] != "terminal" || owned.Config.Labels["pwnden.problem"] != c.Slug {
 		return errors.New("unexpected container ownership")
 	}
-	if len(owned.Mounts) != 1 || owned.Mounts[0].Type != "bind" || owned.Mounts[0].Destination != "/challenge" || owned.Mounts[0].RW || owned.Mounts[0].Source == filepath.Join(c.Root, "challenges", c.Slug) {
+	if len(owned.Mounts) != 1 || owned.Mounts[0].Type != "bind" || owned.Mounts[0].Destination != "/workspace" || owned.Mounts[0].RW || owned.Mounts[0].Source == filepath.Join(c.Root, "challenges", c.Slug) {
 		return errors.New("terminal mount policy differs")
 	}
 	problem, err := challenge.Load(c.Root, c.Slug)
