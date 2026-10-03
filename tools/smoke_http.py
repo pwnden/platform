@@ -102,6 +102,7 @@ def check_assets(origin, token):
     assert "/session.js" not in page and token not in page
     assets = re.findall(r'(?:src|href)="(/assets/[^" ]+)"', page)
     assert len(assets) >= 2
+    scripts = []
     for path in assets:
         with client.open(origin + path, timeout=10) as response:
             content = response.read().decode()
@@ -111,8 +112,13 @@ def check_assets(origin, token):
             assert response.headers.get("X-Content-Type-Options") == "nosniff"
         assert content and token not in content
         if path.endswith(".js"):
-            assert "history.replaceState" in content and "/api/v1" in content
-            assert "localStorage" not in content and "sessionStorage" in content
+            scripts.append(content)
+    # The entry HTML can preload shared chunks. Session and API initialization
+    # belong to the module graph, rather than every individual JavaScript file.
+    script = "\n".join(scripts)
+    assert re.search(r"history\s*(?:\.\s*replaceState|\[\s*['\"]replaceState['\"]\s*\])", script)
+    assert "/api/v1" in script
+    assert "localStorage" not in script and "sessionStorage" in script
 
 
 def download(origin, token, slug, file):

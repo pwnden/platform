@@ -1,12 +1,55 @@
 """Check HTTP smoke coverage as problem catalogs and guidance change."""
 
 import json
+from email.message import Message
+from io import BytesIO
 from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
 
-from smoke_http import check_catalog, check_guidance
+from smoke_http import check_assets, check_catalog, check_guidance
+
+
+class AssetCoverageTests(unittest.TestCase):
+    def check(self, *, session=True, leaked=False):
+        nonce = "a" * 64
+        page = (f'<meta name="pwnden-style-nonce" content="{nonce}">'
+                '<div id="app"></div><script type="module" src="/assets/entry.js"></script>'
+                '<link rel="modulepreload" href="/assets/shared.js">'
+                '<link rel="stylesheet" href="/assets/style.css">')
+        assets = {
+            "/": page,
+            "/assets/entry.js": "history.replaceState(history.state, '', location.pathname); sessionStorage.getItem('session');" if session else "console.log('missing session');",
+            "/assets/shared.js": "const api='/api/v1';" + ("fixture-secret" if leaked else ""),
+            "/assets/style.css": "body { color: blue; }",
+        }
+
+        class Client:
+            def open(self, url, timeout):
+                path = url.removeprefix("http://fixture")
+                response = BytesIO(assets[path].encode())
+                response.headers = Message()
+                media = "text/html" if path == "/" else "text/javascript" if path.endswith(".js") else "text/css"
+                response.headers["Content-Type"] = media + "; charset=utf-8"
+                response.headers["Cache-Control"] = "no-store"
+                response.headers["X-Content-Type-Options"] = "nosniff"
+                response.headers["Content-Security-Policy"] = "default-src 'self'"
+                return response
+
+        with patch("smoke_http.build_opener", return_value=Client()):
+            check_assets("http://fixture", "fixture-secret")
+
+    def test_session_and_api_can_live_in_separate_chunks(self):
+        self.check()
+
+    def test_missing_session_initialization_fails(self):
+        with self.assertRaises(AssertionError):
+            self.check(session=False)
+
+    def test_credentials_in_any_chunk_fail(self):
+        with self.assertRaises(AssertionError):
+            self.check(leaked=True)
 
 
 class CatalogCoverageTests(unittest.TestCase):
