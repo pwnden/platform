@@ -57,7 +57,7 @@ const MarkdownContent = () => nodes.value.map(node => renderMarkdownNode(node, p
 .ui-markdown :deep(ul), .ui-markdown :deep(ol) { padding: var(--ui-space-2); }
 .ui-markdown :deep(li > ul), .ui-markdown :deep(li > ol) { margin-block: var(--ui-space-1); }
 .ui-markdown :deep(blockquote) { margin-inline: 0; padding: var(--ui-space-2); border-left: 1px solid var(--ui-border-active); color: var(--ui-muted); }
-.ui-markdown :deep(.markdown-person) { color: var(--ui-person); text-decoration: underline dotted; text-decoration-color: color-mix(in srgb, var(--ui-person) 35%, transparent); text-decoration-thickness: 1px; text-underline-offset: 0.18em; }
+.ui-markdown :deep(.markdown-person) { color: var(--ui-person); }
 .ui-markdown :deep(.markdown-message) { padding: var(--ui-space-3); border: 0; border-radius: var(--ui-radius-surface); color: var(--ui-foreground); background: var(--ui-accent-surface); }
 .ui-markdown :deep(.markdown-message-from) { display: flex; align-items: center; gap: var(--ui-space-1); margin-bottom: var(--ui-space-1); color: var(--ui-accent); font-weight: 600; }
 .ui-markdown :deep(.markdown-message-body) { font-size: 1.05rem; }

@@ -275,7 +275,7 @@ license terms are recorded in `web/packages/ui/src/fonts/README.md`; Vite emits
 both OFL license files under `/assets/licenses/`. Go serves WOFF2 as `font/woff2`.
 
 `:person[name]` renders an explicit narrative name as a plain inline span with
-the shared muted lavender color and a thin, low-contrast dotted underline.
+the shared muted lavender color.
 It inherits body typography without added weight or interaction. An explicit
 label declares the name for that document; later prose mentions receive the
 same treatment automatically. Code, links and other documents keep their own
