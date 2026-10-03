@@ -5,6 +5,15 @@ paths and prose. Examples: `api`, `APIClient`, `createAPI`, `HTTPError`,
 `UIButton`, `url`, `URL`, `DTO`, `CLI`. Preserve upstream names when calling
 third-party APIs; give project-owned aliases the project spelling.
 
+# Delivery validation
+
+For changes to player file exposure, terminal behavior, installation, packaging
+or HTTP delivery, run `python3 -B tools/verify_delivery.py --challenges ../challenges`
+before publishing or marking the work complete. This is the same native package,
+HTTP and PTY gate used by CI. `tools/verify.py` checks catalog execution and is
+not sufficient for those delivery changes. Player `exec` and terminal smoke
+checks use declared exercise files; trusted `verify` supplies submission fixtures.
+
 # Challenge integration
 
 Discover problems and derive player tools from the challenges contract. Keep

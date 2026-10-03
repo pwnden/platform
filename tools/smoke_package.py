@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import re
 from pathlib import Path
 import shutil
 import signal
@@ -65,6 +66,15 @@ def extract_package(package, directory):
     return binaries[0]
 
 
+def verified_answer(output, slug):
+    """Trusted verification supplies test data; player exec cannot read solutions."""
+    match = re.fullmatch(r'verified ' + re.escape(slug) + r': (pwnden\{[^\s{}]+\})'
+                         r'(?:\npatched attack failed; functional check passed)?', output.strip())
+    if match is None:
+        raise ValueError('verification did not return one answer for ' + slug)
+    return match.group(1)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     source = parser.add_mutually_exclusive_group(required=True)
@@ -110,17 +120,15 @@ def main():
         listing = execute(binary, environment, ["list"])
         assert "note-vault" in listing and "rotor-lock" in listing
         execute(binary, environment, ["exec", "rotor-lock", "--", "python3", "files/checker.py", "wrong"], expected=1)
-        file_flag = execute(binary, environment, ["exec", "rotor-lock", "--", "python3", "solve/solve.py"]).strip()
+        file_flag = verified_answer(execute(binary, environment, ["verify", "rotor-lock"]), "rotor-lock")
         execute(binary, environment, ["submit", "rotor-lock", "wrong"], expected=1)
         execute(binary, environment, ["submit", "rotor-lock", file_flag])
-        execute(binary, environment, ["verify", "rotor-lock"])
         # The fresh data root makes this check the owner of any attempted start.
         started = True
         try:
             execute(binary, environment, ["run", "note-vault"])
-            service_flag = execute(binary, environment, ["exec", "note-vault", "--", "python3", "solve/solve.py"]).strip()
+            service_flag = verified_answer(execute(binary, environment, ["verify", "note-vault"]), "note-vault")
             execute(binary, environment, ["submit", "note-vault", service_flag])
-            execute(binary, environment, ["verify", "note-vault"])
         finally:
             try:
                 execute(binary, environment, ["stop", "note-vault"], cleanup=True)

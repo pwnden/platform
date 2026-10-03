@@ -63,7 +63,21 @@ The test leaves the player's running projects untouched. See [network isolation]
 
 The workflow runs on pushes to the platform's `main`, pull requests, manual dispatches, and daily at 18:00 UTC (03:00 Korea time). The daily run checks changes to the published problem repository. Each repository owns its implementation and CI; the platform workflow uses its own checked-out code for the consumer runtime. GitHub-hosted execution is confirmed by the respective workflow runs after publication.
 
-After problem verification, the workflow builds a native Linux platform package and runs `tools/smoke_package.py`. That check uses the package with only Docker on its child PATH, exercising managed setup and player commands without Go, Git, or a separately supplied problem path. See [distribution](distribution.md) for local package checks.
+After problem verification, CI and local delivery checks use the same command:
+
+```sh
+python3 -B tools/verify_delivery.py --challenges ../challenges
+```
+
+It builds the native Linux package and terminal driver, then runs both
+`smoke_package.py` and `smoke_http.py` with actual Docker. The application child
+PATH contains only Docker, exercising managed setup and player commands without
+host SDKs or an explicit problem checkout. Run this gate for changes to player
+file exposure, terminal behavior, installation, packaging or HTTP delivery;
+`tools/verify.py` alone covers catalog execution. Trusted `verify` supplies answer
+fixtures for submission tests, while player `exec` and PTY checks use distributed
+exercise files. Terminal inspection checks the declared file contents and rejects
+mounting the author directory. See [distribution](distribution.md) for package details.
 
 `tools/smoke_http.py` also exercises the packaged local server with only Docker on its child PATH: embedded HTML/script/style delivery, authenticated catalog, both problem kinds, web problem solving, incorrect and correct submissions, preserved state and rotated credentials after server restart, and repeatable stop. It compares CLI metadata in catalog summaries and details with the installed problem declarations. This driver checks HTTP behavior; browser interaction is a separate check. See [local server](local-server.md) for the local command and unit/concurrency coverage.
 

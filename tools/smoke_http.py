@@ -19,7 +19,7 @@ from urllib.error import HTTPError
 from urllib.parse import urlsplit
 from urllib.request import HTTPCookieProcessor, ProxyHandler, Request, build_opener
 
-from smoke_package import extract_package
+from smoke_package import extract_package, verified_answer
 
 
 def command(binary, environment, *args):
@@ -240,7 +240,7 @@ def main():
             assert shutil.which(name, path=environment["PATH"]) is None
         command(binary, environment, "setup")
         # CLI mutations complete before opening the HTTP session.
-        file_flag = command(binary, environment, "exec", "rotor-lock", "--", "python3", "solve/solve.py")
+        file_flag = verified_answer(command(binary, environment, "verify", "rotor-lock"), "rotor-lock")
         server, origin, token = start(binary, environment)
         for mutation in (("stop", "note-vault"), ("exec", "rotor-lock", "--", "true"), ("serve",)):
             blocked = subprocess.run([str(binary), *mutation], env=environment, capture_output=True, text=True, timeout=10)

@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
+	"github.com/pwnden/platform/internal/challenge"
 )
 
 type config struct{ Origin, Token, Slug, Root, Mode string }
@@ -80,11 +81,17 @@ func (s *terminal) until(marker string) error {
 // Send the same UTF-8 bytes and control sequences as xterm. Assertions match
 // command results rather than input echo, so a shell without Readline fails.
 func (s *terminal) editing() error {
+	if err := s.input("mkdir -p /tmp/pwnden-completion; touch /tmp/pwnden-completion/Example.txt; printf '\\137\\137FIXTURE__:ok\\n'\r"); err != nil {
+		return err
+	}
+	if err := s.until("__FIXTURE__:ok\r\n"); err != nil {
+		return err
+	}
 	cases := []struct{ name, input, result string }{
 		{"UTF-8 erase", "printf '\\137\\137UTF8__:%s\\n' '가나\x7f\x7fok'\r", "__UTF8__:ok\r\n"},
 		{"erase at prompt", "한글" + strings.Repeat("\x7f", 20) + "printf '\\137\\137BOUNDARY__:ok\\n'\r", "__BOUNDARY__:ok\r\n"},
-		{"path completion", "printf '\\137\\137COMPLETE__:%s\\n' /challenge/sol\t\r", "__COMPLETE__:/challenge/solve/\r\n"},
-		{"filename completion ignoring case", "printf '\\137\\137FILENAME__:%s\\n' readme\t\r", "__FILENAME__:README.md\r\n"},
+		{"path completion", "printf '\\137\\137COMPLETE__:%s\\n' /tmp/pwnden-complet\t\r", "__COMPLETE__:/tmp/pwnden-completion/\r\n"},
+		{"filename completion ignoring case", "printf '\\137\\137FILENAME__:%s\\n' /tmp/pwnden-completion/exam\t\r", "__FILENAME__:/tmp/pwnden-completion/Example.txt\r\n"},
 		{"completion candidates", "mkdir -p /tmp/pwnden-completion; touch /tmp/pwnden-completion/choice-{alpha,beta,gamma}; printf '\\137\\137CANDIDATES__:ok\\n'\r", "__CANDIDATES__:ok\r\n"},
 		{"Tab candidate cycling", "printf '\\137\\137CYCLE__:%s\\n' /tmp/pwnden-completion/choice-\t\t\r", "__CYCLE__:/tmp/pwnden-completion/choice-beta\r\n"},
 		{"Tab candidate wraparound", "printf '\\137\\137WRAP__:%s\\n' /tmp/pwnden-completion/choice-" + strings.Repeat("\t", 5) + "\r", "__WRAP__:/tmp/pwnden-completion/choice-alpha\r\n"},
@@ -215,8 +222,49 @@ func run(c config) error {
 	if owned.Config.Labels["pwnden.kind"] != "terminal" || owned.Config.Labels["pwnden.problem"] != c.Slug {
 		return errors.New("unexpected container ownership")
 	}
-	if len(owned.Mounts) != 1 || owned.Mounts[0].Type != "bind" || owned.Mounts[0].Destination != "/challenge" || owned.Mounts[0].RW || owned.Mounts[0].Source != filepath.Join(c.Root, "challenges", c.Slug) {
+	if len(owned.Mounts) != 1 || owned.Mounts[0].Type != "bind" || owned.Mounts[0].Destination != "/challenge" || owned.Mounts[0].RW || owned.Mounts[0].Source == filepath.Join(c.Root, "challenges", c.Slug) {
 		return errors.New("terminal mount policy differs")
+	}
+	problem, err := challenge.Load(c.Root, c.Slug)
+	if err != nil {
+		return err
+	}
+	expected := map[string][]byte{}
+	for _, name := range problem.Files {
+		source, err := challenge.Resolve(c.Root, problem.Dir, name)
+		if err != nil {
+			return err
+		}
+		data, err := os.ReadFile(source)
+		if err != nil {
+			return err
+		}
+		expected[filepath.Clean(name)] = data
+	}
+	source := owned.Mounts[0].Source
+	if err := filepath.WalkDir(source, func(path string, entry os.DirEntry, failure error) error {
+		if failure != nil {
+			return failure
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		name, err := filepath.Rel(source, path)
+		if err != nil {
+			return err
+		}
+		want, exists := expected[name]
+		data, err := os.ReadFile(path)
+		if !exists || err != nil || !bytes.Equal(data, want) {
+			return errors.New("terminal exposes unexpected or changed exercise files")
+		}
+		delete(expected, name)
+		return nil
+	}); err != nil {
+		return err
+	}
+	if len(expected) != 0 {
+		return errors.New("terminal is missing declared exercise files")
 	}
 	if owned.HostConfig.Privileged || strings.Join(owned.HostConfig.CapDrop, ",") != "ALL" || !strings.Contains(strings.Join(owned.HostConfig.SecurityOpt, ","), "no-new-privileges") {
 		return errors.New("terminal privilege policy differs")
@@ -256,14 +304,14 @@ func run(c config) error {
 		return err
 	}
 	if c.Slug == "rotor-lock" {
-		if err := s.input("python3 solve/solve.py; printf '__SOLVED__\\n'\n"); err != nil {
+		if err := s.input("python3 files/checker.py wrong; test $? = 1 && printf '\\137\\137CHECKED__\\n'\n"); err != nil {
 			return err
 		}
-		if err := s.until("__SOLVED__\r\n"); err != nil {
+		if err := s.until("__CHECKED__\r\n"); err != nil {
 			return err
 		}
-		if !strings.Contains(s.output.String(), "pwnden{") {
-			return errors.New("file solver failed inside terminal")
+		if !strings.Contains(s.output.String(), "locked") {
+			return errors.New("exercise checker failed inside terminal")
 		}
 	} else {
 		if err := s.input("python3 -c \"import urllib.request; print(urllib.request.urlopen('http://app:8000/healthz').status)\"; printf '__NETWORK_END__\\n'\n"); err != nil {
