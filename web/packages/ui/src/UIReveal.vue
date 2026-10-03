@@ -14,7 +14,7 @@ defineEmits<{ 'update:modelValue': [value: boolean] }>();
 </template>
 
 <style scoped>
-.ui-reveal { min-width: 0; border-block-start: 1px solid var(--ui-border); }
+.ui-reveal { min-width: 0; }
 .ui-reveal > .ui-disclosure { width: 100%; }
 .ui-reveal-content { min-width: 0; padding: var(--ui-space-1); }
 </style>

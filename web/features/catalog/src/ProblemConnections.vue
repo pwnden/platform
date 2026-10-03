@@ -99,7 +99,7 @@ onMounted(load);
 </template>
 
 <style scoped>
-.learning-body { display: grid; gap: var(--ui-space-3); }
+.learning-body { display: grid; gap: var(--ui-space-2); }
 .knowledge, .problem-links, .connection-list, .goal-notes { display: grid; align-content: start; gap: var(--ui-space-1); min-width: 0; }
 h4 { margin: 0; font-size: 0.875rem; font-weight: 600; color: var(--ui-muted); }
 .problem-links { gap: var(--ui-space-2); }

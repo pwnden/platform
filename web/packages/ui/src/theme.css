@@ -177,10 +177,9 @@ a:not(.ui-button):active { color: var(--ui-accent); background: var(--ui-accent-
 .ui-disclosure[aria-expanded='true'] .ui-disclosure-chevron { transform: rotate(90deg); }
 @media (hover: hover) { .ui-disclosure:hover { color: var(--ui-accent); background: var(--ui-surface-hover); } }
 .ui-disclosure:active { background: var(--ui-surface-pressed); }
-.ui-disclosure:focus-visible { outline: none; }
-.ui-disclosure:focus-visible .ui-disclosure-label { outline: var(--ui-focus-width) solid var(--ui-focus-color); outline-offset: 2px; }
+.ui-disclosure:focus-visible { outline: var(--ui-focus-width) solid var(--ui-focus-color); outline-offset: -2px; }
 @media (forced-colors: active) {
-  :focus-visible, .ui-disclosure:focus-visible .ui-disclosure-label { outline-color: Highlight; }
+  :focus-visible { outline-color: Highlight; }
   .ui-button--row[aria-pressed='true'] { color: HighlightText; background: Highlight; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }

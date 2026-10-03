@@ -66,14 +66,16 @@ onMounted(() => { if (detail.value) emit('loaded', detail.value); else void load
     <template v-if="detail">
       <ProblemConnections v-if="detail.learning" :catalog="catalog" :problem="detail" :disabled="selectionDisabled" class="content-section" @select="emit('select', $event)" />
       <UIPanel v-if="detail.hintCount" title="힌트" headingID="hints-heading" :heading-level="3" class="content-section">
-        <UIReveal v-for="n in detail.hintCount" :key="n" :label="`힌트 ${n}`" :model-value="reading(`hint-${n}`).open" @update:model-value="open => reveal(`hint-${n}`, open)">
-          <p v-if="reading(`hint-${n}`).pending" role="status">힌트를 불러오는 중…</p>
-          <UIMarkdown v-if="reading(`hint-${n}`).content" :source="reading(`hint-${n}`).content!" :heading-offset="2" />
-          <div v-if="reading(`hint-${n}`).failed" role="alert">
-            <p>힌트를 불러오지 못했습니다.</p>
-            <UIButton size="compact" @click="reveal(`hint-${n}`, true)">힌트 다시 불러오기</UIButton>
-          </div>
-        </UIReveal>
+        <div class="reading-list">
+          <UIReveal v-for="n in detail.hintCount" :key="n" :label="`힌트 ${n}`" :model-value="reading(`hint-${n}`).open" @update:model-value="open => reveal(`hint-${n}`, open)">
+            <p v-if="reading(`hint-${n}`).pending" role="status">힌트를 불러오는 중…</p>
+            <UIMarkdown v-if="reading(`hint-${n}`).content" :source="reading(`hint-${n}`).content!" :heading-offset="2" />
+            <div v-if="reading(`hint-${n}`).failed" role="alert">
+              <p>힌트를 불러오지 못했습니다.</p>
+              <UIButton size="compact" @click="reveal(`hint-${n}`, true)">힌트 다시 불러오기</UIButton>
+            </div>
+          </UIReveal>
+        </div>
       </UIPanel>
       <UIPanel v-if="detail.walkthrough" title="해설" headingID="walkthrough-heading" :heading-level="3" class="content-section">
         <UIReveal label="해설 보기 · 정답 포함" :model-value="reading('walkthrough').open" @update:model-value="open => reveal('walkthrough', open)">
@@ -94,6 +96,6 @@ onMounted(() => { if (detail.value) emit('loaded', detail.value); else void load
 .detail-panel > p, .detail-panel > [role='alert'] { padding: var(--ui-space-3); }
 .content-section { --ui-panel-inset: var(--ui-space-3); border-bottom: 1px solid var(--ui-border); }
 .content-section :deep(.ui-panel-heading) { background: var(--ui-surface-raised); }
-.content-section :deep(.ui-reveal:first-child) { border-top: 0; }
+.reading-list { display: grid; gap: var(--ui-space-1); }
 @media (max-width: 48rem) { .content-section { --ui-panel-inset: var(--ui-space-2); } }
 </style>

@@ -260,13 +260,13 @@ Source: [App.vue](apps/player/src/App.vue), [UIPanel.vue](packages/ui/src/UIPane
 
 ## Elevation & Depth
 
-Depth comes from tonal surfaces and dividing strokes. The shared blue glow supports primary button hover. Keyboard focus uses the shared (2px) accent outline inside the control boundary so scroll containers retain the indicator. Inline links and disclosure labels use an external (2px) offset. Disclosure focus follows its label and chevron. Pointer focus follows the browser's `:focus-visible` semantics; editable fields also show an accent border while focused.
+Depth comes from tonal surfaces and dividing strokes. The shared blue glow supports primary button hover. Keyboard focus uses the shared (2px) accent outline inside the control boundary so scroll containers retain the indicator. Inline links use an external (2px) offset. Disclosure hover and focus cover the full trigger row. Pointer focus follows the browser's `:focus-visible` semantics; editable fields also show an accent border while focused.
 
 Control color, border and shadow transitions take (140ms) with ease-out timing. Enabled hover uses the hover surface and active stroke on devices that support hover. Pressing a control uses the pressed surface and accent border; selected rows keep their accent fill after release. Expanded disclosures use the accent label and rotated chevron. Disabled controls retain their resting appearance at reduced opacity. Forced-color mode uses the system Highlight for focus and selection borders. Reduced-motion preferences remove CSS transitions and animations. The xterm renderer enables its blinking cursor when connected. These states belong to the shared UI package.
 
 ## Shapes
 
-Buttons, inputs, disclosures and switch tracks share `rounded.control`. Inline code, links and disclosure focus labels use `rounded.inline`; standalone code blocks and framed web documents use `rounded.surface`. Adjoining workspace panels use `rounded.flush`. General status is text with semantic color; tool actions use compact square icon controls with accessible names and progress state. Section headings use a raised navy surface and a dividing stroke.
+Buttons, inputs, disclosures and switch tracks share `rounded.control`. Inline code and links use `rounded.inline`; standalone code blocks and framed web documents use `rounded.surface`. Adjoining workspace panels use `rounded.flush`. General status is text with semantic color; tool actions use compact square icon controls with accessible names and progress state. Section headings use a raised navy surface and a dividing stroke.
 
 Nested contours derive the inner radius from the outer radius minus the complete border and padding inset, clamped to zero. `theme.css` provides `.ui-radius-outer` and `.ui-radius-inner`, with inherited `--ui-radius-outer` and `--ui-radius-inset` values. The calculation stays on the child so local overrides work. The switch applies it to its track and thumb. Material lists apply it only to the first and last exposed edges; preview content follows those corners while focus indicators remain visible.
 
