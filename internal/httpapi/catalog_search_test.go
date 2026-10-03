@@ -10,12 +10,20 @@ import (
 	"testing"
 
 	"github.com/pwnden/platform/internal/application"
+	"github.com/pwnden/platform/internal/challenge"
 )
 
 func TestPublishedCatalogSearch(t *testing.T) {
 	repo := os.Getenv("PWNDEN_TEST_CHALLENGES")
 	if repo == "" {
 		t.Skip("set PWNDEN_TEST_CHALLENGES to check tool search against the published catalog")
+	}
+	definition, err := challenge.Load(repo, "diagnostic-port")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if definition.Schema < 6 {
+		t.Skip("CLI metadata requires a contract 6 catalog; legacy execution remains supported")
 	}
 	backend, err := application.New(repo)
 	if err != nil {
@@ -33,7 +41,7 @@ func TestPublishedCatalogSearch(t *testing.T) {
 	for _, tool := range []string{"nmap", "ffuf", "sqlite3", "exiftool", "tshark", "jq", "git", "openssl"} {
 		var found []string
 		for _, problem := range catalog.Problems {
-			if strings.Contains(strings.ToLower(problem.SearchText), tool) {
+			if strings.Contains(","+strings.Join(problem.CLI, ",")+",", ","+tool+",") {
 				found = append(found, problem.Slug)
 			}
 		}

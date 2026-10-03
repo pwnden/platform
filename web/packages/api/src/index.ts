@@ -60,6 +60,13 @@ function completion(value: unknown): { solvedAt?: string } {
   return { solvedAt: value };
 }
 
+function cli(value: unknown): { cli?: readonly string[] } {
+  if (value === undefined) return {};
+  const names = array(value).map(value => string(value));
+  if (names.length > 32 || new Set(names).size !== names.length || names.some(name => !/^[a-z0-9][a-z0-9.+_-]{0,63}$/.test(name))) throw new APIError('invalid_response', 0);
+  return { cli: names };
+}
+
 function route(slug: string): string {
   if (slug.length > 40 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
     throw new APIError('invalid_argument', 0);
@@ -179,7 +186,7 @@ export function createAPI(options: APIOptions): APIClient {
         return array(payload.problems).map(value => {
           const item = object(value);
           return { slug: string(item.slug), title: string(item.title), category: string(item.category), kind: kind(item.kind), ...difficulty(item.difficulty), ...completion(item.solved_at),
-            ...(item.search_text === undefined ? {} : { searchText: string(item.search_text) }) };
+            ...cli(item.cli) };
         });
       },
       async detail(slug): Promise<ProblemDetail> {
@@ -190,6 +197,7 @@ export function createAPI(options: APIOptions): APIClient {
         return {
           slug, title: string(item.title), category: string(item.category), kind: kind(item.kind),
           ...difficulty(item.difficulty),
+          ...cli(item.cli),
           ...completion(item.solved_at),
           ...(item.solved_at === undefined ? {} : { answer: string(item.answer) }),
           description: string(item.description),

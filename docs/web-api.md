@@ -31,11 +31,10 @@ See [durable state](storage.md) for ownership and catalog identity.
 
 Problem summaries contain `slug`, `title`, `category`, and `kind`, plus `difficulty` when declared. Difficulty is an integer from 1 (Intro) to 5 (Expert), shared by summaries and detail. Installed catalogs without a declared difficulty omit it; the consumer preserves their unrated state. Missing display titles use the slug. Kind is `file` or `service`. Arrays are JSON arrays, including empty arrays; they never serialize as `null`.
 
-Summaries include optional `search_text` containing the public problem brief.
-The player searches this text alongside titles, identifiers and categories, so
-CLI names such as `nmap` resolve without opening each problem. Empty briefs omit
-the field. Hints, walkthroughs, solution files and runtime state are excluded.
-Text uses the same UTF-8, 1 MiB and repository containment checks as descriptions.
+Summaries and details include optional `cli`, an array of primary learner CLI names
+declared in contract 6 through `[player].cli`. Empty lists omit the field. The
+player searches these names alongside titles, identifiers and categories. Catalog
+listing reads metadata only. Installed contract 1–5 catalogs omit CLI metadata.
 
 Details add `description`, `files`, `tools`, `hint_count` and `walkthrough`. Contract 4 declares the ordered `tools` array through `[player].tools`: `web`, `files` or `terminal`. The player displays these tools and opens the first by default. Earlier catalogs derive their tools from declared resources. Contract 2 and later read the declared player brief; hint and walkthrough bodies are absent from this response. Contract 1 installations retain optional README text and have no guidance. Markdown is UTF-8, at most 1 MiB. Guidance IDs are `hint-1` through `hint-10` and `walkthrough`; only entries declared by that problem resolve. They use the same authentication, request-body and repository containment rules as other reads. The response contains `id` and Markdown `content`. It intentionally includes answer content on a walkthrough request.
 

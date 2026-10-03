@@ -9,7 +9,7 @@ export interface Problem {
   readonly kind: ProblemKind;
   readonly difficulty?: Difficulty;
   readonly solvedAt?: string;
-  readonly searchText?: string;
+  readonly cli?: readonly string[];
 }
 
 export interface Catalog {

@@ -63,7 +63,7 @@ func problem(c *challenge.Loaded) Problem {
 	if title == "" {
 		title = c.Slug
 	}
-	return Problem{Slug: c.Slug, Title: title, Category: category, Kind: kind(c), Difficulty: c.Difficulty}
+	return Problem{Slug: c.Slug, Title: title, Category: category, Kind: kind(c), Difficulty: c.Difficulty, CLI: c.PlayerCLI()}
 }
 
 // Root keeps even a file replaced by a symlink confined while opening it.
@@ -172,8 +172,6 @@ func (s *Service) Detail(ctx context.Context, slug string) (ProblemDetail, error
 	return result, nil
 }
 
-// Catalog search uses the same public brief as the detail pane. Guidance and
-// solution resources remain available only through their explicit read paths.
 func readDescription(ctx context.Context, c *challenge.Loaded, root *os.Root) (string, error) {
 	name := c.Content.Description
 	if c.Schema == 1 {

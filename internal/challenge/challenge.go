@@ -13,7 +13,7 @@ import (
 
 var slugPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 
-const SupportedContractVersion = 5
+const SupportedContractVersion = 6
 
 // Installed snapshots remain readable with the consumer's current isolation.
 func supportedVersion(version int) bool { return version >= 1 && version <= SupportedContractVersion }
@@ -59,6 +59,14 @@ type Challenge struct {
 
 type Player struct {
 	Tools []string `toml:"tools"`
+	CLI   []string `toml:"cli"`
+}
+
+func (c *Loaded) PlayerCLI() []string {
+	if c.Schema < 6 {
+		return []string{}
+	}
+	return append([]string{}, c.Player.CLI...)
 }
 
 // PlayerTools consumes author-selected tools; older catalogs derive a minimal set.

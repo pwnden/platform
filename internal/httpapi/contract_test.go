@@ -52,11 +52,16 @@ func TestPlayerResponsesDoNotExposeExecutionInternals(t *testing.T) {
 	}
 }
 
-func TestProblemListIncludesPublicSearchText(t *testing.T) {
-	list := ProblemsFrom([]application.Problem{{Slug: "diagnostic-port", Title: "개발용 점검 포트", Kind: application.KindService, SearchText: "Use nmap to inspect ports."}})
+func TestProblemResponsesIncludeDeclaredCLI(t *testing.T) {
+	p := application.Problem{Slug: "diagnostic-port", Title: "개발용 점검 포트", Kind: application.KindService, CLI: []string{"nmap", "ncat"}}
+	list := ProblemsFrom([]application.Problem{p})
 	data, err := json.Marshal(list)
-	if err != nil || !strings.Contains(string(data), `"search_text":"Use nmap to inspect ports."`) {
-		t.Fatal("public search text omitted", string(data), err)
+	if err != nil || !strings.Contains(string(data), `"cli":["nmap","ncat"]`) || strings.Contains(string(data), "search_text") {
+		t.Fatal("declared CLI omitted", string(data), err)
+	}
+	data, err = json.Marshal(DetailFrom(application.ProblemDetail{Problem: p}))
+	if err != nil || !strings.Contains(string(data), `"cli":["nmap","ncat"]`) {
+		t.Fatal("detail CLI omitted", string(data), err)
 	}
 }
 

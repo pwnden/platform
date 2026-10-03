@@ -115,7 +115,11 @@ height as its neighboring workspace headers. Its title stays on one line with a
 full-title tooltip; the category and declared difficulty appear in right-aligned
 badges, each with a screen-reader prefix. The body scrolls independently below it.
 
-Contract v5 declares difficulty as an integer from 1 to 5. List and detail responses
+Contract v6 declares primary learner CLI names through `[player].cli`; list and
+detail responses expose `cli`. Catalog search uses these names alongside titles,
+identifiers and categories. Older catalogs provide no CLI metadata.
+
+Contract v5 introduces difficulty as an integer from 1 to 5. List and detail responses
 preserve that value; legacy catalogs without it remain unrated. The catalog domain
 owns the numeric type. The UI package owns Intro, Easy, Medium, Hard and Expert
 labels and their gemstone color tokens through `UIDifficultyBadge`.

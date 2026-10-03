@@ -82,20 +82,30 @@ func TestDetailAndDeclaredDownload(t *testing.T) {
 		t.Fatalf("optional description: %+v %v", result, err)
 	}
 	items, err := s.List(ctx)
-	if err != nil || len(items) != 1 || items[0].SearchText != "" {
+	if err != nil || len(items) != 1 || len(items[0].CLI) != 0 {
 		t.Fatalf("legacy catalog without brief: %+v %v", items, err)
 	}
 }
 
-func TestCatalogSearchIndexesPublicToolNames(t *testing.T) {
+func TestCatalogExposesDeclaredCLIWithoutReadingBrief(t *testing.T) {
 	s, c := fixture(t, false)
-	brief := "# 개발용 점검 포트\nUse `nmap --unprivileged -sT` to inspect the service.\n"
-	if err := os.WriteFile(filepath.Join(c.Dir, "README.md"), []byte(brief), 0600); err != nil {
+	definition := filepath.Join(c.RepoRoot, "contract.toml")
+	data, _ := os.ReadFile(definition)
+	os.WriteFile(definition, []byte(strings.Replace(string(data), "version=1", "version=6", 1)), 0600)
+	manifest := filepath.Join(c.Dir, "challenge.toml")
+	data, _ = os.ReadFile(manifest)
+	metadata := strings.Replace(string(data), "schema=1", "schema=6\ndifficulty=1", 1) + "\n[player]\ntools=['files','terminal']\ncli=['nmap','ncat']\n[content]\ndescription='README.md'\n"
+	os.WriteFile(manifest, []byte(metadata), 0600)
+	if err := os.WriteFile(filepath.Join(c.Dir, "README.md"), []byte("Inspect the supplied service."), 0600); err != nil {
 		t.Fatal(err)
 	}
 	items, err := s.List(context.Background())
-	if err != nil || len(items) != 1 || items[0].SearchText != brief {
-		t.Fatalf("tool search text missing: %+v %v", items, err)
+	if err != nil || len(items) != 1 || strings.Join(items[0].CLI, ",") != "nmap,ncat" {
+		t.Fatalf("declared CLI missing: %+v %v", items, err)
+	}
+	detail, err := s.Detail(context.Background(), c.Slug)
+	if err != nil || strings.Join(detail.CLI, ",") != "nmap,ncat" {
+		t.Fatalf("detail CLI missing: %+v %v", detail, err)
 	}
 }
 
@@ -153,7 +163,9 @@ func TestDescriptionAndCatalogCancellation(t *testing.T) {
 		_, err := s.Detail(context.Background(), c.Slug)
 		requireCode(t, err, InvalidArgument)
 		_, err = s.List(context.Background())
-		requireCode(t, err, InvalidArgument)
+		if err != nil {
+			t.Fatal("catalog read the description", err)
+		}
 	}
 	os.Remove(path)
 	if err := os.Symlink(filepath.Join(t.TempDir(), "missing"), path); err != nil {
@@ -163,8 +175,8 @@ func TestDescriptionAndCatalogCancellation(t *testing.T) {
 	if err == nil {
 		t.Fatal("outside description was accepted")
 	}
-	if _, err := s.List(context.Background()); err == nil {
-		t.Fatal("catalog search accepted an outside description")
+	if _, err := s.List(context.Background()); err != nil {
+		t.Fatal("catalog read an outside description", err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -194,8 +206,8 @@ func TestDeclaredPlayerContentAndSpoilerReads(t *testing.T) {
 		t.Fatalf("player detail: %+v %v", detail, err)
 	}
 	items, err := s.List(ctx)
-	if err != nil || len(items) != 1 || items[0].SearchText != "Find the key." {
-		t.Fatalf("search indexed something other than the declared public brief: %+v %v", items, err)
+	if err != nil || len(items) != 1 || len(items[0].CLI) != 0 {
+		t.Fatalf("legacy catalog inferred CLI: %+v %v", items, err)
 	}
 	for id, want := range map[string]string{"hint-1": "Look at the address.", "walkthrough": "The complete answer."} {
 		got, err := s.Guidance(ctx, c.Slug, id)

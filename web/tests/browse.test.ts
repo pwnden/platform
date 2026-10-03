@@ -16,9 +16,9 @@ it('searches all words across titles, identifiers and readable categories withou
   expect(problems.map(p => p.slug)).toEqual(['rotor-lock', 'note-vault', 'test-new']);
 });
 
-it('finds tool names and other public brief words while respecting category and difficulty', () => {
+it('finds declared CLI names while respecting category and difficulty', () => {
   const problems: readonly Problem[] = [
-    { slug: 'diagnostic-port', title: '개발용 점검 포트', category: 'misc', kind: 'service', difficulty: 2, searchText: 'nmap --unprivileged -sT로 포트를 조사하고 ncat으로 응답을 읽는다.' },
+    { slug: 'diagnostic-port', title: '개발용 점검 포트', category: 'misc', kind: 'service', difficulty: 2, cli: ['nmap', 'ncat'] },
     { slug: 'note-vault', title: '다른 사람의 메모', category: 'web', kind: 'service', difficulty: 1 },
   ];
   expect(filterProblems(problems, '  ＮＭＡＰ ', '').map(p => p.slug)).toEqual(['diagnostic-port']);
@@ -27,6 +27,15 @@ it('finds tool names and other public brief words while respecting category and 
   expect(filterProblems(problems, 'nmap', 'web')).toEqual([]);
   expect(filterProblems(problems, 'nmap', '', '1')).toEqual([]);
   expect(filterProblems(problems, 'undefined', '')).toEqual([]);
+});
+
+it('does not index description words as CLI metadata', () => {
+  const problems = [
+    { slug: 'other', title: 'Other', category: 'web', kind: 'service' as const, description: 'nmap' },
+    { slug: 'scan', title: 'Scan', category: 'misc', kind: 'service' as const, cli: ['nmap'], description: 'supplied service' },
+  ];
+  expect(filterProblems(problems, 'nmap', '').map(p => p.slug)).toEqual(['scan']);
+  expect(filterProblems(problems, 'supplied', '')).toEqual([]);
 });
 
 it('combines difficulty with search and category, sorts within categories and keeps unrated problems last', () => {

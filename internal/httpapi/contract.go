@@ -32,7 +32,7 @@ type Problem struct {
 	Difficulty int              `json:"difficulty,omitempty"`
 	Kind       application.Kind `json:"kind"`
 	SolvedAt   *time.Time       `json:"solved_at,omitempty"`
-	SearchText string           `json:"search_text,omitempty"`
+	CLI        []string         `json:"cli,omitempty"`
 }
 
 type ProblemList struct {
@@ -106,13 +106,13 @@ type ErrorResponse struct {
 func ProblemsFrom(result []application.Problem) ProblemList {
 	response := ProblemList{Problems: make([]Problem, 0, len(result))}
 	for _, p := range result {
-		response.Problems = append(response.Problems, Problem{Slug: p.Slug, Title: p.Title, Category: p.Category, Kind: p.Kind, Difficulty: p.Difficulty, SolvedAt: p.SolvedAt, SearchText: p.SearchText})
+		response.Problems = append(response.Problems, Problem{Slug: p.Slug, Title: p.Title, Category: p.Category, Kind: p.Kind, Difficulty: p.Difficulty, SolvedAt: p.SolvedAt, CLI: p.CLI})
 	}
 	return response
 }
 
 func DetailFrom(result application.ProblemDetail) ProblemDetail {
-	response := ProblemDetail{Problem: Problem{Slug: result.Slug, Title: result.Title, Category: result.Category, Kind: result.Kind, Difficulty: result.Difficulty}, Description: result.Description, Files: make([]ProblemFile, 0, len(result.Files))}
+	response := ProblemDetail{Problem: Problem{Slug: result.Slug, Title: result.Title, Category: result.Category, Kind: result.Kind, Difficulty: result.Difficulty, CLI: result.CLI}, Description: result.Description, Files: make([]ProblemFile, 0, len(result.Files))}
 	response.HintCount, response.Walkthrough = result.HintCount, result.Walkthrough
 	response.SolvedAt = result.SolvedAt
 	if result.Completion != nil {

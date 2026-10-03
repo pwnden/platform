@@ -598,8 +598,8 @@ it('uses the real Sectile selected button to emit controlled changes and block b
 
 it('finds a CLI problem by tool name through the API-backed catalog search', async () => {
   const fetch = vi.fn(async () => new Response(JSON.stringify({ problems: [
-    { slug: 'diagnostic-port', title: '개발용 점검 포트', category: 'misc', kind: 'service', difficulty: 2, search_text: 'Use nmap --unprivileged -sT to inspect ports.' },
-    { slug: 'note-vault', title: '다른 사람의 메모', category: 'web', kind: 'service' },
+    { slug: 'diagnostic-port', title: '개발용 점검 포트', category: 'misc', kind: 'service', difficulty: 2, cli: ['nmap', 'ncat'] },
+    { slug: 'note-vault', title: '다른 사람의 메모', category: 'web', kind: 'service', description: 'nmap' },
   ] }), { headers: { 'Content-Type': 'application/json' } }));
   const catalog = createAPI({ token: 'a'.repeat(64), fetch }).catalog;
   const selected = vi.fn();

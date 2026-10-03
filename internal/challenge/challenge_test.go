@@ -97,6 +97,26 @@ command = ["python3", "solve.py"]
 	}
 }
 
+func TestPrimaryCLIUsesVersionedDeclarationAndCopiesNames(t *testing.T) {
+	for _, schema := range []int{5, 6} {
+		loaded := Loaded{Challenge: Challenge{Schema: schema, Player: Player{CLI: []string{"nmap", "ncat"}}}}
+		names := loaded.PlayerCLI()
+		if schema < 6 {
+			if len(names) != 0 {
+				t.Fatal("legacy catalog supplied CLI metadata", names)
+			}
+			continue
+		}
+		if strings.Join(names, ",") != "nmap,ncat" {
+			t.Fatal("CLI order changed", names)
+		}
+		names[0] = "curl"
+		if loaded.Player.CLI[0] != "nmap" {
+			t.Fatal("CLI metadata shares mutable storage")
+		}
+	}
+}
+
 func writeContract(t *testing.T, root, contents string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(root, "contract.toml"), []byte(contents), 0600); err != nil {
@@ -132,16 +152,16 @@ func TestLoadRejectsUnsupportedVersionBeforeExecutionFieldDecoding(t *testing.T)
 				t.Fatal(err)
 			}
 			definition := "version = 1\nsolve_network = 'default'\nsolve_timeout_seconds = 60\nattack_rejected_exit = 3\n"
-			metadata := "schema = 6\n[solve]\nimage = 123\n"
+			metadata := "schema = 7\n[solve]\nimage = 123\n"
 			if repository {
-				definition = "version = 6\nsolve_network = 123\n"
-				metadata = "schema = 6\n"
+				definition = "version = 7\nsolve_network = 123\n"
+				metadata = "schema = 7\n"
 			}
 			writeContract(t, root, definition)
 			if err := os.WriteFile(filepath.Join(dir, "challenge.toml"), []byte(metadata), 0600); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := Load(root, "sample"); err == nil || !strings.Contains(err.Error(), "contract version 6") {
+			if _, err := Load(root, "sample"); err == nil || !strings.Contains(err.Error(), "contract version 7") {
 				t.Fatalf("unsupported contract not rejected first: %v", err)
 			}
 		})
