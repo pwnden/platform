@@ -242,6 +242,11 @@ from the same origin and embedded into the Go executable. Font sources and
 license terms are recorded in `web/packages/ui/src/fonts/README.md`; Vite emits
 both OFL license files under `/assets/licenses/`. Go serves WOFF2 as `font/woff2`.
 
+`:person[name]` renders an explicit narrative name as a plain inline span with
+the shared person color. It inherits body typography and has no added weight,
+decoration or interaction. Authors use it for the first mention; later mentions
+stay plain. Source attributes are dropped through the existing allowlist.
+
 `UIMarkdown` accepts a `source` string. The UI package lazily imports the
 md4x standalone module and initializes its embedded WASM once. It renders the
 AST through Vue nodes: headings, lists, tables, fenced code, emphasis, quotes

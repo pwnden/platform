@@ -8,6 +8,7 @@ colors:
   surface-hover: "#122239"
   surface-pressed: "#19324b"
   foreground: "#d2dfef"
+  person: "#c8d6e7"
   muted: "#8a9db6"
   border: "#1b2d43"
   border-active: "#3a729e"

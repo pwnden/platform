@@ -42,6 +42,7 @@ export function renderMarkdownNode(node: ComarkNode, prefix: string, headingOffs
     }
   }
   const children = content.map(child => renderMarkdownNode(child, prefix, headingOffset));
+  if (tag === 'person') return h('span', { class: 'markdown-person' }, children);
   const section = tag ? sections.get(tag) : undefined;
   if (section) {
     const title = typeof attributes.title === 'string' && attributes.title.trim() ? attributes.title.trim() : section.title;

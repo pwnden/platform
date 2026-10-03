@@ -52,6 +52,22 @@ it('supports unnamed messages while preserving ordinary blockquotes', async () =
   expect(html).not.toContain('markdown-message-from');
 });
 
+it('renders explicitly marked people as plain inline text with a shared color class', async () => {
+  const html = await render('운영 담당자 :person[솔개로그]는 서버를 관리한다. 이후 솔개로그는 자료를 전달했다.\n\n:person[moru17]도 참여했다.');
+  expect(html).toContain('운영 담당자 <span class="markdown-person">솔개로그</span>는 서버를 관리한다. 이후 솔개로그는 자료를 전달했다.');
+  expect(html).toContain('<span class="markdown-person">moru17</span>도 참여했다.');
+  expect(html).not.toMatch(/<strong|<em|<a\b|<code|:person/);
+});
+
+it('drops person attributes and escapes names using the ordinary Markdown allowlist', async () => {
+  const html = await render(':person[솔개로그]{style="font-weight:900" onclick="bad" href="https://example.com"}');
+  expect(html).toContain('<span class="markdown-person">솔개로그</span>');
+  expect(html).not.toMatch(/style=|onclick=|href=|tabindex=|<a\b/);
+  const unsafe = await renderToString(createSSRApp({ render: () => h('div', [markdown.renderMarkdownNode(['person', { innerHTML: '<script>bad</script>' }, '<img src=x onerror=bad>'], 'test')]) }));
+  expect(unsafe).toContain('&lt;img src=x onerror=bad&gt;');
+  expect(unsafe).not.toMatch(/<img|<script|innerHTML=/);
+});
+
 it('renders briefing roles with distinct sections and headings below the panel title', async () => {
   const source = '::objective\n복구 키를 찾자.\n::\n\n::resources{title="전달받은 자료"}\n- `files/recovery.txt`\n::\n\n::knowledge\nBase64 예제\n\n```sh\nprintf hello\n```\n::\n\n::submission\n`pwnden{...}` 전체를 제출하자.\n::';
   const html = await renderToString(createSSRApp({ render: () => h(UIMarkdown, { source, headingOffset: 1 }) }));
