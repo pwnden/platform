@@ -22,7 +22,7 @@ export default defineConfig({
     dts: process.env.PWNDEN_READONLY_SOURCES === '1' ? false : new URL('./src/typed-router.d.ts', import.meta.url).pathname,
   }), vue(), {
     name: 'player-font-preloads',
-    transformIndexHtml: {
+    'transformIndexHtml': {
       order: 'pre',
       handler(html, context) {
         if (!context.server) return html;
