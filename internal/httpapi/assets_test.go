@@ -78,6 +78,11 @@ func TestEmbeddedPlayerAssets(t *testing.T) {
 		expected := "text/javascript; charset=utf-8"
 		if strings.HasSuffix(path, ".css") {
 			expected = "text/css; charset=utf-8"
+		} else if strings.HasSuffix(path, ".woff2") {
+			expected = "font/woff2"
+			if !strings.HasPrefix(content, "wOF2") {
+				t.Fatalf("invalid preloaded font: %s", path)
+			}
 		}
 		if w.Header().Get("Content-Type") != expected || w.Header().Get("X-Content-Type-Options") != "nosniff" {
 			t.Fatalf("asset MIME mismatch: %s", path)
