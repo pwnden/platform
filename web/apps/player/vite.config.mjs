@@ -21,6 +21,16 @@ export default defineConfig({
     routesFolder: new URL('./src/pages', import.meta.url).pathname,
     dts: process.env.PWNDEN_READONLY_SOURCES === '1' ? false : new URL('./src/typed-router.d.ts', import.meta.url).pathname,
   }), vue(), {
+    name: 'player-font-preloads',
+    transformIndexHtml: {
+      order: 'pre',
+      handler(html, context) {
+        if (!context.server) return html;
+        const fonts = new URL('../../packages/ui/src/fonts/', import.meta.url).pathname;
+        return html.replaceAll('href="../../packages/ui/src/fonts/', `href="/@fs${fonts}`);
+      },
+    },
+  }, {
     name: 'workspace-source-watch',
     configureServer(server) {
       // Type-only SFC dependencies do not enter Vite's runtime module graph.

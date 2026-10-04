@@ -192,7 +192,7 @@ Semantic success, warning and danger colors support status and terminal output. 
 
 ## Typography
 
-**Body font stack:** Pretendard, system-ui, sans-serif. Pretendard Variable 1.3.9 supports the body, headings and controls. **Code stack:** D2Coding, monospace, through `--ui-font-code`. Markdown code blocks, inline code and the source viewer share this token. Terminal output and the brand use the separate JetBrains Mono, D2Coding, monospace stack. All fonts are bundled and served locally with `font-display: swap`; license files and source revisions are recorded in [fonts/README.md](packages/ui/src/fonts/README.md).
+**Body font stack:** Pretendard, system-ui, sans-serif. Pretendard Variable 1.3.9 supports the body, headings and controls. **Code stack:** D2Coding, monospace, through `--ui-font-code`. Markdown code blocks, inline code and the source viewer share this token. Terminal output and the brand use the separate JetBrains Mono, D2Coding, monospace stack. All fonts are bundled and served locally with `font-display: optional`; license files and source revisions are recorded in [fonts/README.md](packages/ui/src/fonts/README.md). Critical fonts are preloaded from the document head. If a font arrives too late, the page retains its fallback face rather than replacing already visible text.
 
 The display role is the empty workspace heading; headline is the selected problem title; title is the shared section heading. Body sets the root scale at (15px), and label covers fields and categories. Status and footnote roles carry secondary state. Headings use weight (600); body uses (400). Numeric text uses tabular figures; ligatures are disabled.
 

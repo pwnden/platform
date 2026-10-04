@@ -4,25 +4,25 @@
   font-family: 'Pretendard';
   src: url('./fonts/PretendardVariable.woff2') format('woff2');
   font-weight: 100 900;
-  font-display: swap;
+  font-display: optional;
 }
 
 @font-face {
   font-family: 'JetBrains Mono';
   src: url('./fonts/JetBrainsMono-Regular.woff2') format('woff2');
   font-weight: 400;
-  font-display: swap;
+  font-display: optional;
 }
 @font-face {
   font-family: 'JetBrains Mono';
   src: url('./fonts/JetBrainsMono-Medium.woff2') format('woff2');
   font-weight: 500 800;
-  font-display: swap;
+  font-display: optional;
 }
 @font-face {
   font-family: 'D2Coding';
   src: url('./fonts/D2Coding-Regular.woff2') format('woff2');
-  font-display: swap;
+  font-display: optional;
 }
 
 :root {
