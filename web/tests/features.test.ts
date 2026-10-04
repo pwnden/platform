@@ -60,13 +60,18 @@ it('restores an accepted answer without submitting again and marks saved complet
 
 it('reads prerequisite notes in place and selects linked problems only on explicit activation', async () => {
   const concept = { id: 'ownership', title: '소유권', requires: [], related: [] };
-  const prior = { slug: 'prior', title: '먼저 배우는 문제', category: 'web', kind: 'service' as const, learning: { requires: [], teaches: [concept] } };
+  const prior = { slug: 'prior', title: '먼저 배우는 문제', category: 'web', kind: 'service' as const, difficulty: 2 as const, solvedAt: '2026-10-05T00:00:00Z', learning: { requires: [], teaches: [concept] } };
   const current = { slug: 'current', title: '현재 배우는 문제', category: 'web', kind: 'service' as const, learning: { requires: [concept], teaches: [{ ...concept, id: 'new-goal', title: '새 학습 목표' }] } };
   const catalog: Catalog = { list: vi.fn(async () => [prior, current]), detail: vi.fn(), download: vi.fn(), guidance: vi.fn(async () => '# 선수 설명') };
   const selected = vi.fn();
   const root = node('root');
   renderer.render(h(ProblemConnections, { catalog, problem: current, onSelect: selected }), root); await settle();
+  const linkedButton = () => flatten(root).find(item => item.type === 'button' && text(item).startsWith(prior.title))!;
   expect(text(root)).toContain('먼저 배우는 문제');
+  expect(text(root)).toContain('이 문제에 필요한 기초를 연습');
+  expect(text(linkedButton())).toContain('웹');
+  expect(text(linkedButton())).toContain('서비스 실습');
+  expect(text(linkedButton())).toContain('해결 완료');
   expect(text(root)).not.toContain('이어서 풀어볼 문제');
   expect(text(root)).not.toContain('연결된 문제 없음');
   const layout = flatten(root);
@@ -81,10 +86,10 @@ it('reads prerequisite notes in place and selects linked problems only on explic
   expect(catalog.guidance).toHaveBeenCalledExactlyOnceWith('current', 'concept-ownership');
   expect(text(root)).toContain('선수 설명');
   expect(selected).not.toHaveBeenCalled();
-  await click(button(root, '먼저 배우는 문제'));
+  await click(linkedButton());
   expect(selected).toHaveBeenCalledExactlyOnceWith(prior);
   renderer.render(h(ProblemConnections, { catalog, problem: current, onSelect: selected, disabled: true }), root); await settle();
-  expect(button(root, '먼저 배우는 문제').props.disabled).toBe(true);
+  expect(linkedButton().props.disabled).toBe(true);
   renderer.render(null, root);
 });
 
