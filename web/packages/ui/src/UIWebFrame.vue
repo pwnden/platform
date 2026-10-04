@@ -67,6 +67,6 @@ defineExpose(handle);
 
 <style scoped>
 .ui-web-frame { position: relative; display: block; width: 100%; height: 100%; min-height: 0; overflow: hidden; border-radius: var(--ui-radius-flush); background: var(--ui-surface); }
-iframe { display: block; width: 100%; height: 100%; border: 0; background: white; color-scheme: normal; }
+iframe { display: block; width: 100%; height: 100%; border: 0; background: var(--ui-surface); color-scheme: dark; }
 .ui-web-connecting { position: absolute; inset: 0; margin: 0; display: grid; place-content: center; padding: var(--ui-space-2); color: var(--ui-muted); background: var(--ui-surface); }
 </style>

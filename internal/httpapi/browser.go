@@ -274,7 +274,7 @@ func (m *browserManager) close() {
 	m.active.Wait()
 }
 
-var browserDocument = template.Must(template.New("browser").Parse(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>문제 웹</title><link rel="stylesheet" href="{{.Prefix}}/style.css"><script src="{{.Prefix}}/controller.js" defer></script></head><body data-parent="{{.Parent}}" data-target="{{.Target}}"><iframe id="problem" title="문제 사이트" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads"></iframe></body></html>`))
+var browserDocument = template.Must(template.New("browser").Parse(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="color-scheme" content="dark"><meta name="viewport" content="width=device-width,initial-scale=1"><title>문제 웹</title><link rel="stylesheet" href="{{.Prefix}}/style.css"><script src="{{.Prefix}}/controller.js" defer></script></head><body data-parent="{{.Parent}}" data-target="{{.Target}}"><iframe id="problem" title="문제 사이트" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads"></iframe></body></html>`))
 
 func (e *browserEntry) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	m := e.manager
@@ -309,7 +309,7 @@ func (e *browserEntry) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_, _ = io.WriteString(w, browserController)
 		case e.prefix + "/style.css":
 			w.Header().Set("Content-Type", "text/css; charset=utf-8")
-			_, _ = io.WriteString(w, "html,body{margin:0;height:100%;overflow:hidden}iframe{display:block;width:100%;height:100%;border:0}")
+			_, _ = io.WriteString(w, "html,body{margin:0;height:100%;overflow:hidden;color-scheme:dark;background:#080e18}iframe{display:block;width:100%;height:100%;border:0;color-scheme:dark;background:#080e18}")
 		default:
 			http.NotFound(w, r)
 		}
