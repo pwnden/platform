@@ -71,6 +71,7 @@ it('reads prerequisite notes in place and selects linked problems only on explic
   expect(text(root)).toContain('이 문제에 필요한 기초를 연습');
   expect(text(linkedButton())).toContain('웹');
   expect(text(linkedButton())).toContain('서비스 실습');
+  expect(text(linkedButton())).toContain('초급');
   expect(text(linkedButton())).toContain('해결 완료');
   expect(text(root)).not.toContain('이어서 풀어볼 문제');
   expect(text(root)).not.toContain('연결된 문제 없음');

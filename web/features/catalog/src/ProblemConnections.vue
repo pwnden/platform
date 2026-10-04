@@ -2,7 +2,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { connections } from '@pwnden/catalog';
 import type { Catalog, Problem } from '@pwnden/catalog';
-import { UIButton, UIPanel, UIReveal, UIMarkdown, UIIcon, UIDifficultyBadge } from '@pwnden/ui';
+import { UIButton, UIPanel, UIReveal, UIMarkdown, UIIcon, difficultyLevels } from '@pwnden/ui';
 import { categoryLabel } from './browse';
 
 const props = defineProps<{ catalog: Catalog; problem: Problem; disabled?: boolean }>();
@@ -93,14 +93,13 @@ onMounted(load);
                 <span class="connection-content">
                   <span class="connection-title">{{ item.title }}</span>
                   <span class="connection-meta">
-                    <span>{{ categoryLabel(item.category) }}</span>
-                    <span>{{ item.kind === 'file' ? '파일 분석' : '서비스 실습' }}</span>
-                    <UIDifficultyBadge v-if="item.difficulty" :level="item.difficulty" />
-                    <span v-else>난이도 미지정</span>
-                    <span class="connection-progress" :class="{ completed: item.solvedAt }"><UIIcon v-if="item.solvedAt" name="check" :size="14" />{{ item.solvedAt ? '해결 완료' : '미해결' }}</span>
+                    {{ categoryLabel(item.category) }} · {{ item.kind === 'file' ? '파일 분석' : '서비스 실습' }} · {{ item.difficulty ? difficultyLevels[item.difficulty - 1]!.label : '난이도 미지정' }}
                   </span>
                 </span>
-                <UIIcon name="chevron-right" class="connection-arrow" />
+                <span class="completion-mark" :title="item.solvedAt ? '해결 완료' : '미해결'">
+                  <UIIcon name="check" :class="{ 'completion-mark--hidden': !item.solvedAt }" />
+                  <span class="ui-sr-only">{{ item.solvedAt ? '해결 완료' : '미해결' }}</span>
+                </span>
               </UIButton>
             </li>
           </ul>
@@ -125,10 +124,9 @@ h4 { margin: 0; font-size: 0.875rem; font-weight: 600; color: var(--ui-muted); }
 .connection-button { width: 100%; max-width: 100%; height: auto; padding: var(--ui-space-1); white-space: normal; text-align: left; }
 .connection-content { flex: 1; min-width: 0; display: grid; gap: var(--ui-space-1); }
 .connection-title { color: var(--ui-foreground); font-weight: 500; overflow-wrap: anywhere; }
-.connection-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-space-1); color: var(--ui-muted); font-size: 0.8125rem; }
-.connection-progress { display: inline-flex; align-items: center; gap: var(--ui-space-1); }
-.connection-arrow { color: var(--ui-muted); }
-.completed { color: var(--ui-success); }
+.connection-meta { color: var(--ui-muted); font-size: 0.8125rem; }
+.completion-mark { flex: none; width: 1rem; color: var(--ui-success); }
+.completion-mark--hidden { visibility: hidden; }
 .connection-status { font-size: 0.875rem; }
 .goal-notes { gap: var(--ui-space-3); }
 </style>
