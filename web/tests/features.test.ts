@@ -899,9 +899,9 @@ it('offers downloads for binary and large materials without fetching a large pre
   const root = node('root');
   renderer.render(h(ProblemFiles, { catalog, slug: 'test', files: [{ id: small, name: 'binary', size: 2 }, { id: large, name: 'large', size: (1 << 20) + 1 }] }), root);
   await settle();
-  expect(text(root)).toContain('텍스트로 표시할 수 없는 자료');
+  expect(text(root)).toContain('텍스트로 읽을 수 없는 데이터');
   (flatten(root).find(item => item.type === 'select')!.props['onUpdate:modelValue'] as (id: string) => void)(large); await settle();
-  expect(text(root)).toContain('미리보기 범위를 초과');
+  expect(text(root)).toContain('이 파일은 그 범위를 초과');
   expect(catalog.download).toHaveBeenCalledOnce();
   renderer.render(null, root);
 });

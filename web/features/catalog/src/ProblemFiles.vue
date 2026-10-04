@@ -23,7 +23,7 @@ async function reveal(file: ProblemFile) {
   state.pending = true; state.failed = false;
   try {
     if (file.size > previewLimit) {
-      state.notice = '미리보기 범위를 초과하는 자료입니다. 상단 다운로드 버튼으로 받을 수 있습니다.';
+      state.notice = '이 패널의 텍스트 미리보기는 1 MiB까지 지원합니다. 이 파일은 그 범위를 초과합니다. 원본은 풀이 환경의 위 파일 경로에서 분석할 수 있습니다. 다운로드는 내 컴퓨터에서 분석할 때 사용하세요.';
       return;
     }
     const bytes = await props.catalog.download(props.slug, file.id, previewLimit);
@@ -32,7 +32,7 @@ async function reveal(file: ProblemFile) {
       const source = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
       if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/.test(source)) throw new Error('binary');
       state.content = source;
-    } catch { state.notice = '텍스트로 표시할 수 없는 자료입니다. 상단 다운로드 버튼으로 받을 수 있습니다.'; }
+    } catch { state.notice = '이 패널은 텍스트 자료만 미리보기합니다. 이 파일에는 텍스트로 읽을 수 없는 데이터가 포함되어 있어 표시하지 못했습니다. 원본은 풀이 환경의 위 파일 경로에서 분석할 수 있습니다. 다운로드는 내 컴퓨터에서 분석할 때 사용하세요.'; }
   } catch { if (active) state.failed = true; }
   finally { if (active) state.pending = false; }
 }
