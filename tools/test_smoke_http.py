@@ -12,28 +12,38 @@ from smoke_http import check_assets, check_catalog, check_guidance
 
 
 class AssetCoverageTests(unittest.TestCase):
-    def check(self, *, session=True, leaked=False):
+    def check(self, *, session=True, leaked=False, font=b"wOF2\xff\x80",
+              font_media="font/woff2", head_body=False, font_nosniff=True):
         nonce = "a" * 64
         page = (f'<meta name="pwnden-style-nonce" content="{nonce}">'
                 '<div id="app"></div><script type="module" src="/assets/entry.js"></script>'
                 '<link rel="modulepreload" href="/assets/shared.js">'
-                '<link rel="stylesheet" href="/assets/style.css">')
+                '<link rel="stylesheet" href="/assets/style.css">'
+                '<link rel="preload" as="font" href="/assets/font.woff2" crossorigin>')
         assets = {
             "/": page,
             "/assets/entry.js": "history.replaceState(history.state, '', location.pathname); sessionStorage.getItem('session');" if session else "console.log('missing session');",
             "/assets/shared.js": "const api='/api/v1';" + ("fixture-secret" if leaked else ""),
             "/assets/style.css": "body { color: blue; }",
+            "/assets/font.woff2": font,
         }
 
         class Client:
             def open(self, url, timeout):
-                path = url.removeprefix("http://fixture")
-                response = BytesIO(assets[path].encode())
+                method = "GET" if isinstance(url, str) else url.get_method()
+                address = url if isinstance(url, str) else url.full_url
+                path = address.removeprefix("http://fixture")
+                content = assets[path]
+                if isinstance(content, str):
+                    content = content.encode()
+                response = BytesIO(content if method == "GET" or head_body else b"")
+                response.status = 200
                 response.headers = Message()
                 media = "text/html" if path == "/" else "text/javascript" if path.endswith(".js") else "text/css"
-                response.headers["Content-Type"] = media + "; charset=utf-8"
+                response.headers["Content-Type"] = font_media if path.endswith(".woff2") else media + "; charset=utf-8"
                 response.headers["Cache-Control"] = "no-store"
-                response.headers["X-Content-Type-Options"] = "nosniff"
+                if not path.endswith(".woff2") or font_nosniff:
+                    response.headers["X-Content-Type-Options"] = "nosniff"
                 response.headers["Content-Security-Policy"] = "default-src 'self'"
                 return response
 
@@ -50,6 +60,16 @@ class AssetCoverageTests(unittest.TestCase):
     def test_credentials_in_any_chunk_fail(self):
         with self.assertRaises(AssertionError):
             self.check(leaked=True)
+
+    def test_invalid_font_signature_media_security_and_credentials_fail(self):
+        for options in ({"font": b"invalid"}, {"font_media": "text/css; charset=utf-8"},
+                        {"font_nosniff": False}, {"font": b"wOF2fixture-secret"}):
+            with self.subTest(options=options), self.assertRaises(AssertionError):
+                self.check(**options)
+
+    def test_head_response_must_have_no_body(self):
+        with self.assertRaises(AssertionError):
+            self.check(head_body=True)
 
 
 class CatalogCoverageTests(unittest.TestCase):

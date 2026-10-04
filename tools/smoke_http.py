@@ -104,15 +104,27 @@ def check_assets(origin, token):
     assert len(assets) >= 2
     scripts = []
     for path in assets:
+        suffix = Path(path).suffix
+        media = {".js": "text/javascript; charset=utf-8",
+                 ".css": "text/css; charset=utf-8", ".woff2": "font/woff2"}[suffix]
         with client.open(origin + path, timeout=10) as response:
-            content = response.read().decode()
-            media = "text/javascript" if path.endswith(".js") else "text/css"
-            assert response.headers.get("Content-Type") == media + "; charset=utf-8"
+            content = response.read()
+            assert response.status == 200
+            assert response.headers.get("Content-Type") == media
             assert response.headers.get("Cache-Control") == "no-store"
             assert response.headers.get("X-Content-Type-Options") == "nosniff"
-        assert content and token not in content
-        if path.endswith(".js"):
-            scripts.append(content)
+        assert content and token.encode() not in content
+        if suffix == ".woff2":
+            assert content.startswith(b"wOF2"), "invalid WOFF2 asset"
+        else:
+            text = content.decode("utf-8")
+            if suffix == ".js":
+                scripts.append(text)
+        with client.open(Request(origin + path, method="HEAD"), timeout=10) as response:
+            assert response.status == 200 and not response.read()
+            assert response.headers.get("Content-Type") == media
+            assert response.headers.get("Cache-Control") == "no-store"
+            assert response.headers.get("X-Content-Type-Options") == "nosniff"
     # The entry HTML can preload shared chunks. Session and API initialization
     # belong to the module graph, rather than every individual JavaScript file.
     script = "\n".join(scripts)
