@@ -36,7 +36,9 @@ problem and connects its toolbox shell. Terminal refresh reattaches while retain
 the environment. Problem
 switching, page refresh and hidden browser tabs retain the same shell and service
 state for up to ten inactive minutes. Returning cancels expiry. Up to ten problem
-environments are retained. When that limit or the shared Docker resource budget
+environments are retained. The budget counts only the player's own containers;
+challenge author verification containers (`pwnden-author-…`) keep a separate budget.
+When that limit or the shared Docker resource budget
 is reached, the server removes its oldest disconnected environment and retries
 preparation automatically, repeating only while cleanup succeeds. Connected
 views and terminals, CLI runs and other installations remain protected. An

@@ -145,7 +145,28 @@ func withRuntimeLock(ctx context.Context, accounting bool, action func(context.C
 	return action(ctx, func(cost resourceCost) error { return checkBudget(used, cost, limits) })
 }
 
+const authorPrefix = "pwnden-author-"
+
+// authorOwned reports containers made by the challenges author runner. It
+// budgets its own containers, so player environments do not count them and
+// they do not count player environments.
+func authorOwned(labels, name string) bool {
+	if strings.HasPrefix(name, authorPrefix) {
+		return true
+	}
+	for _, entry := range strings.Split(labels, ",") {
+		key, value, _ := strings.Cut(entry, "=")
+		if key == "pwnden.author-verification" || (key == "com.docker.compose.project" && strings.HasPrefix(value, authorPrefix)) {
+			return true
+		}
+	}
+	return false
+}
+
 func managedContainer(labels, name string) bool {
+	if authorOwned(labels, name) {
+		return false
+	}
 	for _, entry := range strings.Split(labels, ",") {
 		key, value, _ := strings.Cut(entry, "=")
 		if key == managedLabel || key == "pwnden.runtime-policy" ||

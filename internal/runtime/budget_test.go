@@ -48,6 +48,23 @@ func TestAdmissionCountsCreatedContainersAndLeavesOtherApps(t *testing.T) {
 	}
 }
 
+func TestAdmissionLeavesAuthorVerificationContainers(t *testing.T) {
+	replies := []testutil.Reply{
+		{Match: []string{"container", "ls", "{{json .}}"}, Out: `{"ID":"author","Names":"pwnden-author-0123456789ab-sample-app-1","Labels":"pwnden.managed=true"}
+{"ID":"project","Names":"service","Labels":"pwnden.managed=true,com.docker.compose.project=pwnden-author-0123456789ab-sample"}
+{"ID":"keeper","Names":"keeper","Labels":"pwnden.author-verification=owner,pwnden.kind=workspace"}`},
+	}
+	calls := testutil.Docker(t, replies...)
+	if err := admitCreation(context.Background(), toolboxCost(), func(context.Context) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range calls() {
+		if strings.Contains(strings.Join(args, " "), "inspect") {
+			t.Fatalf("author verification container counted: %v", args)
+		}
+	}
+}
+
 func TestAdmissionIgnoresConfirmedRemovedContainer(t *testing.T) {
 	testutil.Docker(t,
 		testutil.Reply{Match: []string{"container", "ls", "{{json .}}"}, Out: `{"ID":"gone","Names":"pwnden-tool","Labels":"pwnden.managed=true"}`},
