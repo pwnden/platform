@@ -23,7 +23,7 @@ import (
 func setupFixture(t *testing.T, service bool) (*SetupService, *challenge.Loaded) {
 	t.Helper()
 	_, original := fixture(t, service)
-	dir := t.TempDir()
+	dir := testutil.TempDir(t)
 	archive := filepath.Join(dir, installation.ArchiveName)
 	file, err := os.Create(archive)
 	if err != nil {

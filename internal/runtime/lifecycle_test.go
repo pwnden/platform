@@ -15,8 +15,10 @@ import (
 
 func TestMain(m *testing.M) { testutil.Main(m) }
 
+func resolvedTempDir(t *testing.T) string { t.Helper(); return testutil.TempDir(t) }
+
 func fixture(t *testing.T) *challenge.Loaded {
-	root := t.TempDir()
+	root := resolvedTempDir(t)
 	return &challenge.Loaded{RepoRoot: root, Dir: root, Challenge: challenge.Challenge{
 		Slug: "test", Compose: "compose.yaml", Solve: challenge.Solve{Network: "default", TimeoutSeconds: 1},
 	}}

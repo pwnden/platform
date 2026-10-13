@@ -38,12 +38,12 @@ func TestFileChallengeNeedsNoDocker(t *testing.T) {
 }
 
 func TestCheckConfigRepositoryBoundary(t *testing.T) {
-	root := t.TempDir()
+	root := resolvedTempDir(t)
 	inside := filepath.Join(root, "inside")
 	if err := os.Mkdir(inside, 0700); err != nil {
 		t.Fatal(err)
 	}
-	outside := t.TempDir()
+	outside := resolvedTempDir(t)
 	link := filepath.Join(root, "escape")
 	if err := os.Symlink(outside, link); err != nil {
 		t.Skipf("symlink unavailable: %v", err)
@@ -67,7 +67,7 @@ func TestCheckConfigRepositoryBoundary(t *testing.T) {
 }
 
 func TestCheckConfigRejectsHostAccess(t *testing.T) {
-	c := &challenge.Loaded{RepoRoot: t.TempDir(), Challenge: challenge.Challenge{Solve: challenge.Solve{Network: "default"}}}
+	c := &challenge.Loaded{RepoRoot: resolvedTempDir(t), Challenge: challenge.Challenge{Solve: challenge.Solve{Network: "default"}}}
 	project := Project(c)
 	config := &Config{
 		Services: map[string]Service{"app": {Privileged: true}},
@@ -103,12 +103,12 @@ func TestCheckConfigRejectsHostAccess(t *testing.T) {
 }
 
 func TestLocalBuildCacheRepositoryBoundary(t *testing.T) {
-	root := t.TempDir()
+	root := resolvedTempDir(t)
 	dir := filepath.Join(root, "challenges", "test")
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		t.Fatal(err)
 	}
-	outside := t.TempDir()
+	outside := resolvedTempDir(t)
 	c := &challenge.Loaded{RepoRoot: root, Dir: dir}
 	for _, attribute := range []string{"src", "dest"} {
 		cases := []struct {
@@ -142,8 +142,8 @@ func TestLocalBuildCacheRepositoryBoundary(t *testing.T) {
 }
 
 func TestLocalBuildCacheSymlinkBoundary(t *testing.T) {
-	root := t.TempDir()
-	outside := t.TempDir()
+	root := resolvedTempDir(t)
+	outside := resolvedTempDir(t)
 	for name, target := range map[string]string{"inside": root, "outside": outside} {
 		if err := os.Symlink(target, filepath.Join(root, name)); err != nil {
 			t.Skipf("symlink unavailable: %v", err)
@@ -165,7 +165,7 @@ func TestLocalBuildCacheSymlinkBoundary(t *testing.T) {
 }
 
 func TestLocalBuildCacheParentTraversal(t *testing.T) {
-	root, outside := t.TempDir(), t.TempDir()
+	root, outside := resolvedTempDir(t), t.TempDir()
 	for _, dir := range []string{filepath.Join(root, "cache"), filepath.Join(root, "deep"), filepath.Join(outside, "deep"), filepath.Join(outside, "cache")} {
 		if err := os.MkdirAll(dir, 0700); err != nil {
 			t.Fatal(err)

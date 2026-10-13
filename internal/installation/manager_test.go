@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/pwnden/platform/internal/testutil"
 )
 
 type archiveEntry struct {
@@ -48,7 +50,7 @@ func bundle(t *testing.T, entries ...archiveEntry) []byte {
 
 func manager(t *testing.T, data []byte) *Manager {
 	t.Helper()
-	dir := t.TempDir()
+	dir := testutil.TempDir(t)
 	archive := filepath.Join(dir, ArchiveName)
 	if err := os.WriteFile(archive, data, 0600); err != nil {
 		t.Fatal(err)
@@ -197,7 +199,7 @@ func TestManagedRootCannotBeRedirectedOutside(t *testing.T) {
 	if err := pending.Activate(); err != nil {
 		t.Fatal(err)
 	}
-	outside := t.TempDir()
+	outside := testutil.TempDir(t)
 	if err := os.WriteFile(filepath.Join(outside, "contract.toml"), []byte("version=1\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -220,7 +222,7 @@ func TestNewCatalogCannotFollowOutsideParent(t *testing.T) {
 	if err := os.MkdirAll(m.DataDir, 0700); err != nil {
 		t.Fatal(err)
 	}
-	outside := t.TempDir()
+	outside := testutil.TempDir(t)
 	if err := os.Symlink(outside, filepath.Join(m.DataDir, "catalogs")); err != nil {
 		t.Fatal(err)
 	}

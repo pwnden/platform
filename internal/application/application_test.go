@@ -21,7 +21,7 @@ func TestMain(m *testing.M) { testutil.Main(m) }
 
 func fixture(t *testing.T, service bool) (*Service, *challenge.Loaded) {
 	t.Helper()
-	root := t.TempDir()
+	root := testutil.TempDir(t)
 	dir := filepath.Join(root, "challenges", "example")
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		t.Fatal(err)
@@ -287,10 +287,12 @@ func TestCanceledStartupCleansUp(t *testing.T) {
 	calls := testutil.Docker(t,
 		testutil.Reply{Match: []string{"version"}, Out: "29.4.1"},
 		testutil.Reply{Match: []string{"config"}, Out: config(c)},
-		testutil.Reply{Match: []string{"up"}, DelayMS: 1500},
+		testutil.Reply{Match: []string{"up"}, DelayMS: 6000},
 		testutil.Reply{Match: []string{"down"}},
 	)
-	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	// The first fake docker process can take over a second to start on a cold
+	// machine, so the deadline must fall after "up" has begun.
+	ctx, cancel := context.WithTimeout(context.Background(), 2500*time.Millisecond)
 	defer cancel()
 	_, err := s.Run(ctx, c.Slug)
 	requireCode(t, err, DeadlineExceeded)
