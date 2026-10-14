@@ -16,7 +16,7 @@ func TestBoundedWorkspaceDocker(t *testing.T) {
 	}
 	c := fixture(t)
 	c.Compose = ""
-	c.Solve.Writable, c.Solve.Image, c.Solve.TimeoutSeconds = true, "pwnden-cli:basic-20261003", 60
+	c.Solve.Writable, c.Solve.Image, c.Solve.TimeoutSeconds = true, "pwnden-cli:basic-20261014", 60
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 	original := filepath.Join(c.Dir, "input.txt")

@@ -41,8 +41,8 @@ jobs:
       - name: Prepare the selected CLI toolboxes
         working-directory: challenges
         run: |
-          docker build --platform linux/amd64 --target basic --tag pwnden-cli:basic-20261003 images/cli
-          docker build --platform linux/amd64 --target pcap --tag pwnden-cli:pcap-20261003 images/cli
+          docker build --platform linux/amd64 --target basic --tag pwnden-cli:basic-20261014 images/cli
+          docker build --platform linux/amd64 --target pcap --tag pwnden-cli:pcap-20261014 images/cli
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
