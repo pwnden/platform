@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/gofrs/flock"
@@ -31,22 +30,10 @@ func (r resourceCost) add(other resourceCost) resourceCost {
 	return resourceCost{r.CPUs + other.CPUs, r.Memory + other.Memory, r.PIDs + other.PIDs, r.Containers + other.Containers}
 }
 
-// Set by withRuntimeLock from the same `docker info` call it already makes,
-// so reading it here costs no extra process exec. 0 until the first lock.
-var lastKnownDaemonCPUs int64
-
 // Operators may tighten the per-container ceiling without increasing it.
-// With no explicit setting, fall back to 1 CPU once the daemon is known to be
-// too small to fit two 2-CPU containers side by side, mirroring the
-// challenges author tool's adaptive ceiling (tools/policy.py's cpu_limit()).
 func containerCPUs() int64 {
 	switch os.Getenv("PWNDEN_CONTAINER_CPUS") {
-	case "":
-		if available := atomic.LoadInt64(&lastKnownDaemonCPUs); available > 0 && available < 4 {
-			return 1e9
-		}
-		return 2e9
-	case "2":
+	case "", "2":
 		return 2e9
 	case "1":
 		return 1e9
@@ -130,7 +117,6 @@ func withRuntimeLock(ctx context.Context, accounting bool, action func(context.C
 	if info.ID == "" || info.NCPU <= 0 || info.MemTotal <= 0 {
 		return errors.New("Docker did not report its resource capacity")
 	}
-	atomic.StoreInt64(&lastKnownDaemonCPUs, info.NCPU)
 	dir := filepath.Join("/tmp", "pwnden-runtime-"+strconv.Itoa(os.Geteuid()))
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return err

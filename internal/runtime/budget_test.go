@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"strings"
-	"sync/atomic"
 	"testing"
 
 	"github.com/pwnden/platform/internal/testutil"
@@ -26,30 +25,6 @@ func TestRuntimeBudget(t *testing.T) {
 	t.Setenv("PWNDEN_RUNTIME_CPUS", "0")
 	if _, err := runtimeBudget(16, 16<<30); err == nil {
 		t.Fatal("invalid budget accepted")
-	}
-}
-
-// A daemon too small to fit two 2-CPU containers side by side (here, 3) should
-// drop the unset default to 1 CPU, the same adaptive ceiling the challenges
-// author tool applies (tools/policy.py's cpu_limit()) -- otherwise a second
-// workspace on a 3-CPU host is refused the moment the first one is still open.
-func TestContainerCPUsAdaptsToSmallDaemon(t *testing.T) {
-	previous := atomic.SwapInt64(&lastKnownDaemonCPUs, 0)
-	t.Cleanup(func() { atomic.StoreInt64(&lastKnownDaemonCPUs, previous) })
-	if got := containerCPUs(); got != 2e9 {
-		t.Fatalf("default before any daemon is known: got %d, want 2e9", got)
-	}
-	testutil.Docker(t, testutil.Reply{Match: []string{"info", budgetInfoFormat},
-		Out: `{"ID":"small-daemon","NCPU":3,"MemTotal":4294967296}`})
-	if err := admitCreation(context.Background(), toolboxCost(), func(context.Context) error { return nil }); err != nil {
-		t.Fatal(err)
-	}
-	if got := containerCPUs(); got != 1e9 {
-		t.Fatalf("after a 3-CPU daemon is known: got %d, want 1e9", got)
-	}
-	t.Setenv("PWNDEN_CONTAINER_CPUS", "2")
-	if got := containerCPUs(); got != 2e9 {
-		t.Fatalf("explicit PWNDEN_CONTAINER_CPUS=2 must override the adaptive default: got %d", got)
 	}
 }
 
