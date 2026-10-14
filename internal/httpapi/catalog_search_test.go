@@ -38,6 +38,7 @@ func TestPublishedCatalogSearch(t *testing.T) {
 	if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &catalog) != nil {
 		t.Fatalf("catalog: %d %s", w.Code, w.Body.String())
 	}
+	nmapProblems := map[string]bool{"diagnostic-port": true, "knock-sequence-gate": true}
 	for _, tool := range []string{"nmap", "ffuf", "sqlite3", "exiftool", "tshark", "jq", "git", "openssl"} {
 		var found []string
 		for _, problem := range catalog.Problems {
@@ -45,7 +46,16 @@ func TestPublishedCatalogSearch(t *testing.T) {
 				found = append(found, problem.Slug)
 			}
 		}
-		if len(found) == 0 || (tool == "nmap" && (len(found) != 1 || found[0] != "diagnostic-port")) {
+		if tool == "nmap" {
+			if len(found) != len(nmapProblems) {
+				t.Fatalf("tool %q not indexed correctly: %v", tool, found)
+			}
+			for _, slug := range found {
+				if !nmapProblems[slug] {
+					t.Fatalf("tool %q not indexed correctly: %v", tool, found)
+				}
+			}
+		} else if len(found) == 0 {
 			t.Fatalf("tool %q not indexed correctly: %v", tool, found)
 		}
 		t.Logf("%s: %v", tool, found)
