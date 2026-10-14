@@ -3,6 +3,7 @@ import { onMounted, onUnmounted, ref } from 'vue';
 import type { Catalog, Problem, ProblemDetail } from '@pwnden/catalog';
 import { UIButton, UIPanel, UIMarkdown, UIReveal } from '@pwnden/ui';
 import ProblemConnections from './ProblemConnections.vue';
+import ProblemReferences from './ProblemReferences.vue';
 
 const props = defineProps<{ catalog: Catalog; slug: string; selectionDisabled?: boolean; initialDetail?: ProblemDetail | undefined }>();
 const emit = defineEmits<{ loaded: [detail: ProblemDetail]; select: [problem: Problem] }>();
@@ -64,6 +65,7 @@ onMounted(() => { if (detail.value) emit('loaded', detail.value); else void load
     </template>
     <slot name="play" />
     <template v-if="detail">
+      <ProblemReferences v-if="detail.cli?.length" :catalog="catalog" :problem="detail" class="content-section" />
       <ProblemConnections v-if="detail.learning" :catalog="catalog" :problem="detail" :disabled="selectionDisabled" class="content-section" @select="emit('select', $event)" />
       <UIPanel v-if="detail.hintCount" title="힌트" headingID="hints-heading" :heading-level="3" class="content-section">
         <div class="reading-list">

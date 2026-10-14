@@ -234,6 +234,15 @@ func (s *Service) Guidance(ctx context.Context, slug, id string) (string, error)
 			}
 		}
 	}
+	if name == "" && strings.HasPrefix(id, "cli-") {
+		key := strings.TrimPrefix(id, "cli-")
+		for _, tool := range c.PlayerCLI() {
+			if tool == key {
+				name = "../../docs/cli/" + key + ".md"
+				break
+			}
+		}
+	}
 	if name == "" {
 		return "", operationError(ctx, "guidance", slug, NotFound, os.ErrNotExist)
 	}

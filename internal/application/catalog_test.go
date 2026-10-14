@@ -246,3 +246,30 @@ func TestDeclaredPlayerContentAndSpoilerReads(t *testing.T) {
 	_, err = s.Guidance(canceled, c.Slug, "hint-1")
 	requireCode(t, err, Canceled)
 }
+
+func TestCLIReferenceGuidanceScopedToDeclaredTools(t *testing.T) {
+	s, c := fixture(t, false)
+	definition := filepath.Join(c.RepoRoot, "contract.toml")
+	data, _ := os.ReadFile(definition)
+	os.WriteFile(definition, []byte(strings.Replace(string(data), "version=1", "version=7", 1)), 0600)
+	manifest := filepath.Join(c.Dir, "challenge.toml")
+	data, _ = os.ReadFile(manifest)
+	metadata := strings.Replace(string(data), "schema=1", "schema=7\ndifficulty=1", 1) + "\n[player]\ntools=['terminal']\ncli=['curl','jq']\n"
+	os.WriteFile(manifest, []byte(metadata), 0600)
+	directory := filepath.Join(c.RepoRoot, "docs", "cli")
+	os.MkdirAll(directory, 0700)
+	os.WriteFile(filepath.Join(directory, "curl.md"), []byte("# curl\n\nSends HTTP requests."), 0600)
+	os.WriteFile(filepath.Join(directory, "jq.md"), []byte("# jq\n\nFilters JSON."), 0600)
+	os.WriteFile(filepath.Join(directory, "nmap.md"), []byte("# nmap\n\nUndeclared for this problem."), 0600)
+	ctx := context.Background()
+	for id, want := range map[string]string{"cli-curl": "# curl\n\nSends HTTP requests.", "cli-jq": "# jq\n\nFilters JSON."} {
+		got, err := s.Guidance(ctx, c.Slug, id)
+		if err != nil || got != want {
+			t.Fatalf("%s: %q %v", id, got, err)
+		}
+	}
+	for _, id := range []string{"cli-nmap", "cli-missing", "cli-../../../outside"} {
+		_, err := s.Guidance(ctx, c.Slug, id)
+		requireCode(t, err, NotFound)
+	}
+}

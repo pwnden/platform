@@ -895,6 +895,36 @@ it('loads spoiler documents on demand, retries failures and caches reopened hint
   renderer.render(null, root);
 });
 
+it('shows cli reference entries without a reveal click and skips the panel when none are declared', async () => {
+  const catalog: Catalog = {
+    list: vi.fn(),
+    detail: vi.fn(async () => ({ slug: 'test', title: 'Test', category: 'misc', kind: 'service', tools: ['terminal'] as const, cli: ['curl', 'jq'], description: 'Scan the service.', files: [], hintCount: 0, walkthrough: false })),
+    download: vi.fn(),
+    guidance: vi.fn(async (_slug, id) => (id === 'cli-curl' ? '# curl\n\nSends HTTP requests.' : '# jq\n\nFilters JSON.')),
+  };
+  const root = node('root');
+  renderer.render(h(ProblemDetail, { catalog, slug: 'test', title: 'Test' }), root);
+  await settle();
+  expect(catalog.guidance).toHaveBeenCalledWith('test', 'cli-curl');
+  expect(catalog.guidance).toHaveBeenCalledWith('test', 'cli-jq');
+  expect(text(root)).toContain('참고 자료');
+  expect(text(root)).toContain('Sends HTTP requests.');
+  expect(text(root)).toContain('Filters JSON.');
+  renderer.render(null, root);
+
+  const withoutCLI: Catalog = {
+    list: vi.fn(),
+    detail: vi.fn(async () => ({ slug: 'bare', title: 'Bare', category: 'misc', kind: 'file', tools: ['files'] as const, description: 'Read the file.', files: [], hintCount: 0, walkthrough: false })),
+    download: vi.fn(),
+    guidance: vi.fn(),
+  };
+  renderer.render(h(ProblemDetail, { catalog: withoutCLI, slug: 'bare', title: 'Bare' }), root);
+  await settle();
+  expect(withoutCLI.guidance).not.toHaveBeenCalled();
+  expect(text(root)).not.toContain('참고 자료');
+  renderer.render(null, root);
+});
+
 it('offers downloads for binary and large materials without fetching a large preview', async () => {
   const small = 'a'.repeat(64), large = 'b'.repeat(64);
   const catalog: Catalog = {
