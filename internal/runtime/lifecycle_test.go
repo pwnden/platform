@@ -3,6 +3,7 @@ package runtime
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -222,5 +223,73 @@ func TestToolImageArgumentsAndFixedUser(t *testing.T) {
 		if args[0] == "create" && !strings.Contains(strings.Join(args, " "), "--user 10001:10001") {
 			t.Fatalf("caller ownership missing: %v", args)
 		}
+	}
+}
+
+func toolFailureReplies(start testutil.Reply, inspect testutil.Reply, remove testutil.Reply, left string) []testutil.Reply {
+	return []testutil.Reply{
+		{Match: []string{"image", "inspect"}}, {Match: []string{"create"}},
+		start, inspect, remove,
+		{Match: []string{"container", "ls", "--filter"}, Out: left},
+	}
+}
+
+func removedTool(calls func() [][]string) bool {
+	for _, args := range calls() {
+		if len(args) > 1 && args[0] == "rm" && args[1] == "-f" {
+			return true
+		}
+	}
+	return false
+}
+
+func TestToolKeepsEveryCompletedExitCodeAndStillCleansUp(t *testing.T) {
+	for _, code := range []int{1, 124, 125, 137, 200, 255} {
+		c := fixture(t)
+		c.Compose = ""
+		c.Solve.Writable = false
+		calls := testutil.Docker(t, toolFailureReplies(
+			testutil.Reply{Match: []string{"start", "--attach"}, Err: "output", Code: code},
+			testutil.Reply{Match: []string{"container", "inspect"}, Err: "No such container", Code: 1},
+			testutil.Reply{Match: []string{"rm"}, Err: "No such container", Code: 1}, "")...)
+		_, err := RunTool(context.Background(), c, "", "image", []string{"solve"})
+		var exit *ToolExitError
+		if !errors.As(err, &exit) || exit.Code != code || errors.Is(err, ErrCleanupFailed) {
+			t.Fatalf("exit %d: %v", code, err)
+		}
+		if !removedTool(calls) {
+			t.Fatalf("exit %d skipped cleanup", code)
+		}
+	}
+}
+
+func TestToolThatNeverStartedIsAnExecutionFailureAndRemoved(t *testing.T) {
+	c := fixture(t)
+	c.Compose = ""
+	c.Solve.Writable = false
+	calls := testutil.Docker(t, toolFailureReplies(
+		testutil.Reply{Match: []string{"start", "--attach"}, Err: "attach failed", Code: 1},
+		testutil.Reply{Match: []string{"container", "inspect"}, Out: "created\n"},
+		testutil.Reply{Match: []string{"rm"}}, "")...)
+	_, err := RunTool(context.Background(), c, "", "image", []string{"solve"})
+	var exit *ToolExitError
+	if err == nil || errors.As(err, &exit) {
+		t.Fatalf("docker failure reported as a completed command: %v", err)
+	}
+	if !removedTool(calls) {
+		t.Fatal("created container was left behind")
+	}
+}
+
+func TestCompletedToolWithFailedCleanupIsNotAPlainExit(t *testing.T) {
+	c := fixture(t)
+	c.Compose = ""
+	c.Solve.Writable = false
+	testutil.Docker(t, toolFailureReplies(
+		testutil.Reply{Match: []string{"start", "--attach"}, Err: "output", Code: 3},
+		testutil.Reply{Match: []string{"container", "inspect"}, Err: "No such container", Code: 1},
+		testutil.Reply{Match: []string{"rm"}, Err: "removal failure", Code: 1}, "leftover")...)
+	if _, err := RunCommand(context.Background(), c, "", "image", []string{"solve"}); !errors.Is(err, ErrCleanupFailed) {
+		t.Fatalf("cleanup failure hidden behind the exit code: %v", err)
 	}
 }

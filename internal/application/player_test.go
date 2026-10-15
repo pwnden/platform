@@ -36,7 +36,7 @@ func TestCatalogAndSubmissions(t *testing.T) {
 }
 
 func TestPlayerToolExecution(t *testing.T) {
-	for _, code := range []int{0, 1, 125} {
+	for _, code := range []int{0, 1, 125, 200} {
 		t.Run(fmt.Sprintf("exit=%d", code), func(t *testing.T) {
 			s, c := fixture(t, false)
 			calls := testutil.Docker(t,
@@ -45,12 +45,9 @@ func TestPlayerToolExecution(t *testing.T) {
 				testutil.Reply{Match: []string{"rm"}},
 			)
 			result, err := s.Execute(context.Background(), c.Slug, []string{"python3", "files/checker.py", "candidate"})
-			if code == 125 {
-				requireCode(t, err, ExecutionFailed)
-				if result.Stdout != "" {
-					t.Fatal("execution failure exposed partial output")
-				}
-			} else if err != nil || result.ExitCode != code || result.Stdout != "command output" || result.Stderr != "command diagnostic" {
+			// The command's own exit code is reported whatever its value; docker
+			// start failures are told apart by container state, not by the code.
+			if err != nil || result.ExitCode != code || result.Stdout != "command output" || result.Stderr != "command diagnostic" {
 				t.Fatalf("execution: %+v %v", result, err)
 			}
 			for _, call := range calls() {

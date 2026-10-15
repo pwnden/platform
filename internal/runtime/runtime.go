@@ -534,7 +534,8 @@ func RunCommand(ctx context.Context, c *challenge.Loaded, project, image string,
 	if err == nil {
 		return CommandResult{Stdout: out, Stderr: stderr}, nil
 	}
-	if exit, ok := err.(*ToolExitError); ok {
+	var exit *ToolExitError
+	if errors.As(err, &exit) && !errors.Is(err, ErrCleanupFailed) {
 		return CommandResult{Stdout: out, Stderr: stderr, ExitCode: exit.Code}, nil
 	}
 	return CommandResult{}, err
@@ -598,16 +599,27 @@ func runTool(ctx context.Context, c *challenge.Loaded, project, image string, ar
 	defer cancel()
 	out, stderr, err := command(ctx, c.Dir, nil, "docker", "start", "--attach", container)
 	if err != nil {
-		var exit *exec.ExitError
-		if ctx.Err() == nil && errors.As(err, &exit) && exit.ExitCode() > 0 && exit.ExitCode() < 125 {
-			// --rm already removed a container whose command completed.
-			return out, stderr, &ToolExitError{Code: exit.ExitCode(), Stderr: stderr}
-		}
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cleanupCancel()
-		return out, stderr, errors.Join(fmt.Errorf("toolbox: %w: %s", errors.Join(err, ctx.Err()), stderr), removeTool(cleanupCtx, c, container))
+		// The Docker CLI also exits nonzero when it fails before the command
+		// runs, so only a container that got past "created" completed a command.
+		// Its exit code is the command's, whatever its value.
+		var exit *exec.ExitError
+		completed := ctx.Err() == nil && errors.As(err, &exit) && exit.ExitCode() > 0 && !toolNeverStarted(cleanupCtx, c, container)
+		cleanup := removeTool(cleanupCtx, c, container)
+		if completed {
+			return out, stderr, errors.Join(&ToolExitError{Code: exit.ExitCode(), Stderr: stderr}, cleanup)
+		}
+		return out, stderr, errors.Join(fmt.Errorf("toolbox: %w: %s", errors.Join(err, ctx.Err()), stderr), cleanup)
 	}
 	return out, stderr, nil
+}
+
+// toolNeverStarted reports whether the container still exists in the created
+// state, which --rm cannot remove because the command never ran.
+func toolNeverStarted(ctx context.Context, c *challenge.Loaded, container string) bool {
+	out, _, err := command(ctx, c.Dir, nil, "docker", "container", "inspect", "--format", "{{.State.Status}}", container)
+	return err == nil && strings.TrimSpace(out) == "created"
 }
 
 func removeTool(ctx context.Context, c *challenge.Loaded, container string) error {
