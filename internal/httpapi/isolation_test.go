@@ -97,7 +97,7 @@ func TestHTTPRunAndStatusReuseObservationWhileProblemIsLocked(t *testing.T) {
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, r)
 		cancel()
-		if w.Code != 200 || !strings.Contains(w.Body.String(), "http://127.0.0.1:") {
+		if w.Code != 200 || !strings.Contains(w.Body.String(), "http://example.localhost:") {
 			t.Fatalf("%s: %d %s", action, w.Code, w.Body.String())
 		}
 	}
@@ -133,7 +133,7 @@ func TestIsolatedBrowserUsesDeclaredStreamAndRejectsRestart(t *testing.T) {
 	defer h.browsers.close()
 	status, _ := b.Status(context.Background(), "example")
 	endpoints, err := h.exposeEndpoints(context.Background(), "example", status.Endpoints)
-	if err != nil || len(endpoints) != 1 || !endpoints[0].Published || !strings.HasPrefix(endpoints[0].URL, "http://127.0.0.1:") {
+	if err != nil || len(endpoints) != 1 || !endpoints[0].Published || !strings.HasPrefix(endpoints[0].URL, "http://example.localhost:") {
 		t.Fatalf("expose: %+v %v", endpoints, err)
 	}
 	browser, err := h.browsers.open(context.Background(), "example", "web")

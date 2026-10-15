@@ -131,7 +131,7 @@ func TestIsolatedNoteVaultDocker(t *testing.T) {
 		t.Fatal(err)
 	}
 	jar, _ := cookiejar.New(nil)
-	client := &http.Client{Jar: jar, Timeout: 15 * time.Second, Transport: &http.Transport{Proxy: nil}}
+	client := &http.Client{Jar: jar, Timeout: 15 * time.Second, Transport: &http.Transport{Proxy: nil, DialContext: loopbackDial}}
 	defer client.CloseIdleConnections()
 	response, err := client.Get(browser.Target + "/")
 	if err != nil {

@@ -144,7 +144,7 @@ func (m *browserManager) openObserved(ctx context.Context, slug, name string, st
 	base, cancel := context.WithCancel(m.ctx)
 	entry := &browserEntry{manager: m, slug: slug, name: name, target: target,
 		instance: instance, isolated: isolated,
-		origin: "http://" + listener.Addr().String(), prefix: "/__pwnden_browser/" + hex.EncodeToString(secret), cancel: cancel}
+		origin: "http://" + browserHost(slug, listener.Addr()), prefix: "/__pwnden_browser/" + hex.EncodeToString(secret), cancel: cancel}
 	upstream, _ := url.Parse(target)
 	entry.transport = &http.Transport{Proxy: nil, DisableCompression: true, ResponseHeaderTimeout: 30 * time.Second,
 		DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
@@ -207,6 +207,18 @@ type browserConnection struct {
 }
 
 func (c *browserConnection) Close() error { c.cancel(); return c.Conn.Close() }
+
+// browserHost names a problem's ingress origin <slug>.localhost:<port>. Cookies
+// are scoped by host, not port, so separate ports on 127.0.0.1 would share one
+// cookie jar across problems. Browsers resolve *.localhost to loopback, where
+// the listener is bound.
+func browserHost(slug string, addr net.Addr) string {
+	_, port, err := net.SplitHostPort(addr.String())
+	if err != nil || !apiSlug.MatchString(slug) || len(slug) > 63 {
+		return addr.String()
+	}
+	return slug + ".localhost:" + port
+}
 
 func (e *browserEntry) description() Browser {
 	return Browser{e.slug, e.name, e.origin + e.prefix, e.visibleTarget()}

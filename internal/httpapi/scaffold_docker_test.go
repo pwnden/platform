@@ -46,7 +46,7 @@ func TestGeneratedServiceDocker(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	client := &http.Client{Timeout: 15 * time.Second, Transport: &http.Transport{Proxy: nil}}
+	client := &http.Client{Timeout: 15 * time.Second, Transport: &http.Transport{Proxy: nil, DialContext: loopbackDial}}
 	defer client.CloseIdleConnections()
 	for _, check := range []struct {
 		path string

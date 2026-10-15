@@ -245,3 +245,44 @@ func TestBrowserClosesUpgradedConnections(t *testing.T) {
 		t.Fatal("upgraded socket retained")
 	}
 }
+
+func TestBrowserSeparatesCookiesBetweenProblems(t *testing.T) {
+	var received atomic.Value
+	received.Store("")
+	issuer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.SetCookie(w, &http.Cookie{Name: "session", Value: "alpha-secret", Path: "/", HttpOnly: true})
+		_, _ = io.WriteString(w, "issued")
+	}))
+	defer issuer.Close()
+	bystander := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		received.Store(r.Header.Get("Cookie"))
+		_, _ = io.WriteString(w, "seen")
+	}))
+	defer bystander.Close()
+	open := func(slug, target string) string {
+		manager := newBrowserManager(context.Background(), browserBackend(target), "http://"+testHost, nil)
+		t.Cleanup(manager.close)
+		browser, err := manager.open(context.Background(), slug, "web")
+		if err != nil {
+			t.Fatal(err)
+		}
+		wrapper, err := url.Parse(browser.URL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return "http://" + wrapper.Host
+	}
+	alpha, bravo := open("alpha", issuer.URL), open("bravo", bystander.URL)
+	jar, _ := cookiejar.New(nil)
+	client := &http.Client{Jar: jar, Timeout: 3 * time.Second}
+	for _, origin := range []string{alpha, bravo} {
+		response, err := client.Get(origin + "/")
+		if err != nil {
+			t.Fatal(err)
+		}
+		response.Body.Close()
+	}
+	if cookie := received.Load().(string); cookie != "" {
+		t.Fatalf("problem bravo received problem alpha's cookie: %q", cookie)
+	}
+}

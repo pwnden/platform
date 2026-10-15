@@ -282,8 +282,8 @@ export function createAPI(options: APIOptions): APIClient {
         const url = string(item.url);
         const target = string(item.target);
         // Wrapper and target share the problem ingress origin; the player is separate.
-        const targetPort = /^http:\/\/127\.0\.0\.1:([1-9][0-9]{0,4})$/.exec(target)?.[1];
-        const wrapperPort = /^http:\/\/127\.0\.0\.1:([1-9][0-9]{0,4})\/__pwnden_browser\/[a-f0-9]{64}$/.exec(url)?.[1];
+        const targetPort = /^http:\/\/[a-z0-9]+(?:-[a-z0-9]+)*\.localhost:([1-9][0-9]{0,4})$/.exec(target)?.[1];
+        const wrapperPort = /^http:\/\/[a-z0-9]+(?:-[a-z0-9]+)*\.localhost:([1-9][0-9]{0,4})\/__pwnden_browser\/[a-f0-9]{64}$/.exec(url)?.[1];
         if (item.slug !== slug || item.name !== name || !targetPort || !wrapperPort ||
           Number(targetPort) < 1 || Number(targetPort) > 65535 || Number(wrapperPort) < 1 || Number(wrapperPort) > 65535 ||
           Number(targetPort) !== Number(wrapperPort) || target === globalThis.location?.origin) throw new APIError('invalid_response', 0);

@@ -293,7 +293,7 @@ it('automatically connects and releases pending and ready attachments on unmount
 
 it('opens only the declared web tool for Note Vault and retains its view during resize', async () => {
   const problem = { slug: 'note-vault', title: 'Note Vault', category: 'web', kind: 'service' as const, difficulty: 1 as const };
-  const status: RunStatus = { ...problem, state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:43123' }] };
+  const status: RunStatus = { ...problem, state: 'running', endpoints: [{ name: 'web', url: 'http://example.localhost:43123' }] };
   const environments = workspace(status);
   const client = {
     catalog: { list: vi.fn(async () => [problem]), detail: vi.fn(async () => ({ ...problem, tools: ['web'] as const, description: '설명', files: [], hintCount: 0, walkthrough: false })), download: vi.fn(), guidance: vi.fn() },
@@ -332,7 +332,7 @@ it('keeps terminal, source and web state across tool tabs and resets tools on pr
   ];
   const close = vi.fn();
   const session = { input: vi.fn(), resize: vi.fn(), close: vi.fn() };
-  let state: RunStatus = { slug: 'note-vault', kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:43123' }] };
+  let state: RunStatus = { slug: 'note-vault', kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://example.localhost:43123' }] };
   let environmentFailed: (code: string) => void = () => {};
   const client = {
     catalog: {
@@ -370,7 +370,7 @@ it('keeps terminal, source and web state across tool tabs and resets tools on pr
   await click(button(root, '웹')); await settle();
   const frame = flatten(root).find(item => item.type === 'iframe')!;
   await vi.waitFor(() => expect(router.currentRoute.value.query.tool).toBe('web'));
-  expect(frame.props.src).toBe(browserSession('http://127.0.0.1:43123').url);
+  expect(frame.props.src).toBe(browserSession('http://example.localhost:43123').url);
   expect(button(root, '문제 웹 새로고침').parent?.props['aria-label']).toBe('웹 탐색');
   expect(button(root, 'checker.py 다운로드')).toBeUndefined();
   expect(flatten(root).find(item => item.type === 'a')?.props.rel).toBe('noopener noreferrer');
@@ -391,10 +391,10 @@ it('keeps terminal, source and web state across tool tabs and resets tools on pr
   environmentFailed('not_running'); await settle();
   expect(flatten(root).some(item => item.type === 'iframe')).toBe(false);
   expect(button(root, '웹')).toBeDefined();
-  state = { ...state, state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:43124' }] };
+  state = { ...state, state: 'running', endpoints: [{ name: 'web', url: 'http://example.localhost:43124' }] };
   await click(button(root, '풀이 환경 다시 연결')); await settle();
   await click(button(root, '웹')); await settle();
-  expect(flatten(root).find(item => item.type === 'iframe')?.props.src).toBe(browserSession('http://127.0.0.1:43124').url);
+  expect(flatten(root).find(item => item.type === 'iframe')?.props.src).toBe(browserSession('http://example.localhost:43124').url);
   await selectChallenge(router, root, 'Rotor Lock', 'rotor-lock');
   expect(flatten(root).filter(item => item.props.role === 'tab').map(text)).toEqual(['파일', '터미널']);
   expect(button(root, '파일').props['aria-selected']).toBe('true');
@@ -405,7 +405,7 @@ it('keeps terminal, source and web state across tool tabs and resets tools on pr
 });
 
 it('retains multiple web documents and reloads only the explicitly selected one', async () => {
-  const endpoints = [{ name: 'first', url: 'http://127.0.0.1:43123' }, { name: 'second', url: 'http://127.0.0.1:43124' }];
+  const endpoints = [{ name: 'first', url: 'http://example.localhost:43123' }, { name: 'second', url: 'http://example.localhost:43124' }];
   const state: RunStatus = { slug: 'test', kind: 'service', state: 'running', endpoints };
   const root = node('root');
   const player: Player = { browser: vi.fn(async (_slug: string, name: string) => browserSession(endpoints.find(endpoint => endpoint.name === name)!.url)), status: vi.fn(), run: vi.fn(), stop: vi.fn(), submit: vi.fn() };
@@ -442,7 +442,7 @@ it('retains multiple web documents and reloads only the explicitly selected one'
 });
 
 it('resolves web paths within the current problem and restores unusable input without navigation', async () => {
-  const origin = 'http://127.0.0.1:43123';
+  const origin = 'http://example.localhost:43123';
   const status: RunStatus = { slug: 'test', kind: 'service', state: 'running', endpoints: [{ name: 'web', url: origin }] };
   const player: Player = { browser: vi.fn(async () => browserSession(origin)), status: vi.fn(), run: vi.fn(), stop: vi.fn(), submit: vi.fn() };
   const root = node('root');
@@ -471,7 +471,7 @@ it('resolves web paths within the current problem and restores unusable input wi
   const navigation = frame.props.navigate as ReturnType<typeof vi.fn>;
   navigation.mockClear();
   for (const input of ['', ' ', 'https://example.com/notes', '//example.com/notes',
-    'http://127.0.0.1:43124/notes', 'javascript:alert(1)', 'http://[invalid',
+    'http://example.localhost:43124/notes', 'javascript:alert(1)', 'http://[invalid',
     'http://user:password@127.0.0.1:43123/notes']) {
     await submit(input);
     expect(navigation).not.toHaveBeenCalled();
@@ -483,7 +483,7 @@ it('resolves web paths within the current problem and restores unusable input wi
 });
 
 it('prepares web lazily, retries once and ignores a response for a removed endpoint', async () => {
-  const state: RunStatus = { slug: 'test', kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:43123' }] };
+  const state: RunStatus = { slug: 'test', kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://example.localhost:43123' }] };
   let resolve: (value: { url: string; target: string }) => void = () => {};
   const browser = vi.fn().mockRejectedValueOnce(new Error('offline')).mockImplementationOnce(() => new Promise(done => { resolve = done; }));
   const player: Player = { browser, status: vi.fn(), run: vi.fn(), stop: vi.fn(), submit: vi.fn() };
@@ -508,7 +508,7 @@ it('opens the declared web tab while environment preparation is pending without 
   const ready = new Promise<RunStatus>(done => { resolve = done; });
   const client = {
     catalog: { list: vi.fn(async () => [problem]), detail: vi.fn(async () => ({ ...problem, tools: ['web'] as const, description: '', files: [], hintCount: 0, walkthrough: false })), download: vi.fn(), guidance: vi.fn() },
-    player: { browser: vi.fn(async () => browserSession('http://127.0.0.1:43123')), status: vi.fn(), run: vi.fn(), stop: vi.fn(), submit: vi.fn() },
+    player: { browser: vi.fn(async () => browserSession('http://example.localhost:43123')), status: vi.fn(), run: vi.fn(), stop: vi.fn(), submit: vi.fn() },
     terminals: { connect: vi.fn(), list: vi.fn(), stop: vi.fn() },
     workspaces: { connect: vi.fn(() => ({ ready, close: vi.fn() })), list: vi.fn(async () => []), stop: vi.fn() },
   };
@@ -517,16 +517,16 @@ it('opens the declared web tab while environment preparation is pending without 
   await selectChallenge(router, root, 'Note Vault', 'note-vault');
   expect(button(root, '웹').props['aria-selected']).toBe('true');
   const form = flatten(root).find(item => item.props.class === 'web-address-bar');
-  resolve({ slug: problem.slug, kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:43123' }] }); await settle();
+  resolve({ slug: problem.slug, kind: 'service', state: 'running', endpoints: [{ name: 'web', url: 'http://example.localhost:43123' }] }); await settle();
   expect(flatten(root).find(item => item.props.class === 'web-address-bar')).toBe(form);
-  expect(flatten(root).find(item => item.type === 'iframe')?.props.src).toBe(browserSession('http://127.0.0.1:43123').url);
+  expect(flatten(root).find(item => item.type === 'iframe')?.props.src).toBe(browserSession('http://example.localhost:43123').url);
   expect(client.terminals.connect).not.toHaveBeenCalled();
   renderer.render(null, root);
 });
 
 it('shows preparation and connection errors inside tools while submission stays stable', async () => {
   const problem = { slug: 'note-vault', title: '다른 사람의 메모', category: 'web', kind: 'service' as const };
-  const status: RunStatus = { ...problem, state: 'running', endpoints: [{ name: 'web', url: 'http://127.0.0.1:43123' }] };
+  const status: RunStatus = { ...problem, state: 'running', endpoints: [{ name: 'web', url: 'http://example.localhost:43123' }] };
   let fail: (code: string) => void = () => {};
   let reject: (error: Error) => void = () => {};
   const ready = new Promise<RunStatus>((_resolve, failed) => { reject = failed; });

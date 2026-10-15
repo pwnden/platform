@@ -4,7 +4,7 @@ import { createApp, h, nextTick, ref } from 'vue';
 import UIWebFrame from '../packages/ui/src/UIWebFrame.vue';
 import type { UIWebFrameHandle, UIWebNavigation } from '../packages/ui/src/props';
 
-const origin = 'http://127.0.0.1:9000';
+const origin = 'http://example.localhost:9000';
 const src = origin + '/__pwnden_browser/' + 'a'.repeat(64);
 const apps: ReturnType<typeof createApp>[] = [];
 beforeEach(() => {

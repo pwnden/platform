@@ -76,7 +76,10 @@ JSON and 4096-byte body rules as submission. The destination comes from the
 running problem's declared HTTP services. Fixed-destination Docker streams reach
 the service inside its isolated network. Each endpoint gets a
 separate local proxy origin and a wrapper with native browser history controls;
-the platform token stays on the API origin. Repeated opens reuse that wrapper.
+the platform token stays on the API origin. The origin is
+`http://<slug>.localhost:<port>`: browsers scope cookies by host rather than
+port, so a per-problem host keeps one problem's cookies from reaching another.
+Repeated opens reuse that wrapper.
 Every proxied request rechecks current run status under the problem lock; stopped
 or changed endpoints return 410. Workspace expiry closes its listeners within
 one second of removal, and server shutdown closes proxies before environment
