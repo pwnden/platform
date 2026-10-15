@@ -10,6 +10,7 @@ import queue
 import re
 import shutil
 import signal
+import socket
 import subprocess
 import tempfile
 import tarfile
@@ -18,6 +19,19 @@ import threading
 from urllib.error import HTTPError
 from urllib.parse import urlsplit
 from urllib.request import HTTPCookieProcessor, ProxyHandler, Request, build_opener
+
+
+_getaddrinfo = socket.getaddrinfo
+
+
+def _loopback_names(host, *args, **kwargs):
+    # Browsers resolve *.localhost to loopback; a CI host's resolver may not.
+    if isinstance(host, str) and host.endswith(".localhost"):
+        host = "127.0.0.1"
+    return _getaddrinfo(host, *args, **kwargs)
+
+
+socket.getaddrinfo = _loopback_names
 
 from smoke_package import extract_package, verified_answer
 
@@ -300,7 +314,7 @@ def main():
         flag = solve_web(endpoint)
         browser = api(origin, token, "POST", "/problems/note-vault/browser", {"name": run["endpoints"][0]["name"]})
         wrapper = urlsplit(browser["url"])
-        assert browser["target"] == endpoint and wrapper.hostname == "127.0.0.1" and wrapper.port
+        assert browser["target"] == endpoint and wrapper.hostname == "note-vault.localhost" and wrapper.port
         assert f"http://{wrapper.netloc}" == endpoint and endpoint != origin
         with build_opener(ProxyHandler({})).open(browser["url"], timeout=10) as response:
             assert token not in response.read().decode()
