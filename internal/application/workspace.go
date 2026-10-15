@@ -156,6 +156,35 @@ func (m *Workspaces) idleLocked(e *workspace) {
 		}
 	})
 }
+
+// cleanupBackend releases the backend resources a workspace owns, such as a
+// writable file problem's keeper container and volume, so that its journal
+// record is only forgotten once they are gone.
+func (m *Workspaces) cleanupBackend(e *workspace) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if cleaner, ok := m.backend.(interface {
+		CleanupWorkspace(context.Context, string) error
+	}); ok {
+		return cleaner.CleanupWorkspace(ctx, e.slug)
+	}
+	if e.service {
+		_, failure := m.backend.Stop(ctx, e.slug)
+		return failure
+	}
+	return nil
+}
+
+// discardLocked removes an entry whose terminal has ended. A failed cleanup
+// keeps the entry and journal record so a later pass or restart retries it.
+func (m *Workspaces) discardLocked(e *workspace) error {
+	if err := m.cleanupBackend(e); err != nil {
+		m.failure(err)
+		m.idleLocked(e)
+		return workspaceError(e.slug, CleanupFailed, err)
+	}
+	return m.remove(e)
+}
 func (m *Workspaces) stopLocked(e *workspace) error {
 	if e.timer != nil {
 		e.timer.Stop()
@@ -167,18 +196,7 @@ func (m *Workspaces) stopLocked(e *workspace) error {
 	if e.cancel != nil {
 		e.cancel()
 	}
-	if cleaner, ok := m.backend.(interface {
-		CleanupWorkspace(context.Context, string) error
-	}); ok {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		err = errors.Join(err, cleaner.CleanupWorkspace(ctx, e.slug))
-		cancel()
-	} else if e.service {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		_, failure := m.backend.Stop(ctx, e.slug)
-		cancel()
-		err = errors.Join(err, failure)
-	}
+	err = errors.Join(err, m.cleanupBackend(e))
 	if err != nil {
 		m.failure(err)
 		e.expires = nil
@@ -280,7 +298,7 @@ func (m *Workspaces) EndTerminal(slug string) error {
 		e.cancel = nil
 	}
 	if !e.service && e.viewers == 0 {
-		return m.remove(e)
+		return m.discardLocked(e)
 	}
 	return nil
 }
@@ -334,7 +352,7 @@ func (m *Workspaces) Attach(slug string, cols, rows int) (*TerminalAttachment, e
 			if e.service || (errors.As(failure, &operation) && operation.Code == CleanupFailed) {
 				m.idleLocked(e)
 			} else {
-				if cleanup := m.remove(e); cleanup != nil {
+				if cleanup := m.discardLocked(e); cleanup != nil {
 					return nil, cleanup
 				}
 			}
@@ -351,7 +369,7 @@ func (m *Workspaces) Attach(slug string, cols, rows int) (*TerminalAttachment, e
 				if err := process.stop(); err != nil {
 					m.failure(err)
 				} else {
-					m.remove(e)
+					m.discardLocked(e)
 				}
 			}
 		}()
@@ -377,7 +395,7 @@ func (m *Workspaces) Attach(slug string, cols, rows int) (*TerminalAttachment, e
 				if err := a.process.stop(); err != nil {
 					m.failure(err)
 				} else {
-					m.remove(e)
+					m.discardLocked(e)
 				}
 			} else {
 				m.idleLocked(e)
