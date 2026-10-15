@@ -238,7 +238,7 @@ export function createAPI(options: APIOptions): APIClient {
         };
       },
       async guidance(slug, id): Promise<string> {
-        if (id.length > 72 || !/^(walkthrough|hint-([1-9]|10)|concept-[a-z0-9]+(-[a-z0-9]+)*)$/.test(id)) throw new APIError('invalid_argument', 0);
+        if (id.length > 72 || !/^(walkthrough|hint-([1-9]|10)|concept-[a-z0-9]+(-[a-z0-9]+)*|cli-[a-z0-9]+(-[a-z0-9]+)*)$/.test(id)) throw new APIError('invalid_argument', 0);
         const item = await request(`${route(slug)}/guidance/${id}`);
         if (item.id !== id) throw new APIError('invalid_response', 0);
         return string(item.content);

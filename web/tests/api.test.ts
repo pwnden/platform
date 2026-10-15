@@ -84,6 +84,11 @@ it('requests only explicit guidance IDs and cancels oversized preview streams', 
   expect(request.mock.calls[0]?.[0]).toBe('/api/v1/problems/test/guidance/hint-1');
   await expect(client.catalog.guidance('test', '../solve.py')).rejects.toMatchObject({ code: 'invalid_argument' });
   expect(request).toHaveBeenCalledOnce();
+  const reference = vi.fn(async (_input: RequestInfo | URL) => response({ id: 'cli-tshark', content: '# tshark' }));
+  expect(await createAPI({ token, fetch: reference }).catalog.guidance('test', 'cli-tshark')).toBe('# tshark');
+  expect(reference.mock.calls[0]?.[0]).toBe('/api/v1/problems/test/guidance/cli-tshark');
+  await expect(createAPI({ token, fetch: reference }).catalog.guidance('test', 'cli-../x')).rejects.toMatchObject({ code: 'invalid_argument' });
+  expect(reference).toHaveBeenCalledOnce();
   const cancel = vi.fn();
   const stream = new ReadableStream<Uint8Array>({ start(controller) { controller.enqueue(new Uint8Array(5)); }, cancel });
   const download = createAPI({ token, fetch: async () => new Response(stream, { headers: { 'Content-Type': 'application/octet-stream' } }) });
